@@ -1,10 +1,10 @@
-The filenams are confusing.
+The `.wav` file with the song: `Marsita the Ultra - Unified with Love.wav`
 
-Initially: "Crocks no socks".
+For the `stems` The filenames are confusing.
 
-Then the last verse graduated to an independent song.
+Initially it was a different song "Crocks no Socks". And then I've repurposed the last verse into to an independent song.
 
-_(the initial verses will be repurposed)_
+_(the initial verses of the "Crocks no Socks" will be reused at point obviously)_
 
 > I love this life
 
