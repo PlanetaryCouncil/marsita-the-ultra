@@ -1,5 +1,6 @@
 ### Lyrics
 
+
 [instrumental intro]
 [instrumental]
 [instrumental]
@@ -55,8 +56,8 @@ Magic money Liquid honey
 Flow of vibes  paradise
 Visualise Harmononize
 Synchronize Recognise Analyse
-Feeling Meaning Healing Dreaming
-Seeing Breathing Winning Believing
+Feeling Healing Dreaming
+Seeing Meaning Winning
 
 [instrumental]
 [instrumental]
@@ -80,7 +81,8 @@ Step into light
 Become the light
 Beam the light 
 Leap of faith
-Take the flight
+Roots in place
+Elevate Cocreate
 
 [instrumental]
 [instrumental]
@@ -89,7 +91,6 @@ Traverse the multiverse
 Hook and chorus, now the verse
 [instrumental]
 [instrumental]
-
 
 [verse]
 TREEGENERATION Transformation
@@ -112,3 +113,64 @@ Grooooooooooow....
 [outro]
 [piano outro]
 [outro]
+
+-----
+
+### Rejected
+
+Many other cool / funky / quirky phrases were tried but eventually removed... Someone may want to run with it.
+
+> Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away. 
+
+
+Also the song should not be too long.
+
+-----
+
+
+Transact Artefact
+Smart Contract
+Interact Exact Impact
+Attract Enact Unpack Intact
+
+
+Step into light
+Leap of faith
+Taking flight 
+Feel the heal
+Truth reveal
+
+GM and good night
+
+Open heart It's an art
+
+TREEGENS GENES GENERATION
+Treegen nation
+
+Electricity
+Scarcity
+Infinity
+Maximised 
+Realized
+Unified 
+
+Don't be alone
+Tag along 
+Find community
+Unity in Diversity
+Clarity
+
+
+Food infrastructure Renerative agriculture
+Ocean Acidification Aquifers resublimation
+
+
+Switching mid flight
+Force of light
+Force of love
+Flooow
+
+Web3
+Easy
+One Two Three
+Will set you free
