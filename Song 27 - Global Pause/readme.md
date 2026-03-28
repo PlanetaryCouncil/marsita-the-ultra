@@ -1,3 +1,7 @@
+Spotify: https://open.spotify.com/track/6xHqj6pSYViFns3U764Mt1
+WavLake: https://wavlake.com/track/2a0a0fd9-ed6d-4396-a08f-697c6ea1c118
+
+
 LYRICS
 
 [Verse 1]
