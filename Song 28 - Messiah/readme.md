@@ -1,8 +1,21 @@
+### Title (brainstorming the exact title)
+
+- Messiah
+- The Messiah
+- The New Messiah
+- Messiah Is Here
+- Everyone Is Messiah
+- Messiah Is Everyone
+- Messiah Is In You
+
+Messiah Is Here?
+Time For Global Peace
+
 Intention of the prompt is more important than the prompt: https://chatgpt.com/share/69cd8462-d544-8388-a4e5-34047ca53890
 
 Suno: https://suno.com/s/mcltwhxcHywQkiL1
 
-### Lyrics: 
+### Lyrics (with English translation)
 ````
 [Intro — ambient]
 
@@ -35,7 +48,7 @@ Habibi, habibi — amor para todos
 
 Shalom
 Salaam
-Habibi
+One world
 One heart
 
 (Loop)
@@ -58,7 +71,7 @@ No savior coming down from above
 
 Wake up
 קום עכשיו							// Get up now
-Despierta
+Despierta							// Wake up
 Enough
 
 [Final Chorus — big, choir energy]
