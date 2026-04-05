@@ -1,22 +1,133 @@
-### Title (brainstorming the exact title)
+### Lyrics (with Suno tags)
 
-- Messiah
-- The Messiah
-- The New Messiah
-- Messiah Is Here
-- Everyone Is Messiah
-- Messiah Is Everyone
-- Messiah Is In You
+Style: `global hit, afrobeat, deep bass, majestic drop, different styles, mix of culture and energy, Hebrew and Arabic vocals, Anthemic, Uplifting, World-fusion, Ethno`
 
-Messiah Is Here?
-Time For Global Peace
+[Intro: Short ambient pads, distant voices, sudden HEAVY Afrobeat drum kick]
+The signal is here…
+האות כאן…
+الإشارة هنا…
 
-Intention of the prompt is more important than the prompt: https://chatgpt.com/share/69cd8462-d544-8388-a4e5-34047ca53890
+[Opening Hook: MAJESTIC DROP, High Energy Afrobeat]
+שלום, سلام — ONE WORLD, ONE HEART
+לב אל לב — NUNCA MÁS LA GUERRA
+עזה, תל אביב — שניהם כואבים
+يا حبيبي، يا حبيبي — AMOR PARA TODOS
 
-Suno: https://suno.com/s/mcltwhxcHywQkiL1
+[Post-Chorus: Afrobeat Dance Break, Deep Log Drum Bass]
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
 
-### Lyrics (with English translation)
-````
+[Verse 1: Afrobeat groove, deep synth bass]
+לא ימין, לא שמאל, לא הם ולא אנחנו
+Todos somos uno — זה מה ששכחנו כבר
+פחד נעלם כשפותחים את הלב
+והאהבה — זה הקוד שמתחבר
+
+[Verse 2: Same melody as Verse 1]
+مش يمين ولا شمال، مش همّ ولا إحنا
+كلّنا واحد — זה מה ששכחנו כבר
+الخوف بيروح لما نفتح القلب
+والحبّ — هو ده الكود اللي بيوصّل
+
+[Bridge: Spiritual, Half-time tempo, Bass swells]
+המשיח החדש לא בא מבחוץ
+مش شخص من برّا... ده نور من جوّا
+No one is coming down
+זה אתה שמתעורר — זה אהבה
+
+[Break: Percussion solo, High energy, Syncopated]
+Wake up! קום עכשיו!
+Despierta! Enough!
+
+[Final Chorus: EXPLOSIVE, Choir energy, Global Celebration]
+שלום, سلام — ONE WORLD, ONE HEART
+לב אל לב — NUNCA MÁS LA GUERRA
+עזה, תל אביב — שניהם כואבים
+يا حبيبي، يا حبيبي — AMOR PARA TODOS
+
+[Post-Chorus: Massive Energy, Afro-dance style]
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+
+[Bridge 2: Slow down, reflective, ethereal]
+[Female Voice] No one is coming…
+[Male Voice] We are already here.
+[Female Voice] The source is in you.
+[Male Voice] Time for global peace.
+
+[Outro: INSANE ENERGY, High-octane peak, Brass section blast]
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+
+[Ending: Soften, reflective]
+[Female Voice] No one is coming…
+[Male Voice] We are already here.
+[distant gong fade]
+
+### Lyrics (clean, for DistroKid)
+
+The signal is here…
+האות כאן…
+الإشارة هنا…
+
+שלום, سلام — One world, one heart
+לב אל לב — Nunca más la guerra
+עזה, תל אביב — שניהם כואבים
+يا حبيبي، يا حبيبي — Amor para todos
+
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+
+לא ימין, לא שמאל, לא הם ולא אנחנו
+Todos somos uno — זה מה ששכחנו כבר
+פחד נעלם כשפותחים את הלב
+והאהבה — זה הקוד שמתחבר
+
+مش يمين ولا شمال، مش همّ ولا إحنا
+كلّنا واحد — זה מה ששכחנו כבר
+الخوف بيروح لما نفتح القلب
+والحبّ — هو ده الكود اللي بيوصّل
+
+המשיח החדש לא בא מבחוץ
+مش شخص من برّا... ده نور من جوّا
+No one is coming down
+זה אתה שמתעורר — זה אהבה
+
+Wake up! קום עכשיו!
+Despierta! Enough!
+
+שלום, سلام — One world, one heart
+לב אל לב — Nunca más la guerra
+עזה, תל אביב — שניהם כואבים
+يا حبيبي، يا حبيبي — Amor para todos
+
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+
+No one is coming…
+We are already here.
+The source is in you.
+Time for global peace.
+
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+Shalom, Salaam, One world, One heart
+
+No one is coming…
+We are already here.
+
+
+### Lyrics OLD (with English translation)
+
+
+```
 [Intro — ambient]
 
 האות כאן…				// The signal is here…
@@ -85,4 +196,26 @@ Enough
 No one is coming…
 אנחנו כבר כאן…						// We are already here…
 We are already here…
+```
+
+
+### Title OLD brainstorming: 
+
+```
+- Messiah
+- The Messiah
+- The New Messiah
+- Messiah Is Here
+- Everyone Is Messiah
+- Messiah Is Everyone
+- Messiah Is In You
+
+Messiah Is Here?
+Time For Global Peace
+
+Intention of the prompt is more important than the prompt: https://chatgpt.com/share/69cd8462-d544-8388-a4e5-34047ca53890
+
+Suno: https://suno.com/s/mcltwhxcHywQkiL1
+
+
 ```
