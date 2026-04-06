@@ -2,6 +2,7 @@
 
 Style: `global hit, afrobeat, deep bass, majestic drop, different styles, mix of culture and energy, Hebrew and Arabic vocals, Anthemic, Uplifting, World-fusion, Ethno`
 
+```
 [Intro: Short ambient pads, distant voices, sudden HEAVY Afrobeat drum kick]
 The signal is here…
 האות כאן…
@@ -67,9 +68,11 @@ Shalom, Salaam, One world, One heart
 [Female Voice] No one is coming…
 [Male Voice] We are already here.
 [distant gong fade]
+```
 
 ### Lyrics (clean, for DistroKid)
 
+```
 The signal is here…
 האות כאן…
 الإشارة هنا…
@@ -122,6 +125,7 @@ Shalom, Salaam, One world, One heart
 
 No one is coming…
 We are already here.
+```
 
 
 ### Lyrics OLD (with English translation)
