@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperdimensional Stem Visualiser 🌻</title>
+<style>
+  :root {
+    --bg: #05060a;
+    --ink: #e8e6df;
+    --accent: #ffd166;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: ui-monospace, "SF Mono", Menlo, monospace; overflow: hidden; }
+  #stage { position: fixed; inset: 0; }
+  #ui {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    padding: 12px 14px;
+    background: linear-gradient(to bottom, rgba(5,6,10,.85), rgba(5,6,10,0));
+    z-index: 10;
+  }
+  .stem {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid rgba(232,230,223,.25);
+    border-radius: 8px; padding: 6px 10px;
+    font-size: 12px; letter-spacing: .04em;
+  }
+  .stem b { font-weight: 600; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  input[type=file] { max-width: 150px; font-size: 10px; color: var(--ink); }
+  button {
+    background: var(--accent); color: #05060a; border: 0;
+    border-radius: 8px; padding: 8px 16px; font-family: inherit;
+    font-size: 12px; letter-spacing: .06em; cursor: pointer; font-weight: 700;
+  }
+  button:disabled { opacity: .4; cursor: default; }
+  #hint {
+    position: fixed; bottom: 14px; left: 0; right: 0; text-align: center;
+    font-size: 11px; letter-spacing: .08em; opacity: .55; z-index: 10;
+  }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div class="stem"><span class="dot" style="background:#ff5e5b"></span><b>STEM 1</b> low / rhythm <input type="file" accept="audio/*" data-stem="0"></div>
+  <div class="stem"><span class="dot" style="background:#4ecdc4"></span><b>STEM 2</b> mids / harmony <input type="file" accept="audio/*" data-stem="1"></div>
+  <div class="stem"><span class="dot" style="background:#ffd166"></span><b>STEM 3</b> highs / voice <input type="file" accept="audio/*" data-stem="2"></div>
+  <button id="play" disabled>PLAY ALL</button>
+</div>
+<div id="stage"></div>
+<div id="hint">load up to 3 stems · they play in sync · each drives its own dimension 🌻</div>
+
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+const stage = document.getElementById('stage');
+const playBtn = document.getElementById('play');
+
+// ---------- audio ----------
+const actx = new (window.AudioContext || window.webkitAudioContext)();
+const stems = [null, null, null]; // {buffer, analyser, data, source}
+let playing = false;
+
+function makeAnalyser() {
+  const a = actx.createAnalyser();
+  a.fftSize = 1024;
+  a.smoothingTimeConstant = 0.82;
+  return a;
+}
+
+document.querySelectorAll('input[type=file]').forEach(inp => {
+  inp.addEventListener('change', async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const buf = await actx.decodeAudioData(await f.arrayBuffer());
+    const i = +inp.dataset.stem;
+    stems[i] = { buffer: buf, analyser: makeAnalyser(), data: new Uint8Array(512), source: null };
+    playBtn.disabled = !stems.some(Boolean);
+  });
+});
+
+playBtn.addEventListener('click', () => {
+  if (playing) return location.reload();
+  actx.resume();
+  const t0 = actx.currentTime + 0.15;
+  stems.forEach(s => {
+    if (!s) return;
+    const src = actx.createBufferSource();
+    src.buffer = s.buffer;
+    src.connect(s.analyser);
+    s.analyser.connect(actx.destination);
+    src.start(t0);
+    s.source = src;
+  });
+  playing = true;
+  playBtn.textContent = 'RESET';
+});
+
+// energy of a band, 0..1
+function band(s, lo, hi) {
+  if (!s) return 0;
+  s.analyser.getByteFrequencyData(s.data);
+  let sum = 0, n = 0;
+  for (let i = lo; i < hi; i++) { sum += s.data[i]; n++; }
+  return sum / (n * 255);
+}
+
+// ---------- three ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x05060a, 0.045);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 0, 9);
+
+// DIMENSION 1: pulsing wireframe icosahedron (low end, the body)
+const ico = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(2.4, 1),
+  new THREE.MeshBasicMaterial({ color: 0xff5e5b, wireframe: true, transparent: true, opacity: 0.9 })
+);
+scene.add(ico);
+
+// DIMENSION 2: torus knot ribbon (mids, the harmony)
+const knot = new THREE.Mesh(
+  new THREE.TorusKnotGeometry(3.6, 0.08, 300, 12, 2, 5),
+  new THREE.MeshBasicMaterial({ color: 0x4ecdc4, transparent: true, opacity: 0.75 })
+);
+scene.add(knot);
+
+// DIMENSION 3: particle constellation (highs, the voice)
+const N = 2200;
+const pos = new Float32Array(N * 3);
+const base = new Float32Array(N * 3);
+for (let i = 0; i < N * 3; i++) { base[i] = pos[i] = (Math.random() - 0.5) * 16; }
+const pgeo = new THREE.BufferGeometry();
+pgeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+const pts = new THREE.Points(pgeo, new THREE.PointsMaterial({ color: 0xffd166, size: 0.045, transparent: true, opacity: 0.85 }));
+scene.add(pts);
+
+let t = 0;
+function tick() {
+  requestAnimationFrame(tick);
+  t += 0.008;
+
+  const low  = band(stems[0], 1, 24);    // rhythm
+  const mid  = band(stems[1], 24, 160);  // harmony
+  const high = band(stems[2], 160, 480); // voice / air
+
+  // dimension 1: breath and pulse
+  const s = 1 + low * 1.6;
+  ico.scale.setScalar(s);
+  ico.rotation.x += 0.002 + low * 0.03;
+  ico.rotation.y += 0.003 + low * 0.02;
+  ico.material.opacity = 0.35 + low * 0.65;
+
+  // dimension 2: orbit and hue drift
+  knot.rotation.z += 0.001 + mid * 0.02;
+  knot.rotation.x = Math.sin(t * 0.6) * 0.4 * (0.4 + mid);
+  knot.scale.setScalar(1 + mid * 0.5);
+  knot.material.color.setHSL(0.48 + mid * 0.25, 0.7, 0.45 + mid * 0.25);
+
+  // dimension 3: synesthetic scatter, arrives before the word does
+  const p = pgeo.attributes.position.array;
+  for (let i = 0; i < N; i++) {
+    const j = i * 3;
+    const w = Math.sin(t * 2 + i * 0.13);
+    p[j]     = base[j]     + w * high * 2.2;
+    p[j + 1] = base[j + 1] + Math.cos(t * 1.7 + i * 0.21) * high * 2.2;
+    p[j + 2] = base[j + 2] + w * high * 1.4;
+  }
+  pgeo.attributes.position.needsUpdate = true;
+  pts.rotation.y += 0.0006 + high * 0.008;
+
+  // camera: slow time-traveller drift
+  camera.position.x = Math.sin(t * 0.3) * 1.2;
+  camera.position.y = Math.cos(t * 0.22) * 0.8;
+  camera.lookAt(0, 0, 0);
+
+  renderer.render(scene, camera);
+}
+tick();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
