@@ -20,6 +20,8 @@
     input[type="range"] { min-width: 220px; accent-color: #f000ab; }
     #stage { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; isolation: isolate; background: radial-gradient(circle at 50% 0%, #1b1235, #06070d 56%, #020205); }
     #stage::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.42)); z-index: 1; pointer-events: none; }
+    #rgb-background { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #020205; }
+    #rgb-video { position: absolute; inset: -5%; width: 110%; height: 110%; object-fit: cover; mix-blend-mode: screen; pointer-events: none; filter: url(#rgb-echo) saturate(1.2) blur(2px); will-change: transform, opacity; }
     #visuals { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; }
     #caption { position: absolute; z-index: 4; left: 8%; right: 8%; top: 12%; text-align: center; font-size: clamp(28px, 6vw, 82px); font-weight: 900; letter-spacing: .05em; color: #fff; text-shadow: 0 3px 0 #120415, 0 0 18px #ff00bd; min-height: 1.2em; }
     #track-list { position: absolute; z-index: 4; left: 18px; bottom: 15px; display: grid; gap: 5px; max-width: 42%; }
@@ -54,11 +56,26 @@
       </div>
     </details>
     <section id="stage" aria-label="Real-time music visualizer">
+      <svg width="0" height="0" aria-hidden="true" focusable="false">
+        <filter id="rgb-echo" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+          <feColorMatrix in="SourceGraphic" result="red" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .52 0"/>
+          <feOffset id="red-offset" in="red" dx="-4" dy="0" result="red-shift"/>
+          <feColorMatrix in="SourceGraphic" result="green" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 .30 0"/>
+          <feOffset id="green-offset" in="green" dx="0" dy="0" result="green-shift"/>
+          <feColorMatrix in="SourceGraphic" result="blue" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 .62 0"/>
+          <feOffset id="blue-offset" in="blue" dx="4" dy="0" result="blue-shift"/>
+          <feBlend in="red-shift" in2="green-shift" mode="screen" result="red-green"/>
+          <feBlend in="red-green" in2="blue-shift" mode="screen"/>
+        </filter>
+      </svg>
+      <div id="rgb-background" aria-hidden="true">
+        <video id="rgb-video" muted loop playsinline preload="metadata"></video>
+      </div>
       <canvas id="visuals"></canvas>
       <div id="track-list" aria-live="polite"></div>
       <div id="caption" aria-live="polite"></div>
     </section>
-    <p class="hint">Each loaded file gets its own live waveform lane. Lyrics advance one word at a time from the vocal timing anchors.</p>
+    <p class="hint">The square video becomes a transparent RGB chromatic echo behind the stem systems. Lyrics advance from the vocal timing anchors.</p>
   </main>
   <script>
     // Exact start times from ___lyricsJSON/05_binface_words.json.
@@ -68,8 +85,11 @@
     const fullAudio = document.getElementById('full-audio'); const stems = document.getElementById('stems'); const defaults = document.getElementById('defaults'); const play = document.getElementById('play'); const mute = document.getElementById('mute');
     const seek = document.getElementById('seek'); const time = document.getElementById('time'); const caption = document.getElementById('caption'); const loadState = document.getElementById('load-state');
     const trackList = document.getElementById('track-list'); const canvas = document.getElementById('visuals'); const stage = document.getElementById('stage'); const ctx = canvas.getContext('2d');
+    const rgbVideo = document.getElementById('rgb-video'); const redOffset = document.getElementById('red-offset'); const greenOffset = document.getElementById('green-offset'); const blueOffset = document.getElementById('blue-offset');
     let audioContext, tracks = [], master, muted = false, animationFrame;
+    let rgbLoadPromise;
     const projectRoot = '.';
+    const projectVideo = `${projectRoot}/video.mp4`;
     const projectDefaults = {
       master: { name: 'Marsita the Ultra — Vote for the Bin (Count Binface vs Farage).mp3', url: `${projectRoot}/FINAL%20AUDIO/Marsita%20the%20Ultra%20%E2%80%94%20Vote%20for%20the%20Bin%20(Count%20Binface%20vs%20Farage).mp3` },
       stems: [
@@ -86,6 +106,26 @@
       ]
     };
     function format(seconds) { const total = Math.round((seconds || 0) * 1000); return `${String(Math.floor(total / 60000)).padStart(2,'0')}:${String(Math.floor(total / 1000) % 60).padStart(2,'0')}.${String(total % 1000).padStart(3,'0')}`; }
+    function loadRgbVideo() {
+      if (rgbLoadPromise) return rgbLoadPromise;
+      rgbLoadPromise = new Promise((resolve, reject) => {
+        rgbVideo.addEventListener('loadedmetadata', resolve, { once: true }); rgbVideo.addEventListener('error', () => reject(new Error('Could not load video.mp4')), { once: true }); rgbVideo.src = projectVideo; rgbVideo.load();
+      });
+      return rgbLoadPromise;
+    }
+    function rgbTarget(seconds) { const duration = rgbVideo.duration; return ((seconds % duration) + duration) % duration; }
+    function syncRgb(seconds, force = false) {
+      if (!Number.isFinite(rgbVideo.duration) || !rgbVideo.duration) return; const target = rgbTarget(seconds); if (force || Math.abs(rgbVideo.currentTime - target) > .11) rgbVideo.currentTime = target;
+    }
+    function setRgbPlayback(playing, seconds = 0) {
+      if (!playing) { rgbVideo.pause(); return; }
+      syncRgb(seconds, true); rgbVideo.play().catch(() => {});
+    }
+    function updateRgbEffect(seconds) {
+      const energy = master ? average(master, 0, 30) : .04, spread = 3 + Math.pow(energy, .7) * 23, sway = Math.sin(seconds * 1.35) * 2.5, lift = Math.cos(seconds * .9) * spread * .18;
+      redOffset.setAttribute('dx', (-spread).toFixed(2)); redOffset.setAttribute('dy', lift.toFixed(2)); greenOffset.setAttribute('dx', (sway * .18).toFixed(2)); greenOffset.setAttribute('dy', (-lift * .25).toFixed(2)); blueOffset.setAttribute('dx', spread.toFixed(2)); blueOffset.setAttribute('dy', (-lift).toFixed(2));
+      rgbVideo.style.transform = `translate(${sway}px, 0) scale(${1.07 + energy * .025})`; rgbVideo.style.opacity = .66 + energy * .22;
+    }
     function roleFor(name) { const value = name.toLowerCase(); if (value.includes('vocal') && value.includes('back')) return 'backing'; if (value.includes('vocal')) return 'lead'; if (value.includes('drum') || value.includes('perc')) return 'drums'; if (value.includes('bass')) return 'bass'; if (value.includes('master') || value.includes('final') || value.includes('mix') || value.includes('vote for the bin')) return 'master'; return 'other'; }
     function resize() { const ratio = window.devicePixelRatio || 1; const rect = stage.getBoundingClientRect(); canvas.width = rect.width * ratio; canvas.height = rect.height * ratio; canvas.style.width = `${rect.width}px`; canvas.style.height = `${rect.height}px`; ctx.setTransform(ratio,0,0,ratio,0,0); }
     function renderTracks() { trackList.innerHTML = tracks.map(track => `<div class="track"><span class="dot" style="--colour:${track.colour}"></span>${track === master ? 'FULL AUDIO — ' : ''}${track.file.name}</div>`).join(''); }
@@ -99,7 +139,7 @@
     function connectDefault(file, index) { return connectSource(file, index, file.url); }
     function connectToOutput(track) { (track === master ? track.analyser : track.silentGain).connect(audioContext.destination); }
     function attachMasterEvents() {
-      master.audio.addEventListener('timeupdate', updateTime); master.audio.addEventListener('ended', () => { play.textContent = 'Play'; });
+      master.audio.addEventListener('timeupdate', updateTime); master.audio.addEventListener('ended', () => { play.textContent = 'Play'; setRgbPlayback(false); });
     }
     async function loadFullAudio(file) {
       if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -122,7 +162,7 @@
     }
     async function prepareDefaults() {
       play.disabled = true; play.textContent = 'Loading defaults…'; loadState.textContent = 'Loading project…';
-      try { await loadProjectDefaults(); play.disabled = false; play.textContent = 'Play'; loadState.textContent = 'Ready'; }
+      try { await Promise.all([loadProjectDefaults(), loadRgbVideo()]); play.disabled = false; play.textContent = 'Play'; loadState.textContent = 'Ready'; }
       catch (error) { console.error(error); play.disabled = true; play.textContent = 'Load failed'; loadState.textContent = 'Open Manual files to retry'; }
     }
     async function loadFullDefault(file) {
@@ -133,7 +173,11 @@
     function updateTime() { if (!master) return; const current = master.audio.currentTime || 0; const duration = master.audio.duration || 0; seek.max = duration || 1; seek.value = current; time.textContent = `${format(current)} / ${format(duration)}`; const cue = wordCues.find(([start,end]) => current >= start && current <= end); caption.textContent = cue ? cue[2] : ''; }
     async function togglePlay() {
       if (!master) return; await audioContext.resume();
-      if (master.audio.paused) { const at = master.audio.currentTime; tracks.forEach(track => { track.audio.currentTime = at; track.audio.play(); }); play.textContent = 'Pause'; } else { tracks.forEach(track => track.audio.pause()); play.textContent = 'Play'; }
+      if (master.audio.paused) {
+        const at = master.audio.currentTime; tracks.forEach(track => { track.audio.currentTime = at; });
+        const masterStart = master.audio.play(); tracks.filter(track => track !== master).forEach(track => track.audio.play().catch(() => {}));
+        masterStart.then(() => setRgbPlayback(true, at)).catch(() => {}); play.textContent = 'Pause';
+      } else { tracks.forEach(track => track.audio.pause()); setRgbPlayback(false); play.textContent = 'Play'; }
     }
     function average(track, from, to) { let sum = 0; const end = Math.min(track.bins.length, to); for (let i = from; i < end; i++) sum += track.bins[i]; return sum / Math.max(1, end - from) / 255; }
     function drawTrack(track, index, width, height, total) {
@@ -155,7 +199,7 @@
       ctx.globalAlpha = 1;
     }
     function draw() {
-      const rect = stage.getBoundingClientRect(); const width = rect.width, height = rect.height; ctx.clearRect(0,0,width,height); drawSpace(width, height, master?.audio.currentTime || 0);
+      const rect = stage.getBoundingClientRect(); const width = rect.width, height = rect.height; const current = master?.audio.currentTime || 0; ctx.clearRect(0,0,width,height); drawSpace(width, height, current); syncRgb(current); updateRgbEffect(current);
       ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 1; for (let i=0;i<12;i++) { const y=height*.60+i*(height*.31/12); ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
       tracks.forEach((track,index) => drawTrack(track,index,width,height,tracks.length)); updateTime(); animationFrame = requestAnimationFrame(draw);
     }
@@ -164,7 +208,7 @@
     defaults.addEventListener('click', prepareDefaults);
     play.addEventListener('click', togglePlay);
     mute.addEventListener('click', () => { muted = !muted; if (master) master.audio.muted = muted; mute.textContent = muted ? 'Unmute' : 'Mute'; });
-    seek.addEventListener('input', () => { if (!master) return; const at = Number(seek.value); tracks.forEach(track => { track.audio.currentTime = at; }); updateTime(); });
+    seek.addEventListener('input', () => { if (!master) return; const at = Number(seek.value); tracks.forEach(track => { track.audio.currentTime = at; }); syncRgb(at, true); updateTime(); });
     window.addEventListener('resize', resize); resize(); draw(); prepareDefaults();
   </script>
 </body>
