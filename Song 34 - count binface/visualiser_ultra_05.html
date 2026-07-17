@@ -20,7 +20,7 @@
   #safe{position:fixed;z-index:4;inset:0;display:grid;place-items:center;pointer-events:none}
   #mediaShell{
     --merge-depth:5%;--merge-edge:.34;
-    position:absolute;left:50%;top:45.5%;width:min(54vh,54vw);aspect-ratio:1;transform:translate(-50%,-50%);
+    position:absolute;left:50%;top:45.5%;width:calc(min(54vh,54vw)*var(--shell-scale,1));aspect-ratio:1;transform:translate(-50%,-50%);
     background:#050611;overflow:hidden;isolation:isolate;border:0;box-shadow:none;clip-path:none;
     -webkit-mask-image:linear-gradient(to right,rgba(0,0,0,var(--merge-edge)),#000 var(--merge-depth),#000 calc(100% - var(--merge-depth)),rgba(0,0,0,var(--merge-edge))),linear-gradient(to bottom,rgba(0,0,0,var(--merge-edge)),#000 var(--merge-depth),#000 calc(100% - var(--merge-depth)),rgba(0,0,0,var(--merge-edge)));
     -webkit-mask-composite:source-in;mask-image:linear-gradient(to right,rgba(0,0,0,var(--merge-edge)),#000 var(--merge-depth),#000 calc(100% - var(--merge-depth)),rgba(0,0,0,var(--merge-edge))),linear-gradient(to bottom,rgba(0,0,0,var(--merge-edge)),#000 var(--merge-depth),#000 calc(100% - var(--merge-depth)),rgba(0,0,0,var(--merge-edge)));mask-composite:intersect;
@@ -78,7 +78,7 @@
   #error{color:#ff6f91}
   /* Achievement timeline: rail of unlock pips under the square + toast pop-ups.
      All motion is driven from song time in JS (no CSS animations) so the 10× capture speed-up stays correct. */
-  #achieveDock{position:absolute;z-index:6;left:50%;top:calc(45.5% + min(27vh,27vw));transform:translateX(-50%);width:min(54vh,54vw);pointer-events:none}
+  #achieveDock{position:absolute;z-index:6;left:50%;top:calc(45.5% + min(27vh,27vw)*var(--shell-scale,1));transform:translateX(-50%);width:calc(min(54vh,54vw)*var(--shell-scale,1));pointer-events:none}
   #achieveRail{position:relative;margin-top:2.1vh;height:4px;background:rgba(255,255,255,.08)}
   #achieveRail>i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--pink),var(--gold),var(--cyan));box-shadow:0 0 14px rgba(37,220,255,.5)}
   .pip{position:absolute;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);background:#0b0e1d;border:1px solid rgba(255,255,255,.3)}
@@ -89,9 +89,21 @@
   .toast .tIcon{font-size:clamp(20px,2.4vw,30px);filter:drop-shadow(0 0 8px rgba(255,229,107,.8))}
   .toast em{display:block;font:700 clamp(7px,.7vw,10px)/1.3 ui-monospace,Menlo,monospace;font-style:normal;letter-spacing:.38em;color:var(--gold);text-transform:uppercase;text-shadow:0 0 10px rgba(255,229,107,.7)}
   .toast strong{display:block;font:1000 clamp(14px,1.7vw,24px)/1.05 "Arial Black",Impact,sans-serif;letter-spacing:-.02em;color:#fff;text-transform:uppercase;text-shadow:-2px 0 rgba(255,43,214,.8),2px 0 rgba(37,220,255,.8),0 0 18px rgba(255,255,255,.25);white-space:nowrap}
+  /* Menu: layer toggles + speed/size config, persisted locally. */
+  #menu{position:fixed;right:14px;top:14px;z-index:30;width:236px;max-height:calc(100vh - 28px);overflow-y:auto;padding:14px 16px 16px;background:rgba(3,4,14,.9);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(14px);font:700 10px/1.9 ui-monospace,"SFMono-Regular",Menlo,monospace;letter-spacing:.08em;color:rgba(255,255,255,.82);text-transform:uppercase}
+  #menu.hidden{display:none}
+  #menu h2{margin:0 0 8px;font:inherit;font-size:11px;letter-spacing:.34em;color:var(--cyan);text-shadow:0 0 10px rgba(37,220,255,.5)}
+  #menu .sec{margin-top:8px;color:rgba(255,255,255,.4);letter-spacing:.24em;font-size:8px}
+  #menu label{display:flex;align-items:center;gap:9px;cursor:pointer}
+  #menu .row{display:flex;gap:12px;flex-wrap:wrap}
+  #menu .row label{gap:5px}
+  #menu input{accent-color:var(--acid);margin:0;cursor:pointer}
+  #menu hr{border:0;border-top:1px solid rgba(255,255,255,.12);margin:10px 0 2px}
+  #bigTimer{position:absolute;top:11.5vh;left:50%;transform:translateX(-50%);font:1000 clamp(22px,3.4vw,54px)/1 ui-monospace,"SFMono-Regular",Menlo,monospace;letter-spacing:.06em;color:#fff;font-variant-numeric:tabular-nums;text-shadow:-3px 0 rgba(255,43,214,.7),3px 0 rgba(37,220,255,.7),0 0 26px rgba(255,255,255,.2)}
+  #bigTimer.hidden{display:none}
   @media (max-aspect-ratio:1/1){
-    #mediaShell{width:min(90vw,50vh)}
-    #achieveDock{width:min(90vw,50vh);top:calc(45.5% + min(45vw,25vh))}
+    #mediaShell{width:calc(min(90vw,50vh)*var(--shell-scale,1))}
+    #achieveDock{width:calc(min(90vw,50vh)*var(--shell-scale,1));top:calc(45.5% + min(45vw,25vh)*var(--shell-scale,1))}
     #stemLegend{display:none} #titleBug{width:90vw;letter-spacing:.25em}
   }
   @media (max-width:680px){#transport{grid-template-columns:1fr auto;gap:6px}#seek{grid-column:1/-1;grid-row:1}.transportButtons{grid-column:2}#time{grid-column:1;grid-row:2;text-align:left}#transport button{padding:7px 8px}}
@@ -104,6 +116,7 @@
 
 <main id="safe">
   <div id="titleBug"><b>Vote for the Bin</b>Marsita the Ultra · Stem Dimension 05</div>
+  <div id="bigTimer" class="hidden">00:00</div>
   <div id="mediaShell">
     <img id="centerImage" alt="Vote for the Bin artwork">
     <video id="centerVideo" muted loop playsinline preload="auto"></video>
@@ -121,14 +134,42 @@
 <div id="transport" class="hidden">
   <span id="time">00:00.000 / 00:00.000</span>
   <input id="seek" type="range" min="0" max="1" value="0" step="0.01" aria-label="Playback position">
-  <div class="transportButtons"><button id="back5" aria-label="Rewind 5 seconds">−5S</button><button id="pause">PAUSE</button><button id="forward5" aria-label="Forward 5 seconds">+5S</button><button id="restart">RESTART</button><button id="full">FULL</button><button id="hide">HIDE</button></div>
+  <div class="transportButtons"><button id="back5" aria-label="Rewind 5 seconds">−5S</button><button id="pause">PAUSE</button><button id="forward5" aria-label="Forward 5 seconds">+5S</button><button id="restart">RESTART</button><button id="menuBtn">MENU</button><button id="full">FULL</button><button id="hide">HIDE</button></div>
 </div>
+
+<aside id="menu" class="hidden" aria-label="Layer and playback menu">
+  <h2>Menu</h2>
+  <div class="sec">Layers · pick what gets recorded</div>
+  <label><input type="checkbox" data-layer="title" checked>Title</label>
+  <label><input type="checkbox" data-layer="square" checked>Square video</label>
+  <label><input type="checkbox" data-layer="lyrics" checked>Lyrics</label>
+  <label><input type="checkbox" data-layer="achievements" checked>Achievements</label>
+  <label><input type="checkbox" data-layer="timer">Big timer</label>
+  <label><input type="checkbox" data-layer="meters" checked>Stem meters</label>
+  <label><input type="checkbox" data-layer="systems" checked>3D systems</label>
+  <label><input type="checkbox" data-layer="rgb" checked>RGB field</label>
+  <hr>
+  <div class="sec">Playback speed</div>
+  <div class="row">
+    <label><input type="radio" name="speed" value="0.1" checked>0.1×</label>
+    <label><input type="radio" name="speed" value="0.25">0.25×</label>
+    <label><input type="radio" name="speed" value="0.5">0.5×</label>
+    <label><input type="radio" name="speed" value="1">1×</label>
+  </div>
+  <hr>
+  <div class="sec">Square size</div>
+  <div class="row">
+    <label><input type="radio" name="size" value="0.8">S</label>
+    <label><input type="radio" name="size" value="1" checked>M</label>
+    <label><input type="radio" name="size" value="1.2">L</label>
+  </div>
+</aside>
 
 <div id="start">
   <div id="card">
-    <div class="kicker">version 05 · 0.1× capture · achievement timeline</div>
+    <div class="kicker">version 05 · achievement timeline · menu</div>
     <h1>Visualiser <em>Ultra</em></h1>
-    <p>Playback runs at one-tenth speed for smooth recording. Speed the capture up 10× in your editor; the stem-reactive RGB field and 3D systems remain synchronized.</p>
+    <p>Playback defaults to one-tenth speed for smooth recording — speed the capture up 10× in your editor. Press M (or the MENU button) to toggle layers on and off, change playback speed, and resize the square.</p>
     <div id="loadStatus">Scanning the project…</div>
     <div id="progress"><i></i></div>
     <button id="go" disabled>Loading</button>
@@ -136,7 +177,7 @@
       <summary>Manual overrides</summary>
       <div><label>Master audio<br><input id="masterPick" type="file" accept="audio/*"></label><label>Square video<br><input id="videoPick" type="file" accept="video/*,image/*"></label></div>
     </details>
-    <p style="margin-bottom:0;font-size:10px">SPACE pause · ←/→ 5 seconds · R restart · L low-strobe · W wave systems · V square footage · H controls · F fullscreen</p>
+    <p style="margin-bottom:0;font-size:10px">SPACE pause · ←/→ 5 seconds · R restart · M menu · L low-strobe · W wave systems · V square footage · H controls · F fullscreen</p>
   </div>
 </div>
 
@@ -180,7 +221,7 @@ const start=$('#start'),go=$('#go'),status=$('#loadStatus'),progress=$('#progres
 const masterAudio=$('#masterAudio'),video=$('#centerVideo'),image=$('#centerImage'),mediaShell=$('#mediaShell'),hero=$('#heroWord'),mediaVideos=[video];
 const fx=$('#fx'),fctx=fx.getContext('2d');
 const textMeasure=document.createElement('canvas').getContext('2d');
-const TARGET_FPS=30,MAX_DPR=1,PLAYBACK_RATE=.1;
+const TARGET_FPS=30,MAX_DPR=1;let PLAYBACK_RATE=.1;
 let dpr=1,fw=0,fh=0,running=false,paused=false,scrubbing=false,resumeAfterScrub=false,showSystems=true,showMedia=true,lowStrobe=matchMedia('(prefers-reduced-motion:reduce)').matches;
 let pauseAt=0,duration=0,words=[],featureData=null,lastWord=-2,lastBeat=-1,shock=0,wordPunch=0;
 const sceneState={rgbSpread:0,shapePulse:0,twist:0,turbulence:0,fusion:0,impact:0,air:0};
@@ -506,7 +547,7 @@ function drawFX(t){
 }
 
 function formatTime(t){t=Math.max(0,Number(t)||0);return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.floor(t%1*1000)).padStart(3,'0')}`}
-function updateTimeline(t){if(!scrubbing){seek.value=Math.min(duration||0,t).toFixed(2);seek.style.setProperty('--seek',`${duration?t/duration*100:0}%`)}$('#time').textContent=`0.1× · ${formatTime(t)} / ${formatTime(duration)}`}
+function updateTimeline(t){if(!scrubbing){seek.value=Math.min(duration||0,t).toFixed(2);seek.style.setProperty('--seek',`${duration?t/duration*100:0}%`)}$('#time').textContent=`${PLAYBACK_RATE}× · ${formatTime(t)} / ${formatTime(duration)}`;bigTimer.textContent=formatTime(t).slice(0,5)}
 let lastFrameTime=performance.now()*.001,lastRenderMs=0;
 function tick(renderMs){requestAnimationFrame(tick);if(renderMs-lastRenderMs<1000/TARGET_FPS-1)return;lastRenderMs=renderMs;const now=renderMs*.001,dt=Math.min(.05,Math.max(0,now-lastFrameTime));lastFrameTime=now;const t=clock();if(running&&!paused&&!scrubbing){analysePrecomputed(t);syncVideos(t)}updateThree(t,running&&!paused&&!scrubbing?dt*PLAYBACK_RATE:0);drawFX(t);renderLyrics(t);renderAchievements(t);updateTimeline(t)}
 requestAnimationFrame(tick);
@@ -522,8 +563,44 @@ $('#masterPick').addEventListener('change',async e=>{const f=e.target.files[0];i
 $('#videoPick').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const u=URL.createObjectURL(f);if(f.type.startsWith('image/')){image.src=u;for(const item of mediaVideos){item.pause();item.removeAttribute('src');item.load()}}else setVideoSource(u)});
 addEventListener('keydown',e=>{
   if(!start.classList.contains('hidden'))return;const k=e.key.toLowerCase();
-  if(k===' '){e.preventDefault();togglePause()}if(k==='arrowleft'){e.preventDefault();jumpBy(-5)}if(k==='arrowright'){e.preventDefault();jumpBy(5)}if(k==='r')startPlayback(0);if(k==='l')lowStrobe=!lowStrobe;if(k==='w')showSystems=!showSystems;if(k==='v'){showMedia=!showMedia;mediaShell.style.opacity=showMedia?1:0}if(k==='h')transport.classList.toggle('hidden');if(k==='f')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+  if(k===' '){e.preventDefault();togglePause()}if(k==='arrowleft'){e.preventDefault();jumpBy(-5)}if(k==='arrowright'){e.preventDefault();jumpBy(5)}if(k==='r')startPlayback(0);if(k==='l')lowStrobe=!lowStrobe;if(k==='w')setLayer('systems',!showSystems);if(k==='v')setLayer('square',!showMedia);if(k==='m')menu.classList.toggle('hidden');if(k==='h')transport.classList.toggle('hidden');if(k==='f')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
 });
+
+// Menu: layer toggles + speed/size. State persists in localStorage so a recording setup survives reloads.
+const menu=$('#menu'),bigTimer=$('#bigTimer'),MENU_KEY='ultra05-menu';
+const LAYERS={
+  title:v=>{$('#titleBug').style.display=v?'':'none'},
+  square:v=>{showMedia=v;mediaShell.style.opacity=v?1:0},
+  lyrics:v=>{$('#lyrics').style.display=v?'':'none'},
+  achievements:v=>{$('#achieveDock').style.display=v?'':'none'},
+  timer:v=>{bigTimer.classList.toggle('hidden',!v)},
+  meters:v=>{$('#stemLegend').style.display=v?'':'none'},
+  systems:v=>{showSystems=v},
+  rgb:v=>{rgbExtension.visible=v}
+};
+let menuLoaded=false;
+function setLayer(name,on){const apply=LAYERS[name];if(!apply)return;apply(on);const box=menu.querySelector(`input[data-layer="${name}"]`);if(box)box.checked=on;saveMenu()}
+function setSpeed(rate){PLAYBACK_RATE=rate;masterAudio.playbackRate=rate;for(const item of mediaVideos)item.playbackRate=rate;const radio=menu.querySelector(`input[name="speed"][value="${rate}"]`);if(radio)radio.checked=true;saveMenu()}
+function setSize(scale){document.documentElement.style.setProperty('--shell-scale',scale);const radio=menu.querySelector(`input[name="size"][value="${scale}"]`);if(radio)radio.checked=true;saveMenu()}
+function saveMenu(){
+  if(!menuLoaded)return;
+  const layers={};for(const box of menu.querySelectorAll('input[data-layer]'))layers[box.dataset.layer]=box.checked;
+  const data={layers,speed:menu.querySelector('input[name="speed"]:checked')?.value,size:menu.querySelector('input[name="size"]:checked')?.value};
+  try{localStorage.setItem(MENU_KEY,JSON.stringify(data))}catch{}
+}
+function loadMenu(){
+  let data=null;try{data=JSON.parse(localStorage.getItem(MENU_KEY))}catch{}
+  if(data){for(const [name,on] of Object.entries(data.layers||{}))setLayer(name,!!on);if(data.speed)setSpeed(+data.speed);if(data.size)setSize(+data.size)}
+  menuLoaded=true;
+}
+menu.addEventListener('change',e=>{
+  const box=e.target;
+  if(box.dataset.layer)setLayer(box.dataset.layer,box.checked);
+  else if(box.name==='speed')setSpeed(+box.value);
+  else if(box.name==='size')setSize(+box.value);
+});
+$('#menuBtn').onclick=()=>menu.classList.toggle('hidden');
+loadMenu();
 
 preload();
 </script>
