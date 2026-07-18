@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vote for the Bin — Stem Stage</title>
+  <style>
+    :root { color-scheme: dark; font-family: Arial, sans-serif; background: #08050a; color: #fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 18px; background: #08050a; }
+    main { max-width: 1320px; margin: auto; }
+    h1 { margin: 0; font-size: clamp(21px, 3vw, 34px); letter-spacing: .05em; }
+    .sub { color: #b8a8b8; margin: 6px 0 14px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+    button, input { font: inherit; }
+    button { background: #f000ab; color: #fff; border: 1px solid #ff77d4; border-radius: 7px; padding: 9px 13px; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: wait; }
+    button.secondary { background: #1d1220; border-color: #6a4168; }
+    input[type="file"] { max-width: 370px; color: #d8cbd8; }
+    input[type="range"] { min-width: 220px; accent-color: #f000ab; }
+    #stage { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; isolation: isolate; background: radial-gradient(circle at 50% 0%, #1b1235, #06070d 56%, #020205); }
+    #stage::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.42)); z-index: 1; pointer-events: none; }
+    #rgb-background { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #020205; }
+    #rgb-video { position: absolute; inset: -5%; width: 110%; height: 110%; object-fit: cover; mix-blend-mode: screen; pointer-events: none; filter: url(#rgb-echo) saturate(1.2) blur(2px); will-change: transform, opacity; }
+    #visuals { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; }
+    #caption { position: absolute; z-index: 4; left: 8%; right: 8%; top: 12%; text-align: center; font-size: clamp(28px, 6vw, 82px); font-weight: 900; letter-spacing: .05em; color: #fff; text-shadow: 0 3px 0 #120415, 0 0 18px #ff00bd; min-height: 1.2em; }
+    #track-list { position: absolute; z-index: 4; left: 18px; bottom: 15px; display: grid; gap: 5px; max-width: 42%; }
+    .track { display: flex; align-items: center; gap: 7px; color: #fff; font-size: clamp(11px, 1.4vw, 17px); text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; background: var(--colour); box-shadow: 0 0 10px var(--colour); }
+    #time { color: #78ff89; font-variant-numeric: tabular-nums; font-weight: 700; }
+    #load-state { color: #b8a8b8; font-weight: 700; }
+    details { margin: 0 0 14px; color: #b8a8b8; }
+    details summary { cursor: pointer; }
+    .manual-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 10px; }
+    .hint { margin: 10px 0 0; color: #b8a8b8; }
+    @media (max-width: 620px) { body { padding: 10px; } .controls { gap: 7px; } button { padding: 8px 10px; } input[type="range"] { min-width: 150px; } #caption { top: 10%; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>VOTE FOR THE BIN — LIVE STEM STAGE</h1>
+    <p class="sub">The project loads itself. Press Play.</p>
+    <div class="controls">
+      <button id="play" type="button" disabled>Loading defaults…</button>
+      <button id="mute" class="secondary" type="button">Mute</button>
+      <span id="load-state">Loading project…</span>
+      <span id="time">00:00.000 / 00:00.000</span>
+      <input id="seek" type="range" min="0" max="1" value="0" step="0.001" aria-label="Seek through track">
+    </div>
+    <details>
+      <summary>Manual files</summary>
+      <div class="manual-controls">
+        <label>Full audio <input id="full-audio" type="file" accept="audio/*"></label>
+        <label>Add stems <input id="stems" type="file" accept="audio/*" multiple></label>
+        <button id="defaults" class="secondary" type="button">Reload defaults</button>
+      </div>
+    </details>
+    <section id="stage" aria-label="Real-time music visualizer">
+      <svg width="0" height="0" aria-hidden="true" focusable="false">
+        <filter id="rgb-echo" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+          <feColorMatrix in="SourceGraphic" result="red" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .52 0"/>
+          <feOffset id="red-offset" in="red" dx="-4" dy="0" result="red-shift"/>
+          <feColorMatrix in="SourceGraphic" result="green" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 .30 0"/>
+          <feOffset id="green-offset" in="green" dx="0" dy="0" result="green-shift"/>
+          <feColorMatrix in="SourceGraphic" result="blue" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 .62 0"/>
+          <feOffset id="blue-offset" in="blue" dx="4" dy="0" result="blue-shift"/>
+          <feBlend in="red-shift" in2="green-shift" mode="screen" result="red-green"/>
+          <feBlend in="red-green" in2="blue-shift" mode="screen"/>
+        </filter>
+      </svg>
+      <div id="rgb-background" aria-hidden="true">
+        <video id="rgb-video" muted loop playsinline preload="metadata"></video>
+      </div>
+      <canvas id="visuals"></canvas>
+      <div id="track-list" aria-live="polite"></div>
+      <div id="caption" aria-live="polite"></div>
+    </section>
+    <p class="hint">The square video becomes a transparent RGB chromatic echo behind the stem systems. Lyrics advance from the vocal timing anchors.</p>
+  </main>
+  <script>
+    // Exact start times from ___lyricsJSON/05_binface_words.json.
+    const wordTiming = [{"t":26.985,"w":"EVERYBODY"},{"t":27.582,"w":"IN"},{"t":28.092,"w":"VOTE"},{"t":28.562,"w":"FOR"},{"t":28.936,"w":"THE"},{"t":29.343,"w":"BIN"},{"t":29.948,"w":"EVERYBODY"},{"t":30.97,"w":"YES"},{"t":31.221,"w":"VOTE"},{"t":31.661,"w":"FOR"},{"t":32.083,"w":"THE"},{"t":32.386,"w":"BEST"},{"t":32.928,"w":"NOT"},{"t":33.269,"w":"THAT"},{"t":33.729,"w":"TRASH"},{"t":34.764,"w":"CLACT-ON"},{"t":35.554,"w":"ON-ON-ON-ON"},{"t":36.029,"w":"FIRE"},{"t":36.498,"w":"RISE"},{"t":36.771,"w":"FROM"},{"t":37.085,"w":"ASH"},{"t":39.32,"w":"A"},{"t":39.621,"w":"I"},{"t":40.581,"w":"TECHNOLOGY"},{"t":42.599,"w":"HU"},{"t":42.988,"w":"MAN"},{"t":43.711,"w":"BIOLOGY"},{"t":45.074,"w":"BRAIN"},{"t":45.496,"w":"ADAPTS"},{"t":47.797,"w":"DIFFERENT"},{"t":48.541,"w":"CRAFTS"},{"t":51.567,"w":"ADAPTATION"},{"t":52.432,"w":"IDENTITY"},{"t":53.765,"w":"PROSPERITY"},{"t":55.387,"w":"EQUALITY"},{"t":56.608,"w":"HONOUR"},{"t":57.299,"w":"AND"},{"t":57.657,"w":"DIGNITY"},{"t":59.73,"w":"O-O-O-O-PPORTUNITY"},{"t":64.485,"w":"EVERYBODY"},{"t":65.013,"w":"IN"},{"t":65.562,"w":"VOTE"},{"t":65.991,"w":"FOR"},{"t":66.373,"w":"THE"},{"t":66.676,"w":"BIN"},{"t":67.281,"w":"EVERYBODY"},{"t":68.238,"w":"YES"},{"t":68.678,"w":"VOTE"},{"t":69.068,"w":"FOR"},{"t":69.519,"w":"THE"},{"t":69.874,"w":"BEST"},{"t":70.698,"w":"NOT"},{"t":71.054,"w":"THAT"},{"t":71.333,"w":"TRASH"},{"t":71.953,"w":"CLACT-ON"},{"t":72.662,"w":"ON-ON-ON-ON"},{"t":73.573,"w":"FIRE"},{"t":73.974,"w":"RISE"},{"t":74.349,"w":"FROM"},{"t":74.692,"w":"ASH"},{"t":92.475,"w":"STOP"},{"t":92.968,"w":"THE"},{"t":93.471,"w":"WAR"},{"t":94.008,"w":"GLOBAL"},{"t":94.371,"w":"PEACE"},{"t":95.077,"w":"KINDLY"},{"t":95.406,"w":"PLEASE"},{"t":95.861,"w":"CLIMATE"},{"t":96.206,"w":"HOT"},{"t":97.093,"w":"LIKE"},{"t":97.4,"w":"OR"},{"t":97.757,"w":"NOT"},{"t":98.295,"w":"PLANT"},{"t":98.646,"w":"THE"},{"t":99.037,"w":"SEED"},{"t":99.333,"w":"NATURE"},{"t":99.647,"w":"LEAD"},{"t":100.356,"w":"MACHINES"},{"t":100.675,"w":"WORK"},{"t":101.159,"w":"HUMANS"},{"t":101.488,"w":"PLAY"},{"t":105.313,"w":"EVERYBODY"},{"t":105.708,"w":"IN"},{"t":106.096,"w":"VOTE"},{"t":106.465,"w":"FOR"},{"t":106.857,"w":"THE"},{"t":107.226,"w":"BIN"},{"t":107.626,"w":"EVERYBODY"},{"t":108.044,"w":"YES"},{"t":108.418,"w":"VOTE"},{"t":108.81,"w":"FOR"},{"t":109.167,"w":"THE"},{"t":109.547,"w":"BEST"},{"t":110.648,"w":"NOT"},{"t":110.979,"w":"THAT"},{"t":111.354,"w":"TRASH"},{"t":112.158,"w":"CLACT-ON"},{"t":112.549,"w":"ON-ON-ON-ON"},{"t":113.077,"w":"FIRE"},{"t":113.76,"w":"RISE"},{"t":114.049,"w":"FROM"},{"t":114.512,"w":"ASH"},{"t":118.2,"w":"EVERYBODY..."},{"t":119.649,"w":"EVERYBODY..."},{"t":123.945,"w":"EVERYBODY"},{"t":124.331,"w":"IN"},{"t":124.737,"w":"VOTE"},{"t":125.144,"w":"FOR"},{"t":125.534,"w":"THE"},{"t":125.904,"w":"BIN"},{"t":126.736,"w":"EVERYBODY"},{"t":127.128,"w":"YES"},{"t":127.53,"w":"VOTE"},{"t":128.18,"w":"FOR"},{"t":128.497,"w":"THE"},{"t":128.923,"w":"BEST"},{"t":129.369,"w":"EVERYBODY"},{"t":130.528,"w":"IN"},{"t":131.462,"w":"VOTE"},{"t":131.775,"w":"FOR"},{"t":132.199,"w":"THE"},{"t":132.482,"w":"BIN"},{"t":133.326,"w":"EVERYBODY"},{"t":133.828,"w":"YES"},{"t":134.401,"w":"VOTE"},{"t":135.012,"w":"THE"},{"t":135.515,"w":"BEST"},{"t":141.882,"w":"99P"},{"t":143.518,"w":"FLAKES"},{"t":144.916,"w":"EVERYBODY"},{"t":145.376,"w":"IN"},{"t":147.517,"w":"VOTE"},{"t":147.872,"w":"FOR"},{"t":148.264,"w":"THE"},{"t":148.529,"w":"BIN"},{"t":161.315,"w":"EVERYBODY"},{"t":161.728,"w":"IN"},{"t":166.122,"w":"LET"},{"t":166.56,"w":"THAT"},{"t":167.105,"w":"SINK"},{"t":167.637,"w":"IN"},{"t":173.586,"w":"EVERYBODY"},{"t":174.327,"w":"IN"},{"t":176.808,"w":"EVERYBODY"},{"t":177.482,"w":"IN"},{"t":178.734,"w":"LET"},{"t":179.267,"w":"THAT"},{"t":179.867,"w":"SINK"},{"t":180.498,"w":"IN"},{"t":197.558,"w":"LET"},{"t":198.108,"w":"THAT"},{"t":198.658,"w":"SINK"},{"t":199.358,"w":"IN"},{"t":211.035,"w":"EVERYBODY"},{"t":211.885,"w":"IN"},{"t":214.535,"w":"EVERYBODY"},{"t":215.185,"w":"IN"},{"t":216.435,"w":"LET"},{"t":216.835,"w":"THAT"},{"t":217.235,"w":"SINK"},{"t":217.635,"w":"IN"},{"t":222.235,"w":"LET"},{"t":222.885,"w":"THAT"},{"t":223.535,"w":"SINK"},{"t":224.431,"w":"IN"}];
+    const wordCues = wordTiming.map((cue, index) => [cue.t, Math.min(wordTiming[index + 1]?.t ?? cue.t + 1.35, cue.t + 1.35), cue.w]);
+    const palette = ['#57d9ff','#78ff89','#ff00bd','#ffc857','#b38cff','#ff6f61','#f5f5f5'];
+    const fullAudio = document.getElementById('full-audio'); const stems = document.getElementById('stems'); const defaults = document.getElementById('defaults'); const play = document.getElementById('play'); const mute = document.getElementById('mute');
+    const seek = document.getElementById('seek'); const time = document.getElementById('time'); const caption = document.getElementById('caption'); const loadState = document.getElementById('load-state');
+    const trackList = document.getElementById('track-list'); const canvas = document.getElementById('visuals'); const stage = document.getElementById('stage'); const ctx = canvas.getContext('2d');
+    const rgbVideo = document.getElementById('rgb-video'); const redOffset = document.getElementById('red-offset'); const greenOffset = document.getElementById('green-offset'); const blueOffset = document.getElementById('blue-offset');
+    let audioContext, tracks = [], master, muted = false, animationFrame;
+    let rgbLoadPromise;
+    const projectRoot = '..';
+    const projectVideo = `${projectRoot}/video.mp4`;
+    const projectDefaults = {
+      master: { name: 'Marsita the Ultra — Vote for the Bin (Count Binface vs Farage).mp3', url: `${projectRoot}/FINAL%20AUDIO/Marsita%20the%20Ultra%20%E2%80%94%20Vote%20for%20the%20Bin%20(Count%20Binface%20vs%20Farage).mp3` },
+      stems: [
+        { name: '1 Woodwinds.mp3', url: `${projectRoot}/STEMS/1%20Woodwinds.mp3` },
+        { name: '3 FX.mp3', url: `${projectRoot}/STEMS/3%20FX.mp3` },
+        { name: '4 Synth.mp3', url: `${projectRoot}/STEMS/4%20Synth.mp3` },
+        { name: '6 Percussion.mp3', url: `${projectRoot}/STEMS/6%20Percussion.mp3` },
+        { name: '8 Guitar.mp3', url: `${projectRoot}/STEMS/8%20Guitar.mp3` },
+        { name: '9 Bass.mp3', url: `${projectRoot}/STEMS/9%20Bass.mp3` },
+        { name: '10 Drums.mp3', url: `${projectRoot}/STEMS/10%20Drums.mp3` },
+        { name: '11 Backing_Vocals.mp3', url: `${projectRoot}/STEMS/11%20Backing_Vocals.mp3` },
+        { name: '12 Vocals.mp3', url: `${projectRoot}/STEMS/12%20Vocals.mp3` },
+        { name: '13 my own background vocal.mp3', url: `${projectRoot}/STEMS/13%20my%20own%20background%20vocal.mp3` }
+      ]
+    };
+    function format(seconds) { const total = Math.round((seconds || 0) * 1000); return `${String(Math.floor(total / 60000)).padStart(2,'0')}:${String(Math.floor(total / 1000) % 60).padStart(2,'0')}.${String(total % 1000).padStart(3,'0')}`; }
+    function loadRgbVideo() {
+      if (rgbLoadPromise) return rgbLoadPromise;
+      rgbLoadPromise = new Promise((resolve, reject) => {
+        rgbVideo.addEventListener('loadedmetadata', resolve, { once: true }); rgbVideo.addEventListener('error', () => reject(new Error('Could not load video.mp4')), { once: true }); rgbVideo.src = projectVideo; rgbVideo.load();
+      });
+      return rgbLoadPromise;
+    }
+    function rgbTarget(seconds) { const duration = rgbVideo.duration; return ((seconds % duration) + duration) % duration; }
+    function syncRgb(seconds, force = false) {
+      if (!Number.isFinite(rgbVideo.duration) || !rgbVideo.duration) return; const target = rgbTarget(seconds); if (force || Math.abs(rgbVideo.currentTime - target) > .11) rgbVideo.currentTime = target;
+    }
+    function setRgbPlayback(playing, seconds = 0) {
+      if (!playing) { rgbVideo.pause(); return; }
+      syncRgb(seconds, true); rgbVideo.play().catch(() => {});
+    }
+    function updateRgbEffect(seconds) {
+      const energy = master ? average(master, 0, 30) : .04, spread = 3 + Math.pow(energy, .7) * 23, sway = Math.sin(seconds * 1.35) * 2.5, lift = Math.cos(seconds * .9) * spread * .18;
+      redOffset.setAttribute('dx', (-spread).toFixed(2)); redOffset.setAttribute('dy', lift.toFixed(2)); greenOffset.setAttribute('dx', (sway * .18).toFixed(2)); greenOffset.setAttribute('dy', (-lift * .25).toFixed(2)); blueOffset.setAttribute('dx', spread.toFixed(2)); blueOffset.setAttribute('dy', (-lift).toFixed(2));
+      rgbVideo.style.transform = `translate(${sway}px, 0) scale(${1.07 + energy * .025})`; rgbVideo.style.opacity = .66 + energy * .22;
+    }
+    function roleFor(name) { const value = name.toLowerCase(); if (value.includes('vocal') && value.includes('back')) return 'backing'; if (value.includes('vocal')) return 'lead'; if (value.includes('drum') || value.includes('perc')) return 'drums'; if (value.includes('bass')) return 'bass'; if (value.includes('master') || value.includes('final') || value.includes('mix') || value.includes('vote for the bin')) return 'master'; return 'other'; }
+    function resize() { const ratio = window.devicePixelRatio || 1; const rect = stage.getBoundingClientRect(); canvas.width = rect.width * ratio; canvas.height = rect.height * ratio; canvas.style.width = `${rect.width}px`; canvas.style.height = `${rect.height}px`; ctx.setTransform(ratio,0,0,ratio,0,0); }
+    function renderTracks() { trackList.innerHTML = tracks.map(track => `<div class="track"><span class="dot" style="--colour:${track.colour}"></span>${track === master ? 'FULL AUDIO — ' : ''}${track.file.name}</div>`).join(''); }
+    function connectSource(file, index, url) {
+      const audio = new Audio(url || URL.createObjectURL(file)); audio.preload = 'auto';
+      const source = audioContext.createMediaElementSource(audio); const analyser = audioContext.createAnalyser(); const silentGain = audioContext.createGain(); analyser.fftSize = 512; silentGain.gain.value = 0; source.connect(analyser); analyser.connect(silentGain);
+      const role = roleFor(file.name); const track = { file, audio, analyser, silentGain, bins: new Uint8Array(analyser.frequencyBinCount), waveform: new Uint8Array(analyser.fftSize), role, colour: palette[index % palette.length] };
+      return new Promise(resolve => { audio.addEventListener('loadedmetadata', () => resolve(track), { once: true }); audio.load(); });
+    }
+    function connectTrack(file, index) { return connectSource(file, index); }
+    function connectDefault(file, index) { return connectSource(file, index, file.url); }
+    function connectToOutput(track) { (track === master ? track.analyser : track.silentGain).connect(audioContext.destination); }
+    function attachMasterEvents() {
+      master.audio.addEventListener('timeupdate', updateTime); master.audio.addEventListener('ended', () => { play.textContent = 'Play'; setRgbPlayback(false); });
+    }
+    async function loadFullAudio(file) {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (master) { master.audio.pause(); URL.revokeObjectURL(master.audio.src); tracks = tracks.filter(track => track !== master); }
+      master = await connectTrack(file, 0); master.role = 'master'; tracks.unshift(master); connectToOutput(master); attachMasterEvents();
+      renderTracks(); updateTime();
+    }
+    async function addStems(selectedFiles) {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const additions = await Promise.all([...selectedFiles].map((file, index) => connectTrack(file, tracks.length + index)));
+      additions.forEach(track => { if (track.role === 'master') track.role = 'other'; tracks.push(track); connectToOutput(track); });
+      renderTracks();
+    }
+    async function loadProjectDefaults() {
+      tracks.forEach(track => track.audio.pause()); tracks = []; master = null;
+      await loadFullDefault(projectDefaults.master);
+      const additions = await Promise.all(projectDefaults.stems.map((file, index) => connectDefault(file, tracks.length + index)));
+      additions.forEach(track => { tracks.push(track); connectToOutput(track); });
+      renderTracks();
+    }
+    async function prepareDefaults() {
+      play.disabled = true; play.textContent = 'Loading defaults…'; loadState.textContent = 'Loading project…';
+      try { await Promise.all([loadProjectDefaults(), loadRgbVideo()]); play.disabled = false; play.textContent = 'Play'; loadState.textContent = 'Ready'; }
+      catch (error) { console.error(error); play.disabled = true; play.textContent = 'Load failed'; loadState.textContent = 'Open Manual files to retry'; }
+    }
+    async function loadFullDefault(file) {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (master) { master.audio.pause(); URL.revokeObjectURL(master.audio.src); tracks = tracks.filter(track => track !== master); }
+      master = await connectDefault(file, 0); master.role = 'master'; tracks.unshift(master); connectToOutput(master); attachMasterEvents(); renderTracks(); updateTime();
+    }
+    function updateTime() { if (!master) return; const current = master.audio.currentTime || 0; const duration = master.audio.duration || 0; seek.max = duration || 1; seek.value = current; time.textContent = `${format(current)} / ${format(duration)}`; const cue = wordCues.find(([start,end]) => current >= start && current <= end); caption.textContent = cue ? cue[2] : ''; }
+    async function togglePlay() {
+      if (!master) return; await audioContext.resume();
+      if (master.audio.paused) {
+        const at = master.audio.currentTime; tracks.forEach(track => { track.audio.currentTime = at; });
+        const masterStart = master.audio.play(); tracks.filter(track => track !== master).forEach(track => track.audio.play().catch(() => {}));
+        masterStart.then(() => setRgbPlayback(true, at)).catch(() => {}); play.textContent = 'Pause';
+      } else { tracks.forEach(track => track.audio.pause()); setRgbPlayback(false); play.textContent = 'Play'; }
+    }
+    function average(track, from, to) { let sum = 0; const end = Math.min(track.bins.length, to); for (let i = from; i < end; i++) sum += track.bins[i]; return sum / Math.max(1, end - from) / 255; }
+    function drawTrack(track, index, width, height, total) {
+      const top = height * .60, available = height * .31, laneHeight = available / Math.max(total, 1), center = top + laneHeight * (index + .5);
+      track.analyser.getByteTimeDomainData(track.waveform); track.analyser.getByteFrequencyData(track.bins); const energy = average(track, 0, 28);
+      ctx.strokeStyle = track.colour; ctx.globalAlpha = .35; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0,center); ctx.lineTo(width,center); ctx.stroke();
+      ctx.globalAlpha = .55 + energy * .45; ctx.lineWidth = 1.4 + energy * 3.5; ctx.beginPath();
+      track.waveform.forEach((sample, point) => { const x = point / (track.waveform.length - 1) * width; const y = center + ((sample - 128) / 128) * laneHeight * .38; point ? ctx.lineTo(x,y) : ctx.moveTo(x,y); }); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    function drawSpace(width, height, seconds) {
+      const horizon = height * .48, vanishingX = width * .5;
+      const masterEnergy = master ? average(master, 0, 28) : .1;
+      ctx.globalAlpha = .42; ctx.strokeStyle = '#ff00bd'; ctx.lineWidth = 1;
+      for (let i = -12; i <= 12; i++) { ctx.beginPath(); ctx.moveTo(vanishingX, horizon); ctx.lineTo(vanishingX + i * width * .12, height); ctx.stroke(); }
+      for (let i = 0; i < 18; i++) { const depth = ((i / 18 + seconds * .065) % 1); const y = horizon + Math.pow(depth, 2.2) * (height - horizon); ctx.globalAlpha = .08 + depth * .42; ctx.strokeStyle = i % 2 ? '#7c63ff' : '#ff00bd'; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
+      for (let i = 0; i < 34; i++) { const depth = ((i * .117 + seconds * (.04 + (i % 5) * .006)) % 1); const x = width * ((Math.sin(i * 93.17) + 1) / 2); const y = horizon + ((Math.cos(i * 41.9) + 1) / 2) * height * .43; const scale = 2 + depth * depth * 24 * (1 + masterEnergy); ctx.globalAlpha = .13 + depth * .65; ctx.fillStyle = i % 3 === 0 ? '#57d9ff' : i % 3 === 1 ? '#78ff89' : '#ff00bd'; ctx.beginPath(); ctx.arc(x + Math.sin(seconds + i) * depth * 40, y, scale, 0, Math.PI * 2); ctx.fill(); }
+      for (let i = 0; i < 3; i++) { const x = width * (.23 + i * .27), y = horizon - 35 + Math.sin(seconds * .6 + i) * 24, size = 26 + i * 12 + masterEnergy * 45, angle = seconds * (.45 + i * .08); ctx.save(); ctx.translate(x,y); ctx.rotate(angle); ctx.strokeStyle = i === 1 ? '#57d9ff' : '#ff00bd'; ctx.globalAlpha = .5; ctx.lineWidth = 2; ctx.strokeRect(-size,-size,size*2,size*2); ctx.rotate(Math.PI / 4); ctx.strokeRect(-size*.7,-size*.7,size*1.4,size*1.4); ctx.restore(); }
+      ctx.globalAlpha = 1;
+    }
+    function draw() {
+      const rect = stage.getBoundingClientRect(); const width = rect.width, height = rect.height; const current = master?.audio.currentTime || 0; ctx.clearRect(0,0,width,height); drawSpace(width, height, current); syncRgb(current); updateRgbEffect(current);
+      ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 1; for (let i=0;i<12;i++) { const y=height*.60+i*(height*.31/12); ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
+      tracks.forEach((track,index) => drawTrack(track,index,width,height,tracks.length)); updateTime(); animationFrame = requestAnimationFrame(draw);
+    }
+    fullAudio.addEventListener('change', async event => { if (event.target.files[0]) { play.disabled = true; await loadFullAudio(event.target.files[0]); play.disabled = false; play.textContent = 'Play'; loadState.textContent = 'Manual audio ready'; } });
+    stems.addEventListener('change', event => { if (event.target.files.length) { addStems(event.target.files); event.target.value = ''; } });
+    defaults.addEventListener('click', prepareDefaults);
+    play.addEventListener('click', togglePlay);
+    mute.addEventListener('click', () => { muted = !muted; if (master) master.audio.muted = muted; mute.textContent = muted ? 'Unmute' : 'Mute'; });
+    seek.addEventListener('input', () => { if (!master) return; const at = Number(seek.value); tracks.forEach(track => { track.audio.currentTime = at; }); syncRgb(at, true); updateTime(); });
+    window.addEventListener('resize', resize); resize(); draw(); prepareDefaults();
+  </script>
+</body>
+</html>

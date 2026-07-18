@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WORD TIMELINE ALIGNER v4.3 — Master Playback + Stem Waveforms</title>
+<style>
+  :root{ --void:#0a0a0a; --panel:#111; --line:#222; --paper:#F2F2F2; --acid:#38FF6E; --red:#E4002B; --blue:#4a6cff; --dim:#888; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:var(--void);color:var(--paper);font-family:"Courier New",monospace;overflow:hidden}
+  #app{display:flex;flex-direction:column;height:100%}
+  /* top bar */
+  #bar{display:flex;align-items:center;gap:14px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  #bar b{color:var(--acid);letter-spacing:.1em}
+  #bar input[type=file]{font-size:10px;color:var(--dim);max-width:150px}
+  #bar .slot{font-size:9px;color:#666;letter-spacing:.1em;display:inline-flex;flex-direction:column;gap:2px}
+  #bar select{background:#181818;color:var(--paper);border:1px solid #333;font-family:inherit;font-size:11px;padding:3px}
+  button{font-family:inherit;font-size:12px;background:#181818;color:var(--paper);border:1px solid #333;padding:6px 12px;cursor:pointer;letter-spacing:.06em}
+  button:hover{border-color:var(--acid);color:var(--acid)}
+  button.primary{background:var(--acid);color:#000;border-color:var(--acid);font-weight:bold}
+  #time{font-size:13px;color:var(--acid);min-width:110px}
+  /* word queue */
+  #queue{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#0d0d0d;border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap}
+  #queue .qword{padding:5px 10px;border:1px solid #2a2a2a;color:var(--dim);font-size:12px}
+  #queue .qword.next{border-color:var(--acid);color:var(--acid);font-weight:bold;font-size:14px}
+  #queue label{color:#555;font-size:10px;letter-spacing:.15em}
+  /* timeline */
+  #tl{flex:1;position:relative;min-height:0}
+  #wave{position:absolute;inset:0;width:100%;height:100%;display:block}
+  /* minimap */
+  #mini{height:44px;border-top:1px solid var(--line);position:relative}
+  #minicv{width:100%;height:100%;display:block}
+  /* help */
+  #help{padding:6px 14px;background:var(--panel);border-top:1px solid var(--line);font-size:10.5px;color:#777;line-height:1.7}
+  #help .k{color:var(--acid)}
+  /* lyrics modal */
+  #lyricsModal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:50}
+  #lyricsModal.open{display:flex}
+  #lyricsModal .box{background:var(--panel);border:1px solid #333;padding:18px;width:min(680px,92vw)}
+  #lyricsModal textarea{width:100%;height:300px;background:#0a0a0a;color:var(--paper);border:1px solid #333;font-family:inherit;font-size:12px;padding:10px;line-height:1.6}
+  #lyricsModal .row{display:flex;gap:10px;margin-top:10px;justify-content:flex-end}
+  #status{color:var(--acid);font-size:11px}
+  #finebar{display:flex;align-items:center;gap:7px;padding:7px 14px;background:#101010;border-bottom:1px solid var(--line);min-height:42px}
+  #finebar .label{color:#666;font-size:9px;letter-spacing:.14em}
+  #fineWord{color:var(--paper);font-size:13px;font-weight:bold;min-width:130px;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+  #fineTime{width:104px;background:#080808;color:var(--acid);border:1px solid #333;padding:5px 7px;font:12px "Courier New",monospace}
+  #finebar button{padding:5px 8px;font-size:10px}
+  #jsonPreset{min-width:92px}
+  .fileButton{position:relative;overflow:hidden;display:inline-flex;align-items:center;font:12px "Courier New",monospace;background:#181818;color:var(--paper);border:1px solid #333;padding:6px 12px;cursor:pointer;letter-spacing:.06em}
+  .fileButton:hover{border-color:var(--acid);color:var(--acid)}
+  .fileButton input{position:absolute;inset:0;opacity:0;cursor:pointer;max-width:none!important}
+  .trackLine{display:flex;align-items:center;gap:5px;max-width:240px}
+  .trackName{display:inline-block;color:var(--acid);font-size:9px;max-width:175px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .trackName.loading{color:#777}
+  .miniFile{position:relative;overflow:hidden;display:inline-block;color:#777;border:1px solid #2a2a2a;padding:2px 4px;font-size:8px;cursor:pointer}
+  .miniFile:hover{color:var(--acid);border-color:var(--acid)}
+  .miniFile input{position:absolute;inset:0;opacity:0;cursor:pointer;max-width:none!important}
+  .playbackBadge{color:#000;background:var(--acid);padding:2px 4px;font-size:8px;font-weight:bold}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bar">
+    <b>WORD ALIGNER v4.3</b>
+    <span class="slot">1·FINAL MASTER <span class="trackLine"><span id="fullName" class="trackName loading">loading default…</span><span class="playbackBadge">PLAYBACK</span><label class="miniFile">CHANGE<input type="file" id="fullIn" accept="audio/*"></label></span></span>
+    <span class="slot">2·MAIN VOCALS <span class="trackLine"><span id="vocalsName" class="trackName loading">loading default…</span><label class="miniFile">CHANGE<input type="file" id="vocalsIn" accept="audio/*"></label></span></span>
+    <span class="slot">3·BACKING <span class="trackLine"><span id="backingName" class="trackName loading">loading default…</span><label class="miniFile">CHANGE<input type="file" id="backingIn" accept="audio/*"></label></span></span>
+    <span class="slot">LISTEN:
+      <select id="listenSel">
+        <option value="vocals">vocals</option>
+        <option value="backing">backing</option>
+        <option value="full" selected>FINAL MASTER</option>
+      </select>
+    </span>
+    <span class="slot">LYRICS JSON:
+      <select id="jsonPreset" title="JSON files in ___lyricsJSON">
+        <option value="01">01</option><option value="02">02</option><option value="03">03</option>
+        <option value="04">04</option><option value="05">05</option><option value="06" selected>06 · latest</option>
+      </select>
+    </span>
+    <button id="loadPreset">LOAD JSON</button>
+    <label class="fileButton">CHOOSE JSON<input type="file" id="jsonIn" accept="application/json,.json" title="load a word timeline JSON"></label>
+    <button id="lyricsBtn">LYRICS</button>
+    <button id="playBtn">▶ PLAY</button>
+    <span id="time">0:00.000</span>
+    <button id="zoomOut">−</button>
+    <button id="zoomIn">+</button>
+    <button id="exportBtn" class="primary">EXPORT JSON ▸</button>
+    <span id="status"></span>
+  </div>
+  <div id="queue"><label>NEXT ▸</label></div>
+  <div id="finebar">
+    <span class="label">SELECTED</span><span id="fineWord">— click a word flag —</span>
+    <span class="label">TIME (SEC)</span><input id="fineTime" type="number" min="0" step="0.001" disabled>
+    <button data-nudge="-0.025">−25ms</button><button data-nudge="-0.010">−10ms</button><button data-nudge="-0.001">−1ms</button>
+    <button data-nudge="0.001">+1ms</button><button data-nudge="0.010">+10ms</button><button data-nudge="0.025">+25ms</button>
+    <button id="previewFine">PREVIEW</button>
+  </div>
+  <div id="tl"><canvas id="wave"></canvas></div>
+  <div id="mini"><canvas id="minicv"></canvas></div>
+  <div id="help">
+    <span class="k">SPACE</span> play/pause ·
+    <span class="k">ENTER</span> drop next word at playhead ·
+    <span class="k">click wave</span> seek ·
+    <span class="k">drag word flag</span> move ·
+    <span class="k">click flag</span> select ·
+    <span class="k">, .</span> nudge selected ±25ms · <span class="k">shift + , .</span> ±1ms ·
+    <span class="k">P</span> preview selected (plays from 0.7s before) ·
+    <span class="k">DELETE</span> unplace selected ·
+    <span class="k">wheel</span> pan · <span class="k">cmd/ctrl+wheel</span> zoom ·
+    <span class="k">←→</span> seek ±2s ·
+    words return to queue in lyric order when unplaced ·
+    <span class="k">dbl-click empty</span> add word right there ·
+    <span class="k">dbl-click flag</span> rename word ·
+    <span class="k">PLAYBACK DEFAULT</span> is the FINAL AUDIO master ·
+    <span class="k">LISTEN</span> can solo a stem without losing position · waveform lanes: <span style="color:#89A7FF">MASTER</span> / <span style="color:#38FF6E">VOCALS</span> / <span style="color:#C8F04B">BACKING</span>
+  </div>
+</div>
+
+<input id="inlineEdit" type="text" style="position:fixed;display:none;z-index:40;background:#000;color:#38FF6E;border:1px solid #38FF6E;font-family:'Courier New',monospace;font-size:13px;padding:4px 8px;text-transform:uppercase;min-width:90px" placeholder="word…">
+
+<div id="lyricsModal">
+  <div class="box">
+    <b style="color:var(--acid)">LYRICS → WORD QUEUE</b>
+    <p style="font-size:11px;color:#777;margin:8px 0">One word per token, whitespace-separated. Parenthetical chunks like (ON-ON-ON-ON) stay single tokens if unspaced. Re-applying resets ONLY unplaced words; placed timestamps survive if the word sequence start matches.</p>
+    <textarea id="lyricsTa"></textarea>
+    <div class="row">
+      <button id="lyricsCancel">CANCEL</button>
+      <button id="lyricsApply" class="primary">APPLY</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- default lyrics (performance order) ---------------- */
+const DEFAULT_LYRICS = `EVERYBODY IN VOTE FOR THE BIN
+EVERYBODY IN VOTE FOR THE BIN
+NOT THAT TRASH
+CLACT-ON (ON-ON-ON-ON) FIRE
+RISE FROM ASH
+NINETY-NINE P FLAKES
+LIQUID DRUM AND BASS
+A-I TECHNOLOGY
+HU-MAN BIOLOGY
+BRAIN ADAPTS
+DIFFERENT CRAFTS
+ADAPTATION IDENTITY
+PROSPERITY EQUALITY (OPPORTUNITY)
+HONOUR AND DIGNITY
+EVERYBODY IN VOTE FOR THE BIN
+EVERYBODY IN VOTE FOR THE BIN
+NOT THAT TRASH
+CLACT-ON (ON-ON-ON-ON) FIRE
+RISE FROM ASH
+NINETY-NINE P FLAKES
+LIQUID DRUM AND BASS
+STOP THE WAR
+GLOBAL PEACE
+KINDLY PLEASE
+CLIMATE HOT
+LIKE OR NOT
+PLANT THE SEED
+NATURE LEAD
+MACHINES WORK
+HUMANS PLAY
+(EY-EY-EY) (EY-EY-EY)
+EVERYBODY IN VOTE FOR THE BIN
+EVERYBODY IN VOTE FOR THE BIN
+NOT THAT TRASH
+CLACT-ON (ON-ON-ON-ON) FIRE
+RISE FROM ASH
+NINETY-NINE P FLAKES (LET IT MAKE SENSE)
+LIQUID DRUM AND BASS
+NINETY-NINE FLAKES…
+(EVERYBODY… EVERYBODY…)
+EVERYBODY IN VOTE FOR THE BIN
+(PROSPERITY EQUALITY)
+EVERYBODY IN VOTE FOR THE BIN
+(HONOUR AND DIGNITY)
+LIQUID DRUM AND BASS!
+NINETY-NINE P FLAKES
+LIQUID DRUM AND BASS
+EVERYBODY IN
+VOTE FOR THE BIN
+LET IT MAKE SENSE.`;
+
+/* ---------------- state ---------------- */
+let words=[];               // [{w, t:null|sec}] in lyric order
+let selected=-1;
+let buffer=null, duration=0;
+let pxPerSec=110, scrollT=0;      // view: seconds at left edge
+let dragging=null;                 // {idx, grabbed}
+let peaksCache={key:'',data:null};
+let backingPeaksCache={key:'',data:null};
+let fullPeaksCache={key:'',data:null};
+let loadedJsonName='06_binface_words.json';
+const DEFAULT_AUDIO={
+  full:'../FINAL AUDIO/Marsita the Ultra — Vote for the Bin (Count Binface vs Farage).mp3',
+  vocals:'../STEMS/12 Vocals.mp3',
+  backing:'../STEMS/11 Backing_Vocals.mp3'
+};
+function backingPeaks(){
+  const t=tracks.backing; if(!t||!t.buffer) return null;
+  const wpx=Math.floor(cv.width/DPR);
+  const key=`${scrollT.toFixed(3)}_${pxPerSec}_${wpx}`;
+  if(backingPeaksCache.key===key) return backingPeaksCache.data;
+  const ch=t.buffer.getChannelData(0), sr=t.buffer.sampleRate;
+  const out=new Float32Array(wpx*2);
+  for(let x=0;x<wpx;x++){
+    const i0=Math.max(0,Math.floor((scrollT+x/pxPerSec)*sr)), i1=Math.min(ch.length,Math.floor((scrollT+(x+1)/pxPerSec)*sr));
+    let mn=0,mx=0;
+    const stride=Math.max(1,Math.floor((i1-i0)/40));
+    for(let i=i0;i<i1;i+=stride){ const v=ch[i]; if(v<mn)mn=v; if(v>mx)mx=v; }
+    out[x*2]=mn; out[x*2+1]=mx;
+  }
+  backingPeaksCache={key,data:out};
+  return out;
+}
+function fullPeaks(){
+  const t=tracks.full; if(!t||!t.buffer) return null;
+  const wpx=Math.floor(cv.width/DPR);
+  const key=`${scrollT.toFixed(3)}_${pxPerSec}_${wpx}`;
+  if(fullPeaksCache.key===key) return fullPeaksCache.data;
+  const ch=t.buffer.getChannelData(0), sr=t.buffer.sampleRate;
+  const out=new Float32Array(wpx*2);
+  for(let x=0;x<wpx;x++){
+    const i0=Math.max(0,Math.floor((scrollT+x/pxPerSec)*sr)), i1=Math.min(ch.length,Math.floor((scrollT+(x+1)/pxPerSec)*sr));
+    let mn=0,mx=0;
+    const stride=Math.max(1,Math.floor((i1-i0)/40));
+    for(let i=i0;i<i1;i+=stride){ const v=ch[i]; if(v<mn)mn=v; if(v>mx)mx=v; }
+    out[x*2]=mn; out[x*2+1]=mx;
+  }
+  fullPeaksCache={key,data:out};
+  return out;
+}
+
+function initWords(text){
+  const toks=text.split(/\s+/).filter(Boolean);
+  words=toks.map(w=>({w:w.toUpperCase(), t:null}));
+  selected=-1; renderQueue();
+}
+initWords(DEFAULT_LYRICS);
+
+function timelineDuration(){
+  if(duration>0) return duration;
+  const last=words.reduce((mx,wd)=>wd.t===null?mx:Math.max(mx,wd.t),0);
+  return Math.max(60,last+5);
+}
+
+/* ---------------- audio: three tracks, one timeline ---------------- */
+const actx=new (window.AudioContext||window.webkitAudioContext)();
+const tracks={vocals:null, backing:null, full:null};   // {audio, buffer?}
+let listen='full';
+async function loadTrack(kind, f, decodeWave){
+  status(`decoding ${kind}…`);
+  const el=new Audio(URL.createObjectURL(f));
+  el.addEventListener('ended',()=>updatePlayBtn());
+  let buf=null;
+  if(decodeWave){ buf=await actx.decodeAudioData(await f.arrayBuffer()); }
+  tracks[kind]={audio:el, buffer:buf, name:f.name};
+  if(kind==='vocals'&&buf){ buffer=buf; if(!tracks.full?.buffer) duration=buf.duration; peaksCache.key=''; }
+  if(kind==='backing'&&buf){ backingPeaksCache.key=''; }
+  if(kind==='full'&&buf){ duration=buf.duration; fullPeaksCache.key=''; }
+  if(!duration && el.duration) duration=el.duration;
+  const nameEl=document.getElementById(`${kind}Name`);
+  if(nameEl){ nameEl.textContent=f.name; nameEl.classList.remove('loading'); }
+  status(`${kind} loaded · ${f.name}`);
+}
+document.getElementById('vocalsIn').addEventListener('change',ev=>{ if(ev.target.files[0]) loadTrack('vocals',ev.target.files[0],true); });
+document.getElementById('backingIn').addEventListener('change',ev=>{ if(ev.target.files[0]) loadTrack('backing',ev.target.files[0],true); });
+document.getElementById('fullIn').addEventListener('change',ev=>{ if(ev.target.files[0]) loadTrack('full',ev.target.files[0],true); });
+async function loadTrackUrl(kind,url){
+  const res=await fetch(url,{cache:'no-store'});
+  if(!res.ok) throw new Error(`${kind}: HTTP ${res.status}`);
+  const blob=await res.blob();
+  const name=decodeURIComponent(url.split('/').pop());
+  await loadTrack(kind,new File([blob],name,{type:blob.type||'audio/mpeg'}),true);
+}
+async function loadDefaultAudio(){
+  if(location.protocol==='file:'){
+    ['full','vocals','backing'].forEach(kind=>document.getElementById(`${kind}Name`).textContent='use CHANGE or localhost');
+    return;
+  }
+  status('loading FINAL AUDIO master…');
+  try{
+    await loadTrackUrl('full',DEFAULT_AUDIO.full);
+    listen='full'; document.getElementById('listenSel').value='full';
+    status('master ready · loading stem waveforms…');
+    const results=await Promise.allSettled([
+      loadTrackUrl('vocals',DEFAULT_AUDIO.vocals),
+      loadTrackUrl('backing',DEFAULT_AUDIO.backing)
+    ]);
+    const failed=results.filter(r=>r.status==='rejected');
+    status(failed.length ? `master ready · ${failed.length} stem failed to load` : 'READY · FINAL MASTER playback + vocal/backing waveforms');
+  }catch(e){ status('⚠ default audio failed: '+e.message); }
+}
+document.getElementById('listenSel').addEventListener('change',ev=>{
+  const to=ev.target.value;
+  if(!tracks[to]) { status(`no ${to} loaded`); ev.target.value=listen; return; }
+  const t=now(), wasPlaying=playing();
+  if(tracks[listen]) tracks[listen].audio.pause();
+  listen=to;
+  tracks[listen].audio.currentTime=t;
+  if(wasPlaying) tracks[listen].audio.play();
+  status(`listening to: ${to}`);
+});
+function activeAudio(){ return tracks[listen]? tracks[listen].audio : null; }
+function playing(){ const a=activeAudio(); return a && !a.paused; }
+function now(){ const a=activeAudio(); return a? a.currentTime : 0; }
+function seek(t){ const a=activeAudio(); if(a) a.currentTime=Math.max(0,Math.min(timelineDuration(),t)); }
+async function togglePlay(){
+  const a=activeAudio();
+  if(!a) return status('audio is still loading');
+  if(playing()) a.pause();
+  else {
+    try{ await a.play(); }
+    catch(e){ status('press PLAY to allow audio · '+e.name); }
+  }
+  updatePlayBtn();
+}
+function updatePlayBtn(){ document.getElementById('playBtn').textContent = playing()? '⏸ PAUSE':'▶ PLAY'; }
+
+/* ---------------- import / export ---------------- */
+function parseWordJson(json){
+  let source=[];
+  if(Array.isArray(json)) source=json;
+  else if(Array.isArray(json.words)) source=json.words;
+  else if(Array.isArray(json.segments)) source=json.segments.flatMap(s=>s.words||[]);
+  else throw new Error('expected an array of words or Whisper-style segments');
+  const imported=source.map((x,i)=>{
+    const rawT=x.t ?? x.time ?? x.start;
+    const rawW=x.w ?? x.word ?? x.text;
+    const t=Number(rawT), w=String(rawW??'').trim();
+    if(!Number.isFinite(t)||t<0||!w) throw new Error(`invalid word at item ${i+1}`);
+    return {w:w.toUpperCase(),t};
+  });
+  if(!imported.length) throw new Error('the JSON contains no timed words');
+  return imported.sort((a,b)=>a.t-b.t);
+}
+function installWordJson(json,name='lyrics.json'){
+  words=parseWordJson(json);
+  selected=-1;
+  loadedJsonName=name;
+  scrollT=Math.max(0,words[0].t-2);
+  renderQueue(); renderFineControls();
+  status(`loaded ${words.length} words · ${name}`);
+}
+async function loadPresetJson(){
+  const version=document.getElementById('jsonPreset').value;
+  const name=`${version}_binface_words.json`;
+  status(`loading ___lyricsJSON/${name}…`);
+  try{
+    const res=await fetch(`../___lyricsJSON/${name}`,{cache:'no-store'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    installWordJson(await res.json(),name);
+  }catch(e){
+    status(location.protocol==='file:' ? '⚠ browser blocked folder access · use CHOOSE JSON' : '⚠ load failed: '+e.message);
+  }
+}
+document.getElementById('loadPreset').addEventListener('click',loadPresetJson);
+document.getElementById('jsonIn').addEventListener('change', async ev=>{
+  const f=ev.target.files[0]; if(!f) return;
+  try{ installWordJson(JSON.parse(await f.text()),f.name); }
+  catch(e){ status('⚠ import failed: '+e.message); }
+  ev.target.value='';
+});
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const placed=words.filter(w=>w.t!==null).map(w=>({t:+w.t.toFixed(3), w:w.w})).sort((a,b)=>a.t-b.t);
+  if(!placed.length) return status('nothing placed yet');
+  const blob=new Blob([JSON.stringify(placed,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  const base=loadedJsonName.replace(/\.json$/i,'');
+  a.href=URL.createObjectURL(blob); a.download=`${base}_fine.json`; a.click();
+  status(`exported ${placed.length} words → ${base}_fine.json`);
+});
+
+/* ---------------- millisecond fine controls ---------------- */
+const fineWord=document.getElementById('fineWord'), fineTime=document.getElementById('fineTime');
+function renderFineControls(){
+  const wd=selected>=0?words[selected]:null;
+  fineWord.textContent=wd?wd.w:'— click a word flag —';
+  fineTime.disabled=!wd||wd.t===null;
+  fineTime.value=wd&&wd.t!==null?wd.t.toFixed(3):'';
+}
+function nudgeSelected(delta){
+  if(selected<0||words[selected].t===null) return status('select a word flag first');
+  words[selected].t=Math.max(0,Math.min(timelineDuration(),words[selected].t+delta));
+  renderFineControls();
+  status(`${words[selected].w} · ${fmt(words[selected].t,true)} (${delta>0?'+':''}${Math.round(delta*1000)}ms)`);
+}
+fineTime.addEventListener('change',()=>{
+  if(selected<0) return;
+  const t=Number(fineTime.value);
+  if(!Number.isFinite(t)||t<0) return renderFineControls();
+  words[selected].t=Math.min(timelineDuration(),t);
+  renderFineControls(); status(`${words[selected].w} set to ${fmt(words[selected].t,true)}`);
+});
+document.querySelectorAll('[data-nudge]').forEach(btn=>btn.addEventListener('click',()=>nudgeSelected(Number(btn.dataset.nudge))));
+document.getElementById('previewFine').addEventListener('click',()=>{
+  if(selected<0||words[selected].t===null) return status('select a word flag first');
+  seek(words[selected].t-0.7); if(!playing()) togglePlay();
+});
+
+/* ---------------- lyrics modal ---------------- */
+const modal=document.getElementById('lyricsModal');
+document.getElementById('lyricsBtn').onclick=()=>{ document.getElementById('lyricsTa').value=words.map(w=>w.w).join(' '); modal.classList.add('open'); };
+document.getElementById('lyricsCancel').onclick=()=>modal.classList.remove('open');
+document.getElementById('lyricsApply').onclick=()=>{
+  const old=words;
+  initWords(document.getElementById('lyricsTa').value);
+  // preserve timestamps where the sequence prefix matches
+  for(let i=0;i<Math.min(old.length,words.length);i++){
+    if(old[i].w===words[i].w) words[i].t=old[i].t; else break;
+  }
+  modal.classList.remove('open'); renderQueue();
+};
+
+/* ---------------- queue strip ---------------- */
+function nextIdx(){ return words.findIndex(w=>w.t===null); }
+function renderQueue(){
+  const q=document.getElementById('queue');
+  q.querySelectorAll('.qword').forEach(n=>n.remove());
+  const n=nextIdx();
+  if(n<0){ q.insertAdjacentHTML('beforeend','<span class="qword next">ALL PLACED ✓</span>'); return; }
+  for(let i=n;i<Math.min(n+9,words.length);i++){
+    q.insertAdjacentHTML('beforeend',`<span class="qword${i===n?' next':''}">${words[i].w}</span>`);
+  }
+}
+function dropNext(){
+  const n=nextIdx(); if(n<0) return status('all words placed');
+  if(!activeAudio()) return status('load main vocals first');
+  words[n].t=now(); selected=n; renderQueue();
+  renderFineControls();
+  status(`dropped "${words[n].w}" @ ${fmt(words[n].t,true)}`);
+}
+
+/* ---------------- canvases ---------------- */
+const cv=document.getElementById('wave'), cx2=cv.getContext('2d');
+const mini=document.getElementById('minicv'), mcx=mini.getContext('2d');
+let DPR=1;
+function resize(){
+  DPR=Math.min(devicePixelRatio||1,2);
+  const tl=document.getElementById('tl');
+  cv.width=tl.clientWidth*DPR; cv.height=tl.clientHeight*DPR;
+  mini.width=mini.parentElement.clientWidth*DPR; mini.height=44*DPR;
+  peaksCache.key='';
+}
+addEventListener('resize',resize);
+
+function peaks(){
+  if(!buffer) return null;
+  const wpx=Math.floor(cv.width/DPR);
+  const key=`${scrollT.toFixed(3)}_${pxPerSec}_${wpx}`;
+  if(peaksCache.key===key) return peaksCache.data;
+  const ch=buffer.getChannelData(0), sr=buffer.sampleRate;
+  const out=new Float32Array(wpx*2);
+  for(let x=0;x<wpx;x++){
+    const t0=scrollT+x/pxPerSec, t1=scrollT+(x+1)/pxPerSec;
+    const i0=Math.max(0,Math.floor(t0*sr)), i1=Math.min(ch.length,Math.floor(t1*sr));
+    let mn=0,mx=0;
+    const stride=Math.max(1,Math.floor((i1-i0)/60));
+    for(let i=i0;i<i1;i+=stride){ const v=ch[i]; if(v<mn)mn=v; if(v>mx)mx=v; }
+    out[x*2]=mn; out[x*2+1]=mx;
+  }
+  peaksCache={key,data:out};
+  return out;
+}
+
+function xOf(t){ return (t-scrollT)*pxPerSec; }
+function tOf(x){ return scrollT + x/pxPerSec; }
+function drawWaveLane(pk,w,center,amp,color,alpha,label){
+  if(!pk) return;
+  cx2.strokeStyle=color; cx2.globalAlpha=alpha; cx2.beginPath();
+  for(let x=0;x<w;x++){
+    cx2.moveTo(x,center+pk[x*2]*amp*3);
+    cx2.lineTo(x,center+pk[x*2+1]*amp*3);
+  }
+  cx2.stroke(); cx2.globalAlpha=1;
+  cx2.fillStyle=color; cx2.font='9px "Courier New"'; cx2.textAlign='left';
+  cx2.fillText(label,8,center-amp-5);
+}
+
+function draw(){
+  requestAnimationFrame(draw);
+  const w=cv.width/DPR, h=cv.height/DPR;
+  cx2.setTransform(DPR,0,0,DPR,0,0);
+  cx2.fillStyle='#0a0a0a'; cx2.fillRect(0,0,w,h);
+  if(!buffer){
+    cx2.fillStyle='#333'; cx2.font='14px "Courier New"'; cx2.textAlign='center';
+    cx2.fillText('JSON loaded · add the vocal stem for waveform + playback',w/2,h*0.60);
+  }
+  // auto-follow playhead
+  if(playing()){
+    const px=xOf(now());
+    if(px>w*0.85) scrollT=now()-w*0.15/pxPerSec;
+    if(px<0) scrollT=Math.max(0,now()-w*0.15/pxPerSec);
+  }
+  const midY=h*0.60, amp=h*0.24;
+  // grid: seconds
+  cx2.strokeStyle='#161616'; cx2.fillStyle='#444'; cx2.font='10px "Courier New"'; cx2.textAlign='left';
+  const step=pxPerSec>250?0.5:(pxPerSec>60?1:5);
+  for(let t=Math.ceil(scrollT/step)*step;t<scrollT+w/pxPerSec;t+=step){
+    const x=xOf(t);
+    cx2.beginPath(); cx2.moveTo(x,0); cx2.lineTo(x,h); cx2.stroke();
+    cx2.fillText(fmt(t),x+3,h-6);
+  }
+  // three aligned waveform lanes; playback remains independently selectable
+  const laneAmp=Math.max(15,h*0.055);
+  drawWaveLane(fullPeaks(),w,h*0.36,laneAmp,'#89A7FF',0.62,'FINAL MASTER · PLAYBACK');
+  drawWaveLane(peaks(),w,h*0.56,laneAmp,'#38FF6E',0.88,'MAIN VOCALS · STEM');
+  drawWaveLane(backingPeaks(),w,h*0.76,laneAmp,'#C8F04B',0.72,'BACKING VOCALS · STEM');
+  // word flags
+  cx2.font='12px "Courier New"';
+  words.forEach((wd,i)=>{
+    if(wd.t===null) return;
+    const x=xOf(wd.t);
+    if(x<-200||x>w+200) return;
+    const sel=i===selected;
+    cx2.strokeStyle=sel?'#F2F2F2':'#E4002B';
+    cx2.beginPath(); cx2.moveTo(x,20); cx2.lineTo(x,midY+amp*1.2); cx2.stroke();
+    const label=wd.w, tw=cx2.measureText(label).width;
+    const ly=18+(i%5)*16;                       // stagger rows to reduce overlap
+    cx2.fillStyle=sel?'#F2F2F2':'#E4002B';
+    cx2.fillRect(x-2,ly-11,tw+8,14);
+    cx2.fillStyle='#000';
+    cx2.fillText(label,x+2,ly);
+  });
+  // playhead
+  const px=xOf(now());
+  cx2.strokeStyle='#F2F2F2'; cx2.lineWidth=1.5;
+  cx2.beginPath(); cx2.moveTo(px,0); cx2.lineTo(px,h); cx2.stroke(); cx2.lineWidth=1;
+  // ---- current-word showcase (bottom center) ----
+  const placedSorted=words.filter(x=>x.t!==null).sort((a,b)=>a.t-b.t);
+  if(placedSorted.length){
+    const t=now();
+    let ci=-1;
+    for(let i=0;i<placedSorted.length;i++){ if(placedSorted[i].t<=t) ci=i; else break; }
+    const cur=ci>=0?placedSorted[ci]:null;
+    const nxt=placedSorted[ci+1]||null;
+    const prv=ci>0?placedSorted[ci-1]:null;
+    const yb=h-34;
+    cx2.textAlign='center'; cx2.textBaseline='middle';
+    if(cur&&t-cur.t<3){
+      const age=t-cur.t, pop=Math.max(0,1-age*7);
+      cx2.font=`900 ${34+pop*10}px "Arial Black",Arial,sans-serif`;
+      cx2.fillStyle='#F2F2F2'; cx2.globalAlpha=0.95;
+      cx2.fillText(cur.w,w/2,yb);
+      cx2.globalAlpha=1;
+    }
+    cx2.font='700 14px "Courier New",monospace'; cx2.fillStyle='#555';
+    if(prv) { cx2.textAlign='right'; cx2.fillText(prv.w, w/2-160, yb); }
+    if(nxt) { cx2.textAlign='left';  cx2.fillText(nxt.w+' ▸ '+fmt(nxt.t,true), w/2+160, yb); }
+    cx2.textAlign='left';
+  }
+  document.getElementById('time').textContent=fmt(now(),true);
+  drawMini();
+}
+function drawMini(){
+  const w=mini.width/DPR, h=mini.height/DPR;
+  mcx.setTransform(DPR,0,0,DPR,0,0);
+  mcx.fillStyle='#0d0d0d'; mcx.fillRect(0,0,w,h);
+  const total=timelineDuration();
+  // coarse waveform
+  const miniBuffer=tracks.full?.buffer||buffer;
+  if(miniBuffer){
+    const ch=miniBuffer.getChannelData(0);
+    mcx.strokeStyle=tracks.full?.buffer?'#50659b':'#1e5c33'; mcx.beginPath();
+    for(let x=0;x<w;x++){
+      const i=Math.floor(x/w*ch.length);
+      const v=ch[i]||0;
+      mcx.moveTo(x,h/2-v*h*1.4); mcx.lineTo(x,h/2+v*h*1.4);
+    }
+    mcx.stroke();
+  }
+  // placed word ticks
+  mcx.fillStyle='#E4002B';
+  words.forEach(wd=>{ if(wd.t!==null) mcx.fillRect(wd.t/total*w,2,1,6); });
+  // viewport
+  const vx=scrollT/total*w, vw=(cv.width/DPR/pxPerSec)/total*w;
+  mcx.strokeStyle='#38FF6E'; mcx.strokeRect(vx,0,Math.max(6,vw),h);
+  // playhead
+  mcx.fillStyle='#F2F2F2'; mcx.fillRect(now()/total*w,0,1,h);
+}
+function fmt(t,ms){
+  const m=Math.floor(t/60), s=t-m*60;
+  return ms? `${m}:${s.toFixed(3).padStart(6,'0')}` : `${m}:${Math.floor(s).toString().padStart(2,'0')}`;
+}
+
+/* ---------------- interactions ---------------- */
+cv.addEventListener('mousedown', ev=>{
+  const r=cv.getBoundingClientRect();
+  const x=ev.clientX-r.left, y=ev.clientY-r.top;
+  // hit a word flag?
+  cx2.font='12px "Courier New"';
+  for(let i=words.length-1;i>=0;i--){
+    const wd=words[i]; if(wd.t===null) continue;
+    const wx=xOf(wd.t), ly=18+(i%5)*16;
+    const tw=cx2.measureText(wd.w).width;
+    if(x>=wx-4&&x<=wx+tw+8&&y>=ly-13&&y<=ly+4){
+      selected=i; dragging={idx:i, dx:x-wx}; renderFineControls();
+      return;
+    }
+    if(Math.abs(x-wx)<4&&y<cv.height/DPR*0.85){ selected=i; dragging={idx:i,dx:0}; renderFineControls(); return; }
+  }
+  // else: seek
+  seek(tOf(x)); selected=-1; renderFineControls();
+});
+addEventListener('mousemove', ev=>{
+  if(!dragging) return;
+  const r=cv.getBoundingClientRect();
+  words[dragging.idx].t=Math.max(0,Math.min(timelineDuration(),tOf(ev.clientX-r.left-dragging.dx)));
+  renderFineControls();
+});
+addEventListener('mouseup', ()=>dragging=null);
+mini.addEventListener('mousedown', ev=>{
+  const r=mini.getBoundingClientRect();
+  const t=(ev.clientX-r.left)/r.width*timelineDuration();
+  scrollT=Math.max(0,t-(cv.width/DPR/pxPerSec)/2);
+});
+cv.addEventListener('wheel', ev=>{
+  ev.preventDefault();
+  if(ev.metaKey||ev.ctrlKey){
+    const r=cv.getBoundingClientRect();
+    const tAt=tOf(ev.clientX-r.left);
+    pxPerSec=Math.max(20,Math.min(600,pxPerSec*(ev.deltaY<0?1.15:0.87)));
+    scrollT=Math.max(0,tAt-(ev.clientX-r.left)/pxPerSec);
+    peaksCache.key='';
+  } else {
+    scrollT=Math.max(0,scrollT+(ev.deltaY+ev.deltaX)/pxPerSec*1.2);
+    peaksCache.key='';
+  }
+},{passive:false});
+document.getElementById('zoomIn').onclick=()=>{pxPerSec=Math.min(600,pxPerSec*1.3);peaksCache.key='';};
+document.getElementById('zoomOut').onclick=()=>{pxPerSec=Math.max(20,pxPerSec/1.3);peaksCache.key='';};
+document.getElementById('playBtn').onclick=togglePlay;
+
+addEventListener('keydown', ev=>{
+  if(modal.classList.contains('open')) return;
+  if(ev.target.matches('input,textarea,select')) return;
+  const k=ev.key;
+  if(k===' '){ ev.preventDefault(); togglePlay(); }
+  if(k==='Enter'){ ev.preventDefault(); dropNext(); }
+  if(k==='ArrowLeft'){ ev.altKey?nudgeSelected(-0.001):seek(now()-2); }
+  if(k==='ArrowRight'){ ev.altKey?nudgeSelected(0.001):seek(now()+2); }
+  if(ev.code==='Comma'&&selected>=0&&words[selected].t!==null) nudgeSelected(ev.shiftKey?-0.001:-0.025);
+  if(ev.code==='Period'&&selected>=0&&words[selected].t!==null) nudgeSelected(ev.shiftKey?0.001:0.025);
+  if((k==='Delete'||k==='Backspace')&&selected>=0){ words[selected].t=null; selected=-1; renderQueue(); renderFineControls(); }
+  if(k==='p'||k==='P'){ if(selected>=0&&words[selected].t!==null){ seek(words[selected].t-0.7); if(!playing()) togglePlay(); } }
+});
+
+/* ---------------- direct on-timeline word editing ---------------- */
+const inlineEdit=document.getElementById('inlineEdit');
+let editCtx=null;   // {mode:'new', t} | {mode:'edit', idx}
+function openInline(x,y,val,ctx){
+  editCtx=ctx;
+  inlineEdit.value=val||'';
+  inlineEdit.style.left=Math.min(innerWidth-160,Math.max(4,x))+'px';
+  inlineEdit.style.top=Math.max(4,y)+'px';
+  inlineEdit.style.display='block';
+  inlineEdit.focus(); inlineEdit.select();
+}
+function closeInline(commit){
+  if(commit&&editCtx){
+    const v=inlineEdit.value.trim().toUpperCase();
+    if(v){
+      if(editCtx.mode==='new'){ words.push({w:v, t:editCtx.t}); selected=words.length-1; status(`added "${v}" @ ${fmt(editCtx.t,true)}`); }
+      else { words[editCtx.idx].w=v; status(`renamed → "${v}"`); }
+      renderQueue(); renderFineControls();
+    }
+  }
+  inlineEdit.style.display='none'; editCtx=null;
+}
+inlineEdit.addEventListener('keydown',ev=>{
+  ev.stopPropagation();
+  if(ev.key==='Enter') closeInline(true);
+  if(ev.key==='Escape') closeInline(false);
+});
+inlineEdit.addEventListener('blur',()=>closeInline(false));
+
+cv.addEventListener('dblclick', ev=>{
+  const r=cv.getBoundingClientRect();
+  const x=ev.clientX-r.left, y=ev.clientY-r.top;
+  // hit an existing flag? -> edit its text
+  cx2.font='12px "Courier New"';
+  for(let i=words.length-1;i>=0;i--){
+    const wd=words[i]; if(wd.t===null) continue;
+    const wx=xOf(wd.t), ly=18+(i%5)*16;
+    const tw=cx2.measureText(wd.w).width;
+    if((x>=wx-4&&x<=wx+tw+8&&y>=ly-13&&y<=ly+4)||(Math.abs(x-wx)<4)){
+      selected=i;
+      renderFineControls();
+      openInline(ev.clientX, ev.clientY-30, wd.w, {mode:'edit', idx:i});
+      return;
+    }
+  }
+  // empty timeline -> new word at this time
+  openInline(ev.clientX, ev.clientY-30, '', {mode:'new', t:tOf(x)});
+});
+
+function status(msg){ document.getElementById('status').textContent=msg; }
+resize(); renderFineControls(); requestAnimationFrame(draw);
+if(location.protocol==='file:'){
+  status('choose JSON/audio manually · automatic folder loading needs localhost');
+  loadDefaultAudio();
+} else {
+  loadPresetJson();
+  loadDefaultAudio();
+}
+</script>
+</body>
+</html>

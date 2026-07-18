@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stick Visualizer v02 — 3D Mesh</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
+  #hud {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    display:flex; gap:12px; align-items:center; z-index:10;
+  }
+  button {
+    background:transparent; border:1px solid rgba(255,255,255,0.2);
+    color:rgba(255,255,255,0.4); padding:7px 16px; cursor:pointer;
+    font:11px 'Courier New'; letter-spacing:3px; text-transform:uppercase;
+    transition:all .2s;
+  }
+  button:hover { border-color:#0ff; color:#0ff; }
+  button.on  { border-color:#0ff; color:#0ff; box-shadow:0 0 10px rgba(0,255,255,.25); }
+  #hint { color:rgba(255,255,255,.18); font-size:10px; letter-spacing:2px; }
+</style>
+</head>
+<body>
+<div id="hud">
+  <button id="micBtn">🎤 mic</button>
+  <span id="hint">drag · scroll · collide</span>
+  <button id="slowBtn">−bpm</button>
+  <button id="fastBtn">+bpm</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  RENDERER + SCENE
+// ═══════════════════════════════════════════════
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+scene.fog    = new THREE.FogExp2(0x00000a, 0.032);
+
+const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 300);
+camera.position.set(0, 1, 16);
+
+window.addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ═══════════════════════════════════════════════
+//  CAMERA ORBIT (manual)
+// ═══════════════════════════════════════════════
+let camR = 16, drag = false, lastX = 0, lastY = 0;
+let orbitY = 0, orbitX = 0.15, targetY = 0, targetX = 0.15;
+const el = renderer.domElement;
+el.addEventListener('mousedown',  e => { drag=true; lastX=e.clientX; lastY=e.clientY; });
+el.addEventListener('mouseup',    ()  => drag=false);
+el.addEventListener('mouseleave', ()  => drag=false);
+el.addEventListener('mousemove',  e  => {
+  if (!drag) return;
+  targetY += (e.clientX - lastX) * 0.005;
+  targetX  = Math.max(-.9, Math.min(.9, targetX + (e.clientY - lastY) * .003));
+  lastX = e.clientX; lastY = e.clientY;
+});
+el.addEventListener('wheel', e => {
+  camR = Math.max(5, Math.min(35, camR + e.deltaY * .02));
+}, {passive:true});
+// Touch
+el.addEventListener('touchstart', e => { drag=true; lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; });
+el.addEventListener('touchend',   ()  => drag=false);
+el.addEventListener('touchmove',  e  => {
+  targetY += (e.touches[0].clientX - lastX) * 0.006;
+  targetX  = Math.max(-.9, Math.min(.9, targetX + (e.touches[0].clientY - lastY) * .003));
+  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+});
+let autoSpin = 0;
+
+// ═══════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════
+let analyser, freqData, micOn = false;
+let bpm = 128;
+document.getElementById('micBtn').addEventListener('click', async () => {
+  if (micOn) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const ac = new AudioContext();
+    const src = ac.createMediaStreamSource(stream);
+    analyser = ac.createAnalyser();
+    analyser.fftSize = 512; analyser.smoothingTimeConstant = .78;
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+    src.connect(analyser);
+    micOn = true;
+    document.getElementById('micBtn').textContent = '🎤 live';
+    document.getElementById('micBtn').classList.add('on');
+  } catch(e) {}
+});
+document.getElementById('slowBtn').addEventListener('click', () => { bpm = Math.max(60, bpm-16); });
+document.getElementById('fastBtn').addEventListener('click', () => { bpm = Math.min(200, bpm+16); });
+
+function energy(lo=0, hi=5) {
+  if (analyser) {
+    analyser.getByteFrequencyData(freqData);
+    let s=0; for (let i=lo;i<=hi;i++) s+=freqData[i];
+    return Math.min(1, s/((hi-lo+1)*210));
+  }
+  const phase = (performance.now() % (60000/bpm)) / (60000/bpm);
+  return Math.max(0, 1 - phase * 3.2) * 0.75;
+}
+function midEnergy() { return energy(6, 35) * 0.8; }
+
+// ═══════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════
+function mesh(geo, mat) { return new THREE.Mesh(geo, mat); }
+function mat(hex, opts={}) {
+  return new THREE.MeshBasicMaterial({ color:hex, wireframe:true, ...opts });
+}
+function cylMesh(rx,ry,h,segs,m) { return mesh(new THREE.CylinderGeometry(rx,ry,h,segs||5),m); }
+function ballMesh(r,segs,m)      { return mesh(new THREE.SphereGeometry(r,segs||7,segs||5),m); }
+function torusMesh(R,r,ts,rs,m)  { return mesh(new THREE.TorusGeometry(R,r,ts||5,rs||10),m); }
+
+// ═══════════════════════════════════════════════
+//  STARS
+// ═══════════════════════════════════════════════
+{
+  const N = 1800, pos = new Float32Array(N*3);
+  for (let i=0;i<N;i++) {
+    const r = 80+Math.random()*120;
+    const t = Math.acos(2*Math.random()-1), p = Math.random()*Math.PI*2;
+    pos[i*3] = r*Math.sin(t)*Math.cos(p);
+    pos[i*3+1] = r*Math.sin(t)*Math.sin(p);
+    pos[i*3+2] = r*Math.cos(t);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({
+    color:0xaaccff, size:.14, transparent:true, opacity:.5,
+    blending:THREE.AdditiveBlending, depthWrite:false, sizeAttenuation:true
+  })));
+}
+
+// Background grid (floor)
+{
+  const grid = new THREE.GridHelper(40, 28, 0x001133, 0x001133);
+  grid.position.y = -5;
+  scene.add(grid);
+}
+
+// ═══════════════════════════════════════════════
+//  AMBIENT FLOATING SHAPES
+// ═══════════════════════════════════════════════
+const ambientMat = new THREE.MeshBasicMaterial({
+  color:0x112244, wireframe:true, transparent:true, opacity:.22
+});
+const ambGeos = [
+  new THREE.IcosahedronGeometry(.7, 1),
+  new THREE.OctahedronGeometry(.7, 1),
+  new THREE.TetrahedronGeometry(.9, 1),
+];
+const ambients = [];
+for (let i=0;i<14;i++) {
+  const m = mesh(ambGeos[i%3], ambientMat);
+  const r = 8+Math.random()*10, t=Math.random()*Math.PI*2, p=Math.random()*Math.PI;
+  m.position.set(r*Math.sin(p)*Math.cos(t), (Math.random()-.5)*12, r*Math.sin(p)*Math.sin(t));
+  m.userData.rv = new THREE.Vector3((Math.random()-.5)*.007,(Math.random()-.5)*.007,(Math.random()-.5)*.006);
+  scene.add(m);
+  ambients.push(m);
+}
+
+// ═══════════════════════════════════════════════
+//  STICKMAN
+// ═══════════════════════════════════════════════
+function buildStickman() {
+  const C = mat(0x00ffff);
+  const root = new THREE.Group();
+
+  const head = ballMesh(.23, 8, C); head.position.y = 1.08; root.add(head);
+
+  // Neck
+  const nk = cylMesh(.04,.04,.14,5,C); nk.position.y = .88; root.add(nk);
+
+  // Torso
+  const torso = cylMesh(.07,.11,.6,7,C); torso.position.y = .32; root.add(torso);
+
+  // Shoulder bar
+  const shBar = cylMesh(.03,.03,.62,4,C);
+  shBar.rotation.z = Math.PI/2; shBar.position.y = .62; root.add(shBar);
+
+  // Hip bar
+  const hpBar = cylMesh(.03,.03,.4,4,C);
+  hpBar.rotation.z = Math.PI/2; hpBar.position.y = .02; root.add(hpBar);
+
+  function arm(sx) {
+    const pivot = new THREE.Group();
+    pivot.position.set(sx*.31, .62, 0); root.add(pivot);
+    const ua = cylMesh(.026,.022,.34,4,C); ua.position.y=-.17; pivot.add(ua);
+    const ep = new THREE.Group(); ep.position.y=-.34; pivot.add(ep);
+    const fa = cylMesh(.02,.018,.3,4,C); fa.position.y=-.15; ep.add(fa);
+    const hand = ballMesh(.055,5,C); hand.position.y=-.3; ep.add(hand);
+    return { pivot, ep };
+  }
+  const lA = arm(-1), rA = arm(1);
+
+  function leg(sx) {
+    const pivot = new THREE.Group();
+    pivot.position.set(sx*.18, .02, 0); root.add(pivot);
+    const th = cylMesh(.035,.03,.42,5,C); th.position.y=-.21; pivot.add(th);
+    const kp = new THREE.Group(); kp.position.y=-.42; pivot.add(kp);
+    const sh = cylMesh(.028,.024,.38,5,C); sh.position.y=-.19; kp.add(sh);
+    // Foot
+    const ft = cylMesh(.022,.022,.14,4,C);
+    ft.rotation.z = Math.PI/2; ft.position.set(sx*.06, -.38, .04); kp.add(ft);
+    return { pivot, kp };
+  }
+  const lL = leg(-1), rL = leg(1);
+
+  scene.add(root);
+  return { root, head, lA, rA, lL, rL, mat:C };
+}
+
+const stick = buildStickman();
+
+function tickStick(t, e) {
+  const s = 2.0 + bpm/128 * .5;
+  const b = t * s, amp = .6 + e * .9;
+
+  stick.root.position.y = Math.sin(b*2) * .18 * (.4 + e*.7);
+  stick.root.rotation.z = Math.sin(b) * .07;
+  stick.head.rotation.y = Math.sin(b*.5) * .5;
+  stick.head.rotation.x = Math.sin(b) * .15;
+
+  stick.lA.pivot.rotation.x  =  Math.sin(b) * amp;
+  stick.lA.ep.rotation.x     =  Math.max(0, Math.sin(b+.5)*amp*.7);
+  stick.lA.pivot.rotation.z  =  .12 + Math.cos(b*.5)*.1;
+  stick.rA.pivot.rotation.x  = -Math.sin(b) * amp;
+  stick.rA.ep.rotation.x     =  Math.max(0,-Math.sin(b-.5)*amp*.7);
+  stick.rA.pivot.rotation.z  = -.12 - Math.cos(b*.5)*.1;
+
+  stick.lL.pivot.rotation.x  =  Math.sin(b) * amp * .65;
+  stick.lL.kp.rotation.x     =  Math.max(0,-Math.sin(b+.4)*amp*.85);
+  stick.rL.pivot.rotation.x  = -Math.sin(b) * amp * .65;
+  stick.rL.kp.rotation.x     =  Math.max(0, Math.sin(b+.4)*amp*.85);
+
+  const pulse = 1 + e*.1;
+  stick.root.scale.setScalar(pulse);
+
+  // colour brightness on beat
+  const br = Math.min(1.8, 1 + e * .8);
+  stick.mat.color.setRGB(0, br, br);
+}
+
+// ═══════════════════════════════════════════════
+//  SAXOPHONE (wireframe 3D)
+// ═══════════════════════════════════════════════
+function buildSax() {
+  const C = mat(0xff3377); const g = new THREE.Group();
+
+  // Main curved body — torus arc
+  const arc = mesh(new THREE.TorusGeometry(.75,.1,7,18,Math.PI*1.3), C);
+  arc.rotation.z = Math.PI*.1; g.add(arc);
+
+  // Bell
+  const bell = mesh(new THREE.ConeGeometry(.36,.48,9,1,true), C);
+  bell.position.set(-.72,-.78,0); bell.rotation.z = Math.PI*.35; g.add(bell);
+  const bellRim = torusMesh(.36,.03,6,9,C);
+  bellRim.position.set(-.72,-.78,0); bellRim.rotation.z = Math.PI*.35; g.add(bellRim);
+
+  // Neck
+  const neck = cylMesh(.05,.05,.55,6,C);
+  neck.position.set(.38,.88,0); neck.rotation.z = -Math.PI*.2; g.add(neck);
+
+  // Mouthpiece
+  const mp = cylMesh(.04,.06,.22,5,C);
+  mp.position.set(.62,1.2,0); mp.rotation.z = -Math.PI*.3; g.add(mp);
+
+  // Key pads along body
+  for (let i=0;i<6;i++) {
+    const a = i/6*Math.PI*1.1 - .2;
+    const kx = Math.cos(a)*.75+.1, ky = Math.sin(a)*.75-.05;
+    const k = ballMesh(.065, 5, C);
+    k.position.set(kx, ky, (i%2)*.07-.035); g.add(k);
+    // key arm stub
+    const arm = cylMesh(.02,.02,.12,4,C);
+    arm.rotation.z = Math.PI/2; arm.position.set(kx+.1, ky, 0); g.add(arm);
+  }
+
+  // Octave key (on neck)
+  const ok = ballMesh(.055, 5, C); ok.position.set(.3,.78,.1); g.add(ok);
+
+  return g;
+}
+
+// ═══════════════════════════════════════════════
+//  GUITAR (wireframe 3D)
+// ═══════════════════════════════════════════════
+function buildGuitar() {
+  const C = mat(0xffcc00); const g = new THREE.Group();
+
+  // Lower bout
+  const lb = torusMesh(.58,.11,7,14,C); lb.position.y=-.5; g.add(lb);
+  // Upper bout
+  const ub = torusMesh(.4,.09,6,12,C);  ub.position.y= .3; g.add(ub);
+  // Waist cuts
+  for (let s of[-1,1]) {
+    const wc = cylMesh(.04,.04,.28,4,C);
+    wc.rotation.z=Math.PI/2; wc.position.set(s*.48,-.1,0); g.add(wc);
+  }
+  // Sound hole
+  const sh = torusMesh(.17,.025,6,10,C); sh.position.y=-.28; g.add(sh);
+  // Inner ring
+  const ir = torusMesh(.12,.015,5,10,C); ir.position.y=-.28; g.add(ir);
+
+  // Neck
+  const neck = cylMesh(.065,.085,1.3,5,C); neck.position.y=1.08; g.add(neck);
+
+  // Headstock
+  const hs = mesh(new THREE.BoxGeometry(.19,.38,.07), C); hs.position.y=1.9; g.add(hs);
+
+  // Nut
+  const nut = cylMesh(.068,.068,.018,4,C);
+  nut.rotation.z=Math.PI/2; nut.position.y=1.42; g.add(nut);
+
+  // Frets
+  for (let i=0;i<7;i++) {
+    const fr = cylMesh(.072,.072,.014,4,C);
+    fr.rotation.z=Math.PI/2; fr.position.y=.5+i*.16; g.add(fr);
+  }
+
+  // Strings
+  for (let i=-2.5;i<=2.5;i++) {
+    const str = cylMesh(.006,.006,2.05,3,C);
+    str.position.set(i*.018, .9, 0); g.add(str);
+  }
+
+  // Bridge
+  const br = mesh(new THREE.BoxGeometry(.3,.06,.07), C); br.position.y=-.55; g.add(br);
+
+  // Tuning pegs
+  for (let s of[-1,1]) for (let i=0;i<3;i++) {
+    const peg = ballMesh(.04,4,C);
+    peg.position.set(s*.1, 1.72+i*-.12, s*.08); g.add(peg);
+  }
+
+  return g;
+}
+
+// ═══════════════════════════════════════════════
+//  DRUM KIT (wireframe 3D)
+// ═══════════════════════════════════════════════
+function buildDrums() {
+  const C = mat(0x33ff88); const g = new THREE.Group();
+
+  function drum(rx, h, px, py, pz, rx2) {
+    const body = mesh(new THREE.CylinderGeometry(rx,rx,h,10,1,true), C);
+    body.position.set(px,py,pz); if(rx2) body.rotation.x=rx2; g.add(body);
+    const head = torusMesh(rx,.032,6,10,C);
+    head.position.set(px,py+h/2,pz); if(rx2) head.position.set(px,py,pz+h/2); g.add(head);
+    const bot  = torusMesh(rx,.032,6,10,C);
+    bot.position.set(px,py-h/2,pz);  if(rx2) bot.position.set(px,py,pz-h/2); g.add(bot);
+  }
+
+  // Bass drum (horizontal)
+  drum(.68, .6, 0, -.3, 0, Math.PI/2);
+
+  // Snare
+  drum(.3, .22, -.78, .12, 0);
+  // Snare stand
+  for (let s of[-1,1]) { const st=cylMesh(.018,.018,.5,4,C); st.position.set(-.78+s*.22,.-.3,0); st.rotation.z=s*.25; g.add(st); }
+
+  // Tom 1
+  drum(.26,.22,.18,.58,-.12);
+  // Tom 2
+  drum(.23,.2,.62,.48,.1);
+
+  // Hi-hat (two cymbal shapes)
+  for (let dy of[0,.09]) {
+    const hh = torusMesh(.34,.04,5,10,C); hh.position.set(.82,.52+dy,0); g.add(hh);
+  }
+  const hhSt = cylMesh(.02,.02,1,4,C); hhSt.position.set(.82,-.02,0); g.add(hhSt);
+
+  // Crash cymbal
+  const cr = torusMesh(.44,.04,6,12,C); cr.position.set(-.32,.92,-.42); cr.rotation.x=.28; g.add(cr);
+  const crBowl = ballMesh(.06,5,C); crBowl.position.set(-.32,.92,-.42); g.add(crBowl);
+  const crSt = cylMesh(.02,.02,.7,4,C); crSt.position.set(-.32,.56,-.42); g.add(crSt);
+
+  // Ride cymbal
+  const ri = torusMesh(.46,.04,6,14,C); ri.position.set(.7,.85,.45); ri.rotation.x=-.22; g.add(ri);
+  const riSt = cylMesh(.02,.02,.65,4,C); riSt.position.set(.7,.52,.45); g.add(riSt);
+
+  // Kick pedal
+  const kp = cylMesh(.04,.04,.3,4,C); kp.rotation.x=Math.PI*.35; kp.position.set(.12,-.55,.45); g.add(kp);
+  const kpFoot = mesh(new THREE.BoxGeometry(.18,.04,.28),C); kpFoot.position.set(.12,-.7,.6); g.add(kpFoot);
+
+  return g;
+}
+
+// ═══════════════════════════════════════════════
+//  FLOATERS — physics objects
+// ═══════════════════════════════════════════════
+const BOUND = 7;
+
+class Floater {
+  constructor(grp, hexColor, rad, initPos) {
+    this.g    = grp;
+    this.col  = new THREE.Color(hexColor);
+    this.rad  = rad;
+    this.mat  = grp.children[0]?.material;
+
+    const p = initPos || new THREE.Vector3(
+      (Math.random()-.5)*BOUND*1.6,
+      (Math.random()-.5)*BOUND*1.2,
+      (Math.random()-.5)*BOUND*1.6
+    );
+    this.g.position.copy(p);
+
+    this.vel = new THREE.Vector3(
+      (Math.random()-.5)*.014,
+      (Math.random()-.5)*.011,
+      (Math.random()-.5)*.013
+    );
+    this.rvel = new THREE.Vector3(
+      (Math.random()-.5)*.016,
+      (Math.random()-.5)*.016,
+      (Math.random()-.5)*.012
+    );
+    this.baseScale = .85 + Math.random()*.3;
+    this.g.scale.setScalar(this.baseScale);
+    scene.add(this.g);
+  }
+
+  tick(e) {
+    this.g.position.addScaledVector(this.vel, 1 + e*.4);
+    this.g.rotation.x += this.rvel.x * (1+e*.6);
+    this.g.rotation.y += this.rvel.y * (1+e*.6);
+    this.g.rotation.z += this.rvel.z;
+
+    // Sphere boundary bounce
+    const d = this.g.position.length();
+    if (d > BOUND) {
+      const n = this.g.position.clone().normalize();
+      this.vel.reflect(n);
+      this.g.position.copy(n.multiplyScalar(BOUND-.01));
+    }
+    this.g.scale.setScalar(this.baseScale * (1+e*.12));
+  }
+
+  pos() { return this.g.position; }
+}
+
+const floaters = [
+  new Floater(buildSax(),    0xff3377, 1.2, new THREE.Vector3(-4.5, 2, -2)),
+  new Floater(buildGuitar(), 0xffcc00, 1.6, new THREE.Vector3( 4.5,-1.5, 1.5)),
+  new Floater(buildDrums(),  0x33ff88, 2.0, new THREE.Vector3(-1,  -3.5,-3)),
+];
+
+// ═══════════════════════════════════════════════
+//  ARTICULONS — collision sparks
+// ═══════════════════════════════════════════════
+const MAX = 600;
+const aPos  = new Float32Array(MAX*3);
+const aCol  = new Float32Array(MAX*3);
+const aLife = new Float32Array(MAX);
+const aVel  = Array.from({length:MAX}, () => new THREE.Vector3());
+const aBaseCol = new Float32Array(MAX*3);
+
+const artGeo = new THREE.BufferGeometry();
+artGeo.setAttribute('position', new THREE.BufferAttribute(aPos,3));
+artGeo.setAttribute('color',    new THREE.BufferAttribute(aCol,3));
+artGeo.setDrawRange(0, MAX);
+
+scene.add(new THREE.Points(artGeo, new THREE.PointsMaterial({
+  size:.09, vertexColors:true, transparent:true,
+  blending:THREE.AdditiveBlending, depthWrite:false, sizeAttenuation:true
+})));
+
+let artCursor = 0;
+function spawn(pos, n, cA, cB) {
+  for (let i=0;i<n;i++) {
+    const k = artCursor++ % MAX;
+    aPos[k*3] = pos.x+(Math.random()-.5)*.3;
+    aPos[k*3+1] = pos.y+(Math.random()-.5)*.3;
+    aPos[k*3+2] = pos.z+(Math.random()-.5)*.3;
+    const spd = .018+Math.random()*.07;
+    const th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random()-1);
+    aVel[k].set(spd*Math.sin(ph)*Math.cos(th), spd*Math.sin(ph)*Math.sin(th), spd*Math.cos(ph));
+    const t = Math.random();
+    aBaseCol[k*3]   = cA.r*t+cB.r*(1-t);
+    aBaseCol[k*3+1] = cA.g*t+cB.g*(1-t);
+    aBaseCol[k*3+2] = cA.b*t+cB.b*(1-t);
+    aLife[k] = 1.0;
+  }
+}
+
+function tickArticulons(dt) {
+  for (let k=0;k<MAX;k++) {
+    if (aLife[k]<=0) { aCol[k*3]=aCol[k*3+1]=aCol[k*3+2]=0; continue; }
+    aLife[k] = Math.max(0, aLife[k]-dt*.65);
+    const l = aLife[k];
+    aPos[k*3]  += aVel[k].x; aPos[k*3+1] += aVel[k].y; aPos[k*3+2] += aVel[k].z;
+    aVel[k].multiplyScalar(.975);
+    // gravity drift
+    aPos[k*3+1] -= dt*.02;
+    aCol[k*3]   = aBaseCol[k*3]  *l;
+    aCol[k*3+1] = aBaseCol[k*3+1]*l;
+    aCol[k*3+2] = aBaseCol[k*3+2]*l;
+  }
+  artGeo.attributes.position.needsUpdate = true;
+  artGeo.attributes.color.needsUpdate    = true;
+}
+
+// ═══════════════════════════════════════════════
+//  ENERGY LINES — tension between close objects
+// ═══════════════════════════════════════════════
+const MAX_LINES = 30;
+const lPos = new Float32Array(MAX_LINES*2*3);
+const lineGeo = new THREE.BufferGeometry();
+lineGeo.setAttribute('position', new THREE.BufferAttribute(lPos,3));
+const lineMesh = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+  vertexColors: false,
+  color: 0x334466,
+  transparent: true,
+  opacity: .35,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+}));
+scene.add(lineMesh);
+
+function tickLines(objects) {
+  let li = 0;
+  for (let i=0;i<objects.length&&li<MAX_LINES;i++) {
+    for (let j=i+1;j<objects.length&&li<MAX_LINES;j++) {
+      const a=objects[i], b=objects[j];
+      const d = a.distanceTo(b);
+      if (d < 6.5) {
+        lPos[li*6]   = a.x; lPos[li*6+1] = a.y; lPos[li*6+2] = a.z;
+        lPos[li*6+3] = b.x; lPos[li*6+4] = b.y; lPos[li*6+5] = b.z;
+        // Intensity by proximity
+        const alpha = Math.max(0, 1-d/6.5);
+        lineMesh.material.opacity = Math.max(lineMesh.material.opacity, alpha*.4);
+        li++;
+      }
+    }
+  }
+  for (let i=li;i<MAX_LINES;i++) lPos.fill(0,i*6,i*6+6);
+  lineGeo.attributes.position.needsUpdate = true;
+  lineGeo.setDrawRange(0, li*2);
+  lineMesh.material.opacity *= .85; // decay
+}
+
+// ═══════════════════════════════════════════════
+//  COLLISION
+// ═══════════════════════════════════════════════
+const lastHit = {};
+const stickCol = new THREE.Color(0x00ffff);
+
+function checkCollisions(e) {
+  const objs = [
+    { pos: stick.root.position.clone(), rad: 1.1, col: stickCol, id:'s' },
+    ...floaters.map((f,i)=>({ pos:f.pos().clone(), rad:f.rad, col:f.col, id:`f${i}` }))
+  ];
+
+  for (let i=0;i<objs.length;i++) {
+    for (let j=i+1;j<objs.length;j++) {
+      const a=objs[i], b=objs[j];
+      const d = a.pos.distanceTo(b.pos);
+      if (d < a.rad+b.rad) {
+        const key=`${a.id}-${b.id}`, now=Date.now();
+        if (!lastHit[key] || now-lastHit[key] > 250) {
+          lastHit[key] = now;
+          const mid = a.pos.clone().add(b.pos).multiplyScalar(.5);
+          spawn(mid, Math.floor(12+e*28), a.col, b.col);
+          // push floaters apart
+          if (j>0) floaters[j-1].vel.reflect(b.pos.clone().sub(a.pos).normalize()).multiplyScalar(1.12);
+          if (i>0) floaters[i-1].vel.reflect(a.pos.clone().sub(b.pos).normalize()).multiplyScalar(1.12);
+        }
+      }
+    }
+  }
+  // Feed positions to line system
+  tickLines(objs.map(o=>o.pos));
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER LOOP
+// ═══════════════════════════════════════════════
+const clock = new THREE.Clock();
+let prev = performance.now();
+
+(function loop() {
+  requestAnimationFrame(loop);
+  const now = performance.now();
+  const dt  = Math.min((now-prev)/1000, .05);
+  prev = now;
+  const t = clock.getElapsedTime();
+
+  const e  = energy();
+  const me = midEnergy();
+
+  // Camera orbit
+  autoSpin += .007;
+  orbitX += (targetX-orbitX)*.04;
+  orbitY += (targetY-orbitY)*.04;
+  const cy = autoSpin + orbitY;
+  const cx = orbitX;
+  const cr = camR * (1-me*.05);
+  camera.position.set(
+    Math.sin(cy)*cr*Math.cos(cx),
+    Math.sin(cx)*cr,
+    Math.cos(cy)*cr*Math.cos(cx)
+  );
+  camera.lookAt(0, .5, 0);
+
+  // Stickman
+  tickStick(t, e);
+  stick.root.position.x = Math.cos(t*.38)*1.1;
+  stick.root.position.z = Math.sin(t*.28)*.8;
+  stick.root.rotation.y = Math.atan2(stick.root.position.x, stick.root.position.z) + Math.PI;
+
+  // Floaters
+  floaters.forEach(f=>f.tick(e));
+
+  // Ambient shapes
+  ambients.forEach(a => {
+    a.rotation.x += a.userData.rv.x;
+    a.rotation.y += a.userData.rv.y;
+    a.rotation.z += a.userData.rv.z;
+  });
+
+  // Collisions & lines
+  checkCollisions(e);
+  tickArticulons(dt);
+
+  renderer.render(scene, camera);
+})();
+</script>
+</body>
+</html>
