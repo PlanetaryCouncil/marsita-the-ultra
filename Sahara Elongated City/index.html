@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAHARA ELONGATED CITY — An Elon-gated Community</title>
+<style>
+  :root {
+    --sand: #e8c98a;
+    --sand-deep: #c99a4b;
+    --dune-shadow: #8a5a1e;
+    --night: #0d0a14;
+    --night-2: #1a1226;
+    --dusk: #ff7a3c;
+    --dusk-2: #ff4d6d;
+    --glacier: #9be7ff;
+    --glacier-deep: #3ab0d8;
+    --ink: #f5eede;
+    --muted: #b9a98c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--night);
+    color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .mono { font-family: 'Courier New', monospace; letter-spacing: 0.08em; }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 4rem 1.5rem 14rem;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% 100%, #4a1f4d 0%, transparent 60%),
+      radial-gradient(ellipse 80% 50% at 50% 110%, var(--dusk) 0%, transparent 55%),
+      linear-gradient(180deg, var(--night) 0%, var(--night-2) 55%, #3d1e33 100%);
+  }
+  .hero .kicker {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5em;
+    color: var(--dusk);
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-size: clamp(2.6rem, 9vw, 7rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, var(--ink) 30%, var(--sand-deep) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero h1 .elongated {
+    display: block;
+    transform: scaleY(1.6);
+    transform-origin: center;
+    margin: 1.2rem 0;
+  }
+  .hero .tagline {
+    margin-top: 2.5rem;
+    font-size: clamp(1rem, 2.5vw, 1.4rem);
+    font-style: italic;
+    color: var(--muted);
+    max-width: 40rem;
+  }
+  .hero .subtag {
+    margin-top: 0.8rem;
+    font-size: 0.85rem;
+    color: var(--dusk);
+  }
+  .dunes {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 12rem;
+    pointer-events: none;
+  }
+  .dunes svg { display: block; width: 100%; height: 100%; }
+  .scroll-hint {
+    position: absolute;
+    bottom: 1.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--dune-shadow);
+    animation: bob 2s ease-in-out infinite;
+    z-index: 2;
+  }
+  @keyframes bob { 0%,100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 8px); } }
+
+  /* ---------- SECTIONS ---------- */
+  section { padding: 6rem 1.5rem; position: relative; }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  .section-num {
+    font-size: 0.75rem;
+    color: var(--dusk);
+    text-transform: uppercase;
+    letter-spacing: 0.4em;
+    margin-bottom: 1rem;
+  }
+  h2 {
+    font-size: clamp(1.8rem, 5vw, 3.2rem);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    margin-bottom: 2rem;
+    line-height: 1.05;
+  }
+  .lede { font-size: 1.2rem; color: var(--ink); max-width: 44rem; margin-bottom: 1.2rem; }
+  p.body-text { color: var(--muted); max-width: 44rem; margin-bottom: 1.2rem; }
+  em.hot { color: var(--dusk); font-style: italic; }
+  em.cold { color: var(--glacier); font-style: italic; }
+
+  /* stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1px;
+    background: #2a2138;
+    border: 1px solid #2a2138;
+    margin: 3rem 0;
+  }
+  .stat {
+    background: var(--night);
+    padding: 1.8rem 1.5rem;
+  }
+  .stat .n {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--sand);
+    display: block;
+    line-height: 1.1;
+  }
+  .stat .l {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-top: 0.4rem;
+    display: block;
+  }
+  .stat .fine { font-size: 0.68rem; color: #6b5f4e; display: block; margin-top: 0.5rem; font-style: italic; }
+
+  /* cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+  .card {
+    border: 1px solid #2f2540;
+    padding: 2rem 1.6rem;
+    background: linear-gradient(160deg, var(--night-2), var(--night));
+  }
+  .card h3 {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--sand);
+    margin-bottom: 0.9rem;
+  }
+  .card p { font-size: 0.92rem; color: var(--muted); }
+  .card .icon { font-size: 1.8rem; display: block; margin-bottom: 1rem; }
+
+  /* gate section */
+  .gate-section {
+    background: linear-gradient(180deg, var(--night) 0%, #241531 50%, var(--night) 100%);
+  }
+  .gate-visual {
+    margin: 3rem auto;
+    max-width: 30rem;
+    text-align: center;
+    border: 2px solid var(--sand-deep);
+    padding: 3rem 2rem;
+    position: relative;
+  }
+  .gate-visual::before, .gate-visual::after {
+    content: "";
+    position: absolute;
+    top: -2px; bottom: -2px;
+    width: 30%;
+    border-top: 2px solid var(--dusk);
+    border-bottom: 2px solid var(--dusk);
+  }
+  .gate-visual::before { left: -2px; border-left: 2px solid var(--dusk); }
+  .gate-visual::after { right: -2px; border-right: 2px solid var(--dusk); }
+  .gate-visual .gate-word {
+    font-size: 1.4rem;
+    letter-spacing: 1.2em;
+    text-indent: 1.2em;
+    text-transform: uppercase;
+    color: var(--sand);
+  }
+  .gate-visual .gate-sub { font-size: 0.8rem; color: var(--muted); margin-top: 1rem; font-style: italic; }
+
+  /* water section */
+  .water-section {
+    background:
+      radial-gradient(ellipse 100% 40% at 50% 0%, rgba(58, 176, 216, 0.12) 0%, transparent 60%),
+      var(--night);
+    border-top: 1px solid rgba(155, 231, 255, 0.15);
+  }
+  .water-section h2 { color: var(--glacier); }
+  .water-section .section-num { color: var(--glacier-deep); }
+  .plan-box {
+    border: 1px dashed var(--glacier-deep);
+    padding: 2rem;
+    margin: 2.5rem 0;
+    max-width: 44rem;
+  }
+  .plan-box .strike {
+    text-decoration: line-through;
+    color: #5e5470;
+  }
+  .plan-box .plan-final {
+    color: var(--glacier);
+    font-size: 1.3rem;
+    font-style: italic;
+    margin-top: 1rem;
+    display: block;
+  }
+  .plan-steps { list-style: none; margin-top: 2.5rem; counter-reset: step; max-width: 44rem; }
+  .plan-steps li {
+    counter-increment: step;
+    padding: 1.2rem 0 1.2rem 3.5rem;
+    position: relative;
+    border-bottom: 1px solid #1f1a2e;
+    color: var(--muted);
+  }
+  .plan-steps li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute;
+    left: 0; top: 1.2rem;
+    font-family: 'Courier New', monospace;
+    color: var(--glacier-deep);
+    font-size: 1.1rem;
+  }
+  .plan-steps li strong { color: var(--ink); }
+
+  /* FAQ */
+  details {
+    border-bottom: 1px solid #2f2540;
+    max-width: 44rem;
+  }
+  details summary {
+    cursor: pointer;
+    padding: 1.3rem 0;
+    font-size: 1.05rem;
+    color: var(--ink);
+    list-style: none;
+    position: relative;
+    padding-right: 2rem;
+  }
+  details summary::after {
+    content: "+";
+    position: absolute;
+    right: 0.2rem;
+    color: var(--dusk);
+    font-size: 1.3rem;
+  }
+  details[open] summary::after { content: "–"; }
+  details .a { padding: 0 0 1.5rem; color: var(--muted); font-size: 0.95rem; }
+
+  /* CTA */
+  .cta-section {
+    text-align: center;
+    background: linear-gradient(180deg, var(--night) 0%, #3d1e33 100%);
+    padding-bottom: 8rem;
+  }
+  .cta-btn {
+    display: inline-block;
+    margin-top: 2.5rem;
+    padding: 1.1rem 3rem;
+    border: 2px solid var(--dusk);
+    color: var(--ink);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    font-size: 0.85rem;
+    transition: all 0.25s ease;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .cta-btn:hover {
+    background: var(--dusk);
+    color: var(--night);
+    letter-spacing: 0.4em;
+  }
+  .cta-fine {
+    margin-top: 1.5rem;
+    font-size: 0.72rem;
+    color: #6b5f4e;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #574c60;
+    border-top: 1px solid #1f1a2e;
+  }
+  footer a { color: var(--dune-shadow); }
+  .disclaimer {
+    max-width: 40rem;
+    margin: 1rem auto 0;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="kicker mono">Now pre-selling &middot; Phase 0 of &infin;</div>
+  <h1>
+    Sahara
+    <span class="elongated">Elongated</span>
+    City
+  </h1>
+  <p class="tagline">One city. The entire desert. From the northern edge of the Sahara to the southern edge of the Sahara — and every grain of sand in between.</p>
+  <p class="subtag mono">It's gated. It's by Elon. It's an Elon-gated community.</p>
+
+  <div class="dunes">
+    <svg viewBox="0 0 1440 190" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,120 C240,60 420,150 720,110 C1020,70 1200,160 1440,100 L1440,190 L0,190 Z" fill="#8a5a1e" opacity="0.5"/>
+      <path d="M0,150 C300,100 560,180 860,140 C1140,105 1300,175 1440,140 L1440,190 L0,190 Z" fill="#c99a4b" opacity="0.6"/>
+      <path d="M0,175 C360,140 700,195 1040,165 C1260,148 1380,180 1440,170 L1440,190 L0,190 Z" fill="#e8c98a"/>
+    </svg>
+  </div>
+  <div class="scroll-hint mono">▼ descend into the dunes ▼</div>
+</header>
+
+<!-- ============ THE VISION ============ -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">01 / The Vision</div>
+    <h2>Why build a city in the desert when you can build a city that <em>is</em> the desert?</h2>
+    <p class="lede">Other cities have limits. City limits. We looked at the Sahara — 9.2 million square kilometres of prime, sun-drenched, absolutely unoccupied* sand — and asked the only question that matters:</p>
+    <p class="body-text"><em class="hot">"What if the whole thing was one enormously long city?"</em></p>
+    <p class="body-text">Sahara Elongated City stretches uninterrupted from the Mediterranean coast to the Sahel. North world of Sahara. South world of Sahara. One postcode. The longest city ever conceived, because it was conceived by someone who really likes things that are long.</p>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="n">9,200,000</span>
+        <span class="l">km&sup2; of city</span>
+        <span class="fine">roughly the size of the Sahara, because it is the Sahara</span>
+      </div>
+      <div class="stat">
+        <span class="n">4,800 km</span>
+        <span class="l">longest boulevard</span>
+        <span class="fine">no left turns</span>
+      </div>
+      <div class="stat">
+        <span class="n">1</span>
+        <span class="l">gate</span>
+        <span class="fine">it's a really good gate</span>
+      </div>
+      <div class="stat">
+        <span class="n">0%</span>
+        <span class="l">humidity, crime&dagger;</span>
+        <span class="fine">&dagger;projected. crime requires neighbours; neighbours are in phase 12</span>
+      </div>
+    </div>
+    <p class="body-text" style="font-size:0.75rem; font-style:italic;">*Occupancy status disputed by approximately 2.5 million current Sahara residents. Our legal team describes them as "early adopters."</p>
+  </div>
+</section>
+
+<!-- ============ THE GATE ============ -->
+<section class="gate-section">
+  <div class="wrap">
+    <div class="section-num mono">02 / The Gate</div>
+    <h2>Elongated. And Elon-gated.</h2>
+    <p class="lede">Every great gated community needs a gate. Ours is the only gate visible from orbit — which is convenient, because that's where the spaceships are going.</p>
+    <p class="body-text">Security is absolute. The perimeter is 12,000 kilometres of nothing, patrolled by heat, thirst, and a subscription-based fence. Residents enter via the Gate. Everyone else enters via the waitlist.</p>
+
+    <div class="gate-visual">
+      <div class="gate-word">The Gate</div>
+      <div class="gate-sub">artist's impression &middot; actual gate may be longer</div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <span class="icon">🏜️</span>
+        <h3>Total Privacy</h3>
+        <p>Your nearest neighbour is, on average, 340 kilometres away. Borrow a cup of sugar. We dare you.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🔑</span>
+        <h3>Members Only</h3>
+        <p>Entry requires biometric scan, proof of vibes, and a founding deposit. The desert has always been exclusive — we just added paperwork.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📏</span>
+        <h3>Aggressively Long</h3>
+        <p>The city has one dimension and we committed to it. Width is a legacy concept. Everything here is elongated: the streets, the gate, the founder's vision, the wait times.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SAND TO STARSHIPS ============ -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">03 / The Sand</div>
+    <h2>Every grain of sand is a spaceship that hasn't been born yet</h2>
+    <p class="lede">The Sahara contains an estimated 1.5 septillion grains of sand. Legacy civilisations saw a wasteland. We see <em class="hot">inventory</em>.</p>
+    <p class="body-text">Sand is silicon. Silicon is chips. Chips are robots. Robots build factories. Factories build spaceships. Spaceships build more factories. You see where this is going: <strong>up</strong>.</p>
+    <p class="body-text">The entire surface area of the desert will be repurposed as a single, continuous, self-replicating spaceship foundry. Each spaceship we launch carries the blueprint to build the next one. We call this program <em class="hot">Dune &amp; Done</em>.</p>
+
+    <div class="cards">
+      <div class="card">
+        <span class="icon">⏳</span>
+        <h3>Step 1: Sand</h3>
+        <p>Already there. Honestly the hardest part was done for us by 7 million years of wind. Thanks, wind.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🏭</span>
+        <h3>Step 2: Foundries</h3>
+        <p>Solar-smelted silicon megafabs every 100 km along the boulevard. The desert gets 3,600 hours of sunshine a year and has literally nothing else planned.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🚀</span>
+        <h3>Step 3: Replicate</h3>
+        <p>Ships that build ships that build ships. Exponential. By Phase 9 we will be legally required to stop, and we will think about it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THE WATER PLAN ============ -->
+<section class="water-section">
+  <div class="wrap">
+    <div class="section-num mono">04 / The Water</div>
+    <h2>We will restore the aquifers.</h2>
+    <p class="lede">Yes, the ancient aquifers under the Sahara. The ones that took 20,000 years to fill. We're going to top them up. Here's the plan, which we workshopped extensively:</p>
+
+    <div class="plan-box">
+      <p class="strike">Plan A: Cure the salty sea. Take the ocean, remove the salt, pour it in. (Desalination at septillion-grain scale. Too obvious. Everyone's doing it.)</p>
+      <span class="plan-final">Plan B: Fresh. Fresh, fresh, <em>fresh</em> melting glaciers will replenish the aquifers. That's the plan.</span>
+    </div>
+
+    <ol class="plan-steps">
+      <li><strong>The glaciers are already melting.</strong> This is the part of the plan that is going extremely well, ahead of schedule, with zero effort on our part.</li>
+      <li><strong>Melting glaciers are fresh water.</strong> Pre-desalinated by nature. The salt never got in. Nature's filtration, zero moving parts.</li>
+      <li><strong>Freshwater goes into the aquifers.</strong> Logistics team is confident. The water is in the north; the aquifers are underneath. Down is a direction water famously loves.</li>
+      <li><strong>Aquifers: restored.</strong> The Sahara was green 6,000 years ago. We're simply rolling back to a previous version. Ctrl+Z for a continent.</li>
+    </ol>
+
+    <p class="body-text" style="margin-top:2.5rem;">Critics ask: <em class="cold">"Isn't relying on melting glaciers a bad sign?"</em> We prefer to think of the cryosphere as a scheduled delivery. The planet is defrosting the fridge, and we brought a bucket.</p>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">05 / FAQ</div>
+    <h2>Frequently Anticipated Questions</h2>
+
+    <details>
+      <summary>Is this a real city?</summary>
+      <div class="a">It is as real as the brochure you are currently reading, which is very real, you can touch your screen right now and feel it.</div>
+    </details>
+    <details>
+      <summary>Why "Elongated"?</summary>
+      <div class="a">Because it is gated, and it is by Elon. Elon-gated. It is also 4,800 km long, which our branding department describes as "a happy coincidence" and our geometry department describes as "a cry for help."</div>
+    </details>
+    <details>
+      <summary>What about the people who already live in the Sahara?</summary>
+      <div class="a">Founding residents with heritage status! They receive lifetime membership, a commemorative grain of sand, and absolutely no say in anything, consistent with our governance model ("one man, one vote — he is the man, it is his vote").</div>
+    </details>
+    <details>
+      <summary>Won't the spaceship foundries use all the sand?</summary>
+      <div class="a">The Sahara gains sand through desertification faster than we can launch it into space. For the first time in history, climate catastrophe is a supply chain advantage. We are the only real-estate project that is literally growing.</div>
+    </details>
+    <details>
+      <summary>What if the glaciers finish melting?</summary>
+      <div class="a">Then the aquifers are full, obviously. Please read the plan again. There are four steps. It rhymes.</div>
+    </details>
+    <details>
+      <summary>Can I leave?</summary>
+      <div class="a">The gate opens from the inside on Tuesdays.</div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta-section">
+  <div class="wrap">
+    <div class="section-num mono">06 / Join</div>
+    <h2>The desert is filling up.<br>With ambition.</h2>
+    <p class="lede" style="margin-left:auto; margin-right:auto;">Reserve your kilometre today. Plots are sold by the linear kilometre, because area is for cities with two dimensions.</p>
+    <button class="cta-btn mono" onclick="this.textContent='POSITION IN QUEUE: 1,500,000,000,000,000,000,000,000'; this.style.letterSpacing='0.05em'; this.style.fontSize='0.6rem';">Join the Waitlist</button>
+    <p class="cta-fine">Deposits are non-refundable, non-transferable, and non-existent until our payments provider returns our calls. Waitlist position determined by vibes and settled in sand.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="mono">SAHARA ELONGATED CITY — a Marsita the Ultra production</div>
+  <div class="disclaimer">This is satire. No deserts were purchased in the making of this brochure. The glaciers, regrettably, are actually melting — that part isn't a joke, which is sort of the point. Not affiliated with any billionaire, living, dead, or on Mars.</div>
+</footer>
+
+</body>
+</html>
