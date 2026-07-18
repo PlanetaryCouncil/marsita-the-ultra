@@ -1,4 +1,42 @@
 <!doctype html>
+<!--
+  BINFACE ACHIEVEMENTS — INTERACTIVE WEBSITE MODULE
+  ==================================================
+
+  PURPOSE
+  -------
+  This file is the interactive reference implementation. The portable feature is
+  the achievement dashboard: current time, remaining time, scrubber, 0/12 counter,
+  twelve stars, milestone rail and unlock toasts. The Three.js/canvas artwork is a
+  host application and is NOT required to reuse the dashboard.
+
+  AI INTEGRATION MAP
+  ------------------
+  1. Copy CSS blocks labelled "ACHIEVEMENTS MODULE".
+  2. Copy the two HTML blocks labelled "ACHIEVEMENTS MODULE":
+       a) cinematic rail/toasts (#achieveDock)
+       b) information dashboard (#transport)
+  3. Copy ACHIEVEMENT_MILESTONES and the JS block labelled
+     "ACHIEVEMENTS MODULE: ENGINE".
+  4. The host must provide song `duration`, call renderAchievements(songTime)
+     whenever its clock changes, and route scrubber input to its media clock.
+  5. Optional integration API: window.BinfaceAchievements (documented at EOF).
+
+  STABLE DOM CONTRACT
+  -------------------
+  #time, #remainingTime, #speedReadout, #unlockedCount, #achievementTotal,
+  #achievementStars, #seek, #achieveRail, #achieveFill and #toastStack.
+
+  EVENTS
+  ------
+  `binface:achievement-change` fires on window only when the unlocked count changes.
+  event.detail = { current, duration, remaining, unlocked, total, next }.
+
+  INTEGRATION RULE
+  ----------------
+  Keep achievement state derived from the authoritative song time. Never use an
+  independent timer; seeking backward must relock future milestones deterministically.
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -47,10 +85,27 @@
   .stemMeter .label{display:flex;justify-content:space-between;gap:8px;white-space:nowrap}
   .stemMeter .bar{height:2px;margin-top:5px;background:rgba(255,255,255,.12);overflow:hidden}
   .stemMeter i{display:block;width:4%;height:100%;background:currentColor;box-shadow:0 0 10px currentColor;transform-origin:left center}
-  #transport{position:fixed;left:50%;bottom:12px;z-index:8;width:min(980px,calc(100vw - 24px));transform:translateX(-50%);display:grid;grid-template-columns:auto minmax(120px,1fr) auto;align-items:center;gap:10px;padding:8px 10px;background:rgba(2,3,10,.66);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(255,255,255,.72);transition:opacity .25s}
-  #transport .transportButtons{display:flex;align-items:center;gap:6px}
-  #time{min-width:118px;text-align:center;color:#fff;white-space:nowrap;font-variant-numeric:tabular-nums}
-  #seek{--seek:0%;width:100%;height:18px;margin:0;cursor:pointer;appearance:none;background:transparent}
+  /* ===== ACHIEVEMENTS MODULE: DASHBOARD STYLES — START ===== */
+  #transport{position:fixed;left:50%;bottom:12px;z-index:8;width:min(1040px,calc(100vw - 24px));transform:translateX(-50%);display:grid;grid-template-columns:1fr;gap:8px;padding:10px;background:linear-gradient(135deg,rgba(3,4,14,.88),rgba(8,10,27,.75));border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 42px rgba(0,0,0,.42),inset 0 0 34px rgba(37,220,255,.035);backdrop-filter:blur(16px);font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(255,255,255,.72);transition:opacity .25s}
+  #achievementPanel{display:grid;grid-template-columns:142px minmax(300px,1fr) 142px;align-items:stretch;gap:10px}
+  .timeCell{display:flex;flex-direction:column;justify-content:center;gap:5px;padding:10px 12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.2);font-variant-numeric:tabular-nums}
+  .timeCell:last-child{text-align:right}
+  .readoutLabel{font-size:7px;letter-spacing:.3em;color:rgba(255,255,255,.42);text-transform:uppercase}
+  #time,#remainingTime{color:#fff;font-size:14px;letter-spacing:.07em;white-space:nowrap;text-shadow:-1px 0 rgba(255,43,214,.65),1px 0 rgba(37,220,255,.65),0 0 12px rgba(255,255,255,.18)}
+  #remainingTime{color:var(--cyan)}
+  #achievementCenter{display:grid;grid-template-rows:auto auto auto;align-content:center;gap:5px;padding:3px 4px}
+  #achievementHeadline{display:flex;align-items:baseline;justify-content:space-between;gap:12px;text-transform:uppercase}
+  #achievementHeadline>span{font-size:7px;letter-spacing:.34em;color:rgba(255,255,255,.44)}
+  #achievementCount{display:flex;align-items:baseline;gap:4px;color:rgba(255,255,255,.45);font-size:9px;font-variant-numeric:tabular-nums}
+  #achievementCount b{color:var(--gold);font-size:18px;text-shadow:0 0 12px rgba(255,229,107,.8)}
+  #achievementCount i{font-style:normal;color:rgba(255,255,255,.25)}
+  #achievementStars{display:grid;grid-template-columns:repeat(12,1fr);align-items:center;gap:3px;min-height:18px}
+  .panelStar{position:relative;display:grid;place-items:center;color:rgba(255,255,255,.14);font-size:15px;line-height:1;transform:scale(.72);transition:color .18s,transform .22s,filter .22s;text-shadow:0 0 0 transparent}
+  .panelStar::before{content:'★'}
+  .panelStar::after{content:'';position:absolute;width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.35;box-shadow:0 0 8px currentColor}
+  .panelStar.lit{color:var(--gold);transform:scale(1);filter:drop-shadow(0 0 6px rgba(255,229,107,.9));text-shadow:-1px 0 rgba(255,43,214,.7),1px 0 rgba(37,220,255,.7)}
+  #transport .transportButtons{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+  #seek{--seek:0%;width:100%;height:18px;margin:0;cursor:ew-resize;appearance:none;background:transparent;touch-action:none;user-select:none}
   #seek::-webkit-slider-runnable-track{height:4px;background:linear-gradient(90deg,var(--pink) 0,var(--cyan) var(--seek),rgba(255,255,255,.15) var(--seek));box-shadow:0 0 12px rgba(37,220,255,.22)}
   #seek::-webkit-slider-thumb{appearance:none;width:16px;height:16px;margin-top:-6px;border:2px solid #fff;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
   #seek::-moz-range-track{height:4px;background:rgba(255,255,255,.15)}
@@ -58,6 +113,7 @@
   #seek::-moz-range-thumb{width:14px;height:14px;border:2px solid #fff;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
   #transport button{border:1px solid rgba(255,255,255,.2);color:#fff;background:rgba(2,3,10,.55);padding:8px 10px;font:inherit;cursor:pointer;backdrop-filter:blur(10px)}
   #transport.hidden{opacity:0;pointer-events:none}
+  /* ===== ACHIEVEMENTS MODULE: DASHBOARD STYLES — END ===== */
   #start{
     position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 44%,rgba(30,16,62,.75),rgba(2,3,10,.96) 60%);
   }
@@ -76,8 +132,8 @@
   #card details div{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;text-align:left}
   #card input{max-width:100%;color:#aaa;font:inherit}
   #error{color:#ff6f91}
-  /* Achievement timeline: rail of unlock pips under the square + toast pop-ups.
-     All motion is driven from song time in JS (no CSS animations) so the 10× capture speed-up stays correct. */
+  /* ===== ACHIEVEMENTS MODULE: RAIL + TOAST STYLES — START =====
+     All motion is derived from authoritative song time, so seeking is deterministic. */
   #achieveDock{position:absolute;z-index:6;left:50%;top:calc(45.5% + min(27vh,27vw)*var(--shell-scale,1));transform:translateX(-50%);width:calc(min(54vh,54vw)*var(--shell-scale,1));pointer-events:none}
   #achieveRail{position:relative;margin-top:2.1vh;height:4px;background:rgba(255,255,255,.08)}
   #achieveRail>i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--pink),var(--gold),var(--cyan));box-shadow:0 0 14px rgba(37,220,255,.5)}
@@ -89,6 +145,7 @@
   .toast .tIcon{font-size:clamp(20px,2.4vw,30px);filter:drop-shadow(0 0 8px rgba(255,229,107,.8))}
   .toast em{display:block;font:700 clamp(7px,.7vw,10px)/1.3 ui-monospace,Menlo,monospace;font-style:normal;letter-spacing:.38em;color:var(--gold);text-transform:uppercase;text-shadow:0 0 10px rgba(255,229,107,.7)}
   .toast strong{display:block;font:1000 clamp(14px,1.7vw,24px)/1.05 "Arial Black",Impact,sans-serif;letter-spacing:-.02em;color:#fff;text-transform:uppercase;text-shadow:-2px 0 rgba(255,43,214,.8),2px 0 rgba(37,220,255,.8),0 0 18px rgba(255,255,255,.25);white-space:nowrap}
+  /* ===== ACHIEVEMENTS MODULE: RAIL + TOAST STYLES — END ===== */
   /* Menu: layer toggles + speed/size config, persisted locally. */
   #menu{position:fixed;right:14px;top:14px;z-index:30;width:236px;max-height:calc(100vh - 28px);overflow-y:auto;padding:14px 16px 16px;background:rgba(3,4,14,.9);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(14px);font:700 10px/1.9 ui-monospace,"SFMono-Regular",Menlo,monospace;letter-spacing:.08em;color:rgba(255,255,255,.82);text-transform:uppercase}
   #menu.hidden{display:none}
@@ -106,7 +163,7 @@
     #achieveDock{width:calc(min(90vw,50vh)*var(--shell-scale,1));top:calc(45.5% + min(45vw,25vh)*var(--shell-scale,1))}
     #stemLegend{display:none} #titleBug{width:90vw;letter-spacing:.25em}
   }
-  @media (max-width:680px){#transport{grid-template-columns:1fr auto;gap:6px}#seek{grid-column:1/-1;grid-row:1}.transportButtons{grid-column:2}#time{grid-column:1;grid-row:2;text-align:left}#transport button{padding:7px 8px}}
+  @media (max-width:680px){#achievementPanel{grid-template-columns:1fr 1fr;gap:6px}#achievementCenter{grid-column:1/-1;grid-row:1}.timeCell{grid-row:2;padding:7px 9px}#transport button{padding:7px 8px}.panelStar{font-size:13px}}
   @media (prefers-reduced-motion:reduce){#mediaShell::after{animation:none}}
 </style>
 </head>
@@ -125,17 +182,28 @@
     </section>
   </div>
   <div id="stemLegend"></div>
+  <!-- ===== ACHIEVEMENTS MODULE: CINEMATIC RAIL + TOASTS — START ===== -->
   <div id="achieveDock" aria-live="polite">
     <div id="toastStack"></div>
     <div id="achieveRail"><i id="achieveFill"></i></div>
   </div>
+  <!-- ===== ACHIEVEMENTS MODULE: CINEMATIC RAIL + TOASTS — END ===== -->
 </main>
 
+<!-- ===== ACHIEVEMENTS MODULE: INFORMATION DASHBOARD — START ===== -->
 <div id="transport" class="hidden">
-  <span id="time">00:00.000 / 00:00.000</span>
-  <input id="seek" type="range" min="0" max="1" value="0" step="0.01" aria-label="Playback position">
+  <div id="achievementPanel" aria-label="Playback and achievement information">
+    <div class="timeCell"><span class="readoutLabel">Current time</span><strong id="time">00:00.000</strong></div>
+    <div id="achievementCenter">
+      <div id="achievementHeadline"><span>Achievement circuit · <strong id="speedReadout">1×</strong></span><strong id="achievementCount"><b id="unlockedCount">0</b><i>/</i><span id="achievementTotal">12</span></strong></div>
+      <div id="achievementStars" aria-label="0 of 12 achievements unlocked"></div>
+      <input id="seek" type="range" min="0" max="1" value="0" step="0.01" aria-label="Playback position">
+    </div>
+    <div class="timeCell"><span class="readoutLabel">Remaining</span><strong id="remainingTime">−00:00.000</strong></div>
+  </div>
   <div class="transportButtons"><button id="back5" aria-label="Rewind 5 seconds">−5S</button><button id="pause">PAUSE</button><button id="forward5" aria-label="Forward 5 seconds">+5S</button><button id="restart">RESTART</button><button id="menuBtn">MENU</button><button id="full">FULL</button><button id="hide">HIDE</button></div>
 </div>
+<!-- ===== ACHIEVEMENTS MODULE: INFORMATION DASHBOARD — END ===== -->
 
 <aside id="menu" class="hidden" aria-label="Layer and playback menu">
   <h2>Menu</h2>
@@ -154,10 +222,10 @@
   <hr>
   <div class="sec">Playback speed</div>
   <div class="row">
-    <label><input type="radio" name="speed" value="0.1" checked>0.1×</label>
+    <label><input type="radio" name="speed" value="0.1">0.1×</label>
     <label><input type="radio" name="speed" value="0.25">0.25×</label>
     <label><input type="radio" name="speed" value="0.5">0.5×</label>
-    <label><input type="radio" name="speed" value="1">1×</label>
+    <label><input type="radio" name="speed" value="1" checked>1×</label>
   </div>
   <hr>
   <div class="sec">Square size</div>
@@ -172,7 +240,7 @@
   <div id="card">
     <div class="kicker">version 05 · achievement timeline · menu</div>
     <h1>Visualiser <em>Ultra</em></h1>
-    <p>Playback defaults to one-tenth speed for smooth recording — speed the capture up 10× in your editor. Press M (or the MENU button) to toggle layers on and off, change playback speed, and resize the square.</p>
+    <p>Playback starts at full 1× speed. Drag the progress bar at any time to scrub precisely through the song. Press M (or the MENU button) to toggle layers, change playback speed, and resize the square.</p>
     <div id="loadStatus">Scanning the project…</div>
     <div id="progress"><i></i></div>
     <button id="go" disabled>Loading</button>
@@ -187,13 +255,17 @@
 <script type="module">
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
+/* ==========================================================================
+   01. HOST PROJECT CONFIGURATION
+   Replace these asset paths when integrating into another site.
+   ========================================================================== */
 const CONFIG={
   bpm:174,
   master:'../FINAL AUDIO/Marsita the Ultra — Vote for the Bin (Count Binface vs Farage).mp3',
   words:'../___lyricsJSON/05_binface_words.json',
   features:'visualizer-features.json',
   video:'video-visualizer-720.mp4',
-  fallbackImage:'Artwork Album Cover/album cover JPG upscaled 3000.jpg',
+  fallbackImage:'../Artwork Album Cover/album cover JPG upscaled 3000.jpg',
   groups:[
     {id:'VOICE',color:0xffffff,css:'#ffffff',files:['../STEMS/12 Vocals.mp3']},
     {id:'CHOIR',color:0xffe56b,css:'#ffe56b',files:['../STEMS/11 Backing_Vocals.mp3','../STEMS/13 my own background vocal.mp3']},
@@ -203,10 +275,16 @@ const CONFIG={
   ]
 };
 
-// Achievement timeline. `at` = song seconds, `pct` = fraction of the full song — mix freely,
-// add story beats like {at:143,icon:'🎭',label:'Farage Arrives'} and they slot into the rail automatically.
-const ACHIEVEMENTS=[
+/* ==========================================================================
+   02. ACHIEVEMENT DATA — PORTABLE
+   Use either `at` (absolute song seconds) or `pct` (0..1 of duration). The
+   engine normalizes and sorts both forms. Keep this list at twelve entries if
+   the twelve-column star layout is retained.
+   ========================================================================== */
+const ACHIEVEMENT_MILESTONES=[
+  {at:5,    icon:'✨', label:'Signal Acquired'},
   {at:10,   icon:'👀', label:'10 Seconds · Still Watching'},
+  {pct:.1,  icon:'⭐', label:'10% · First Star'},
   {at:30,   icon:'🗑️', label:'30 Seconds of Bin'},
   {at:60,   icon:'⏱️', label:'1 Minute Unlocked'},
   {pct:.25, icon:'🔓', label:'25% Complete'},
@@ -218,13 +296,17 @@ const ACHIEVEMENTS=[
   {pct:.995,icon:'🏆', label:'100% · Certified Ultra'}
 ];
 
+/* ==========================================================================
+   03. HOST DOM REFERENCES + RUNTIME STATE
+   The achievement module's own DOM references are grouped inside its engine.
+   ========================================================================== */
 const $=s=>document.querySelector(s);
 const START_AT=Math.max(0,Number(new URLSearchParams(location.search).get('start'))||0);
 const start=$('#start'),go=$('#go'),status=$('#loadStatus'),progress=$('#progress i'),transport=$('#transport'),seek=$('#seek');
 const masterAudio=$('#masterAudio'),video=$('#centerVideo'),image=$('#centerImage'),mediaShell=$('#mediaShell'),hero=$('#heroWord'),mediaVideos=[video];
 const fx=$('#fx'),fctx=fx.getContext('2d');
 const textMeasure=document.createElement('canvas').getContext('2d');
-const TARGET_FPS=30,MAX_DPR=1;let PLAYBACK_RATE=.1;
+const TARGET_FPS=30,MAX_DPR=1;let PLAYBACK_RATE=1;
 let dpr=1,fw=0,fh=0,running=false,paused=false,scrubbing=false,resumeAfterScrub=false,showSystems=true,showMedia=true,lowStrobe=matchMedia('(prefers-reduced-motion:reduce)').matches;
 let pauseAt=0,duration=0,words=[],featureData=null,lastWord=-2,lastBeat=-1,shock=0,wordPunch=0;
 const sceneState={rgbSpread:0,shapePulse:0,twist:0,turbulence:0,fusion:0,impact:0,air:0};
@@ -254,6 +336,11 @@ function makeGroups(){
 }
 makeGroups();
 
+/* ==========================================================================
+   04. ASSET LOADING + HOST INITIALIZATION
+   The portable achievement module only needs `duration`; these asset jobs are
+   specific to the reference visualizer.
+   ========================================================================== */
 async function preload(){
   if(location.protocol==='file:'){
     setStatus('<span id="error">Autoload needs localhost.<br>Run <b>python3 -m http.server 8888</b> in this folder.</span>',0);return;
@@ -266,7 +353,7 @@ async function preload(){
     setStatus('Loading square footage and RGB field…',done/jobs);const vr=await fetch(encodeURI(CONFIG.video));if(!vr.ok)throw new Error(`video ${vr.status}`);const videoUrl=URL.createObjectURL(await vr.blob());
     image.src=encodeURI(CONFIG.fallbackImage);setVideoSource(videoUrl);
     await new Promise(resolve=>{let settled=false;const finish=()=>{if(!settled){settled=true;resolve()}};video.addEventListener('canplay',finish,{once:true});video.addEventListener('error',finish,{once:true});setTimeout(finish,3500)});
-    done++;buildLegend();buildAchievements();seek.max=Math.max(.01,duration).toFixed(2);setStatus(`READY · 0.1× CAPTURE · ${words.length} timed words · ${featureData.groups.VOICE.length} baked frames`,1);go.disabled=false;go.textContent='Play · 0.1× Capture';
+    done++;buildLegend();buildAchievements();seek.max=Math.max(.01,duration).toFixed(2);setStatus(`READY · 1× PLAYBACK · ${words.length} timed words · ${featureData.groups.VOICE.length} baked frames`,1);go.disabled=false;go.textContent='Play · 1×';
   }catch(err){console.error(err);setStatus(`<span id="error">Could not preload: ${err.message}<br>Use localhost from the song folder, or choose the master manually.</span>`,done/jobs);go.textContent='Retry';go.disabled=false;}
 }
 
@@ -274,20 +361,59 @@ function buildLegend(){
   $('#stemLegend').innerHTML=CONFIG.groups.map(g=>`<div class="stemMeter" style="--c:${g.css}"><div class="label"><span>${g.id}</span><span>${g.files.length} SRC</span></div><div class="bar"><i id="meter-${g.id}"></i></div></div>`).join('');
 }
 
-// Achievement engine. Toast in/hold/out phases are measured in song seconds and evaluated per frame,
-// so the pop-ups run at 0.1× with the capture and land at full speed after the 10× edit.
+/* ==========================================================================
+   05. ACHIEVEMENTS MODULE: ENGINE — PORTABLE
+
+   Host lifecycle:
+     buildAchievements()            after duration is known
+     renderAchievements(songTime)   on every clock/scrub update
+     silenceAchievementsUpTo(time)  after non-linear seeks/restarts
+
+   Unlock animation phases use song seconds, so every playback speed behaves
+   consistently and seeking backward deterministically relocks future stars.
+   ========================================================================== */
 const TOAST_IN=.45,TOAST_HOLD=3.3,TOAST_OUT=.65,TOAST_LIFE=TOAST_IN+TOAST_HOLD+TOAST_OUT,RING_LIFE=1.1;
-const achieveFill=$('#achieveFill'),achieveRail=$('#achieveRail'),toastStack=$('#toastStack');
+const achievementUI=Object.freeze({
+  fill:$('#achieveFill'),
+  rail:$('#achieveRail'),
+  toasts:$('#toastStack'),
+  stars:$('#achievementStars'),
+  unlocked:$('#unlockedCount'),
+  total:$('#achievementTotal')
+});
+const {fill:achieveFill,rail:achieveRail,toasts:toastStack,stars:achievementStars,unlocked:unlockedCount,total:achievementTotal}=achievementUI;
 let achievements=[];
+let lastPublishedUnlockCount=-1;
 function buildAchievements(){
   for(const a of achievements)if(a.toastEl)a.toastEl.remove();
   for(const pip of achieveRail.querySelectorAll('.pip'))pip.remove();
-  achievements=ACHIEVEMENTS.map(a=>({...a,time:a.at!=null?a.at:a.pct*(duration||0),unlockedAt:null,toastEl:null,pip:null,ring:null}))
+  achievementStars.textContent='';
+  achievements=ACHIEVEMENT_MILESTONES.map(a=>({...a,time:a.at!=null?a.at:a.pct*(duration||0),unlockedAt:null,toastEl:null,pip:null,ring:null,star:null}))
     .filter(a=>Number.isFinite(a.time)&&a.time<=(duration||0)+.01).sort((x,y)=>x.time-y.time);
-  for(const a of achievements){
+  achievements.forEach((a,index)=>{
     const pip=document.createElement('span');pip.className='pip';pip.style.left=(duration?a.time/duration*100:0)+'%';pip.title=a.label;
     a.ring=document.createElement('b');pip.appendChild(a.ring);achieveRail.appendChild(pip);a.pip=pip;
-  }
+    const star=document.createElement('span');star.className='panelStar';star.title=`${index+1}/${achievements.length} · ${a.label}`;star.setAttribute('aria-hidden','true');achievementStars.appendChild(star);a.star=star;
+  });
+  lastPublishedUnlockCount=-1;unlockedCount.textContent='0';achievementTotal.textContent=String(achievements.length);achievementStars.setAttribute('aria-label',`0 of ${achievements.length} achievements unlocked`);
+}
+function getAchievementState(t=clock()){
+  const current=Math.max(0,Math.min(duration||0,Number(t)||0));
+  const unlocked=achievements.filter(a=>a.unlockedAt!=null).length;
+  const nextAchievement=achievements.find(a=>a.unlockedAt==null);
+  return {
+    current,
+    duration:duration||0,
+    remaining:Math.max(0,(duration||0)-current),
+    unlocked,
+    total:achievements.length,
+    next:nextAchievement?{time:nextAchievement.time,label:nextAchievement.label,icon:nextAchievement.icon}:null
+  };
+}
+function publishAchievementState(t,unlocked){
+  if(unlocked===lastPublishedUnlockCount)return;
+  lastPublishedUnlockCount=unlocked;
+  window.dispatchEvent(new CustomEvent('binface:achievement-change',{detail:getAchievementState(t)}));
 }
 function silenceAchievementsUpTo(t){
   for(const a of achievements){
@@ -306,6 +432,7 @@ function renderAchievements(t){
   if(!achievements.length)return;
   achieveFill.style.width=(duration?Math.min(1,t/duration)*100:0).toFixed(2)+'%';
   const live=running&&!paused&&!scrubbing;
+  let unlocked=0;
   for(const a of achievements){
     if(t>=a.time){
       if(a.unlockedAt==null){
@@ -313,7 +440,7 @@ function renderAchievements(t){
         if(a.unlockedAt===t){spawnToast(a);shock=Math.max(shock,.42);wordPunch=Math.max(wordPunch,.5)}
       }
     }else if(a.unlockedAt!=null){a.unlockedAt=null;if(a.toastEl){a.toastEl.remove();a.toastEl=null}}
-    const lit=a.unlockedAt!=null;a.pip.classList.toggle('lit',lit);
+    const lit=a.unlockedAt!=null;if(lit)unlocked++;a.pip.classList.toggle('lit',lit);a.star.classList.toggle('lit',lit);
     const age=lit?t-a.unlockedAt:1e9;
     if(age<RING_LIFE){const p=age/RING_LIFE;a.ring.style.opacity=((1-p)*.9).toFixed(3);a.ring.style.transform=`scale(${(1+p*3.2).toFixed(3)})`}
     else a.ring.style.opacity=0;
@@ -324,8 +451,13 @@ function renderAchievements(t){
     else if(age>TOAST_IN+TOAST_HOLD){const p=(age-TOAST_IN-TOAST_HOLD)/TOAST_OUT;opacity=1-p;transform=`translateY(${(-p*45).toFixed(2)}%) scale(${(1-p*.06).toFixed(3)})`;blur=p*6}
     a.toastEl.style.opacity=Math.max(0,opacity).toFixed(3);a.toastEl.style.transform=transform;a.toastEl.style.filter=blur?`blur(${blur.toFixed(2)}px)`:'';
   }
+  unlockedCount.textContent=String(unlocked);achievementStars.setAttribute('aria-label',`${unlocked} of ${achievements.length} achievements unlocked`);publishAchievementState(t,unlocked);
 }
 
+/* ==========================================================================
+   06. HOST ARTWORK: THREE.JS + CANVAS
+   Not required when transplanting the achievement module into another site.
+   ========================================================================== */
 // THREE: five reactive dimensions around a square-safe centre.
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,MAX_DPR));renderer.setSize(innerWidth,innerHeight);renderer.setClearColor(0x02030a,.58);renderer.outputColorSpace=THREE.SRGBColorSpace;$('#webgl').appendChild(renderer.domElement);
@@ -426,6 +558,10 @@ function updateParticles(t,dt){
 
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,MAX_DPR))});
 
+/* ==========================================================================
+   07. AUTHORITATIVE PLAYBACK CLOCK + SCRUBBING
+   Achievement UI always reads this clock; it never owns a second timer.
+   ========================================================================== */
 function startPlayback(offset=0){
   offset=Math.max(0,Math.min(duration||Infinity,offset));masterAudio.pause();masterAudio.playbackRate=PLAYBACK_RATE;masterAudio.preservesPitch=true;masterAudio.currentTime=offset;pauseAt=offset;running=true;paused=false;masterAudio.play().catch(error=>console.warn('Audio playback needs a click',error));
   setVideosPlaying(true,offset);$('#pause').textContent='PAUSE';resetTransientState(offset);
@@ -439,10 +575,10 @@ function togglePause(){
   else startPlayback(pauseAt)
 }
 function previewSeek(value){
-  const target=Math.max(0,Math.min(duration||0,Number(value)||0));pauseAt=target;masterAudio.currentTime=target;syncVideos(target,true);analysePrecomputed(target,true);renderLyrics(target);updateTimeline(target);
+  const target=Math.max(0,Math.min(duration||0,Number(value)||0));pauseAt=target;masterAudio.currentTime=target;syncVideos(target,true);analysePrecomputed(target,true);renderLyrics(target);renderAchievements(target);updateTimeline(target);
 }
 function beginScrub(){
-  if(scrubbing)return;scrubbing=true;resumeAfterScrub=running&&!paused;if(resumeAfterScrub){pauseAt=clock();masterAudio.pause();setVideosPlaying(false);paused=true}
+  if(scrubbing)return;const current=clock();resumeAfterScrub=running&&!paused;scrubbing=true;pauseAt=current;if(resumeAfterScrub){masterAudio.pause();setVideosPlaying(false);paused=true}
 }
 function finishScrub(){
   if(!scrubbing)return;const target=pauseAt;scrubbing=false;resetTransientState(target);if(resumeAfterScrub)startPlayback(target);else{paused=true;running=true;syncVideos(target,true);$('#pause').textContent='PLAY'}
@@ -549,26 +685,36 @@ function drawFX(t){
   const vg=fctx.createRadialGradient(cx,cy,h*.2,cx,cy,h*.82);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.72)');fctx.fillStyle=vg;fctx.fillRect(0,0,w,h);fctx.restore();
 }
 
+/* ==========================================================================
+   08. MASTER RENDER LOOP + INFORMATION PANEL
+   ========================================================================== */
 function formatTime(t){t=Math.max(0,Number(t)||0);return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.floor(t%1*1000)).padStart(3,'0')}`}
-function updateTimeline(t){if(!scrubbing){seek.value=Math.min(duration||0,t).toFixed(2);seek.style.setProperty('--seek',`${duration?t/duration*100:0}%`)}$('#time').textContent=`${PLAYBACK_RATE}× · ${formatTime(t)} / ${formatTime(duration)}`;bigTimer.textContent=formatTime(t).slice(0,5)}
+function updateTimeline(t){const current=Math.min(duration||0,Math.max(0,t)),remaining=Math.max(0,(duration||0)-current);if(!scrubbing){seek.value=current.toFixed(2);seek.style.setProperty('--seek',`${duration?current/duration*100:0}%`)}$('#time').textContent=formatTime(current);$('#remainingTime').textContent=`−${formatTime(remaining)}`;$('#speedReadout').textContent=`${PLAYBACK_RATE}×`;bigTimer.textContent=formatTime(current).slice(0,5)}
 let lastFrameTime=performance.now()*.001,lastRenderMs=0;
 function tick(renderMs){requestAnimationFrame(tick);if(renderMs-lastRenderMs<1000/TARGET_FPS-1)return;lastRenderMs=renderMs;const now=renderMs*.001,dt=Math.min(.05,Math.max(0,now-lastFrameTime));lastFrameTime=now;const t=clock();if(running&&!paused&&!scrubbing){analysePrecomputed(t);syncVideos(t)}updateThree(t,running&&!paused&&!scrubbing?dt*PLAYBACK_RATE:0);drawFX(t);renderLyrics(t);renderAchievements(t);updateLayerPhysics(t,running&&!paused&&!scrubbing?dt*PLAYBACK_RATE:0);updateTimeline(t)}
 requestAnimationFrame(tick);
 
+/* ==========================================================================
+   09. USER INPUT BINDINGS
+   ========================================================================== */
 go.addEventListener('click',async()=>{
   if(!masterAudio.src||masterAudio.readyState<1){go.disabled=true;go.textContent='Loading';await preload();if(masterAudio.readyState<1){go.disabled=false;return}}
   start.classList.add('hidden');transport.classList.remove('hidden');startPlayback(START_AT);
 });
 $('#pause').onclick=togglePause;$('#restart').onclick=()=>startPlayback(0);$('#full').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();$('#hide').onclick=()=>transport.classList.add('hidden');
 $('#back5').onclick=()=>jumpBy(-5);$('#forward5').onclick=()=>jumpBy(5);
-seek.addEventListener('pointerdown',beginScrub);seek.addEventListener('input',()=>{beginScrub();previewSeek(seek.value);seek.style.setProperty('--seek',`${duration?Number(seek.value)/duration*100:0}%`)});seek.addEventListener('change',finishScrub);seek.addEventListener('pointerup',finishScrub);seek.addEventListener('pointercancel',finishScrub);
-$('#masterPick').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;await loadMasterSource(URL.createObjectURL(f));seek.max=Math.max(.01,duration).toFixed(2);buildAchievements();setStatus(`Manual master ready · ${f.name}`,1);go.disabled=false;go.textContent='Play · 0.1× Capture'});
+seek.addEventListener('pointerdown',event=>{beginScrub();seek.setPointerCapture?.(event.pointerId)});seek.addEventListener('input',()=>{beginScrub();previewSeek(seek.value);seek.style.setProperty('--seek',`${duration?Number(seek.value)/duration*100:0}%`)});seek.addEventListener('change',()=>{previewSeek(seek.value);finishScrub()});seek.addEventListener('pointerup',event=>{previewSeek(seek.value);if(seek.hasPointerCapture?.(event.pointerId))seek.releasePointerCapture(event.pointerId);finishScrub()});seek.addEventListener('pointercancel',finishScrub);
+$('#masterPick').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;await loadMasterSource(URL.createObjectURL(f));seek.max=Math.max(.01,duration).toFixed(2);buildAchievements();setStatus(`Manual master ready · ${f.name}`,1);go.disabled=false;go.textContent='Play · 1×'});
 $('#videoPick').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const u=URL.createObjectURL(f);if(f.type.startsWith('image/')){image.src=u;for(const item of mediaVideos){item.pause();item.removeAttribute('src');item.load()}}else setVideoSource(u)});
 addEventListener('keydown',e=>{
   if(!start.classList.contains('hidden'))return;const k=e.key.toLowerCase();
   if(k===' '){e.preventDefault();togglePause()}if(k==='arrowleft'){e.preventDefault();jumpBy(-5)}if(k==='arrowright'){e.preventDefault();jumpBy(5)}if(k==='r')startPlayback(0);if(k==='l')lowStrobe=!lowStrobe;if(k==='w')setLayer('systems',!showSystems);if(k==='v')setLayer('square',!showMedia);if(k==='m')menu.classList.toggle('hidden');if(k==='h')transport.classList.toggle('hidden');if(k==='f')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
 });
 
+/* ==========================================================================
+   10. OPTIONAL HOST LAYER PHYSICS
+   The dashboard does not depend on this section.
+   ========================================================================== */
 // Layer physics: the HTML layers are spring-mounted bodies that bump and shove each other.
 // Toasts knock the achievement rail, the pulsing square shoves the timer/title out of its way,
 // drum onsets thump the floating layers. Integrated in song time so capture speed-up stays correct.
@@ -621,8 +767,11 @@ function updateLayerPhysics(t,dt){
   shellBody.x=Math.max(-40,Math.min(40,shellBody.x+shellBody.vx*dt));shellBody.y=Math.max(-40,Math.min(40,shellBody.y+shellBody.vy*dt));
 }
 
+/* ==========================================================================
+   11. OPTIONAL HOST MENU + PERSISTED SETTINGS
+   ========================================================================== */
 // Menu: layer toggles + speed/size. State persists in localStorage so a recording setup survives reloads.
-const menu=$('#menu'),bigTimer=$('#bigTimer'),MENU_KEY='ultra05-menu';
+const menu=$('#menu'),bigTimer=$('#bigTimer'),MENU_KEY='ultra05-menu-v2';
 const LAYERS={
   title:v=>{$('#titleBug').style.display=v?'':'none'},
   square:v=>{showMedia=v;mediaShell.style.opacity=v?1:0},
@@ -658,6 +807,38 @@ menu.addEventListener('change',e=>{
 $('#menuBtn').onclick=()=>menu.classList.toggle('hidden');
 loadMenu();
 
+/* ==========================================================================
+   12. PUBLIC INTEGRATION API
+
+   window.BinfaceAchievements.getState()
+     Returns {current,duration,remaining,unlocked,total,next}.
+
+   window.BinfaceAchievements.sync(seconds)
+     Updates only the achievement/dashboard presentation. Use this when another
+     player owns the media clock.
+
+   window.BinfaceAchievements.seek(seconds)
+     Reference-host convenience: seeks this file's audio/video and dashboard.
+
+   window.BinfaceAchievements.rebuild()
+     Re-normalizes milestones after changing duration or milestone data.
+
+   window event: `binface:achievement-change`
+     Fires only when the unlocked count changes; `event.detail` matches getState().
+   ========================================================================== */
+window.BinfaceAchievements=Object.freeze({
+  version:'1.0.0',
+  get milestones(){return ACHIEVEMENT_MILESTONES.map(item=>({...item}))},
+  getState:getAchievementState,
+  sync(seconds){
+    const target=Math.max(0,Math.min(duration||0,Number(seconds)||0));
+    renderAchievements(target);updateTimeline(target);return getAchievementState(target);
+  },
+  seek(seconds){previewSeek(seconds);return getAchievementState(pauseAt)},
+  rebuild(){buildAchievements();renderAchievements(clock());return getAchievementState()}
+});
+
+/* Reference-host boot. An integrated website may replace this with its own mount lifecycle. */
 preload();
 </script>
 </body>
