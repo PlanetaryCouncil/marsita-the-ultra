@@ -1,0 +1,22 @@
+name: planetary-council tests
+
+on:
+  push:
+    paths:
+      - "planetary-council/**"
+      - ".github/workflows/planetary-council-ci.yml"
+  pull_request:
+    paths:
+      - "planetary-council/**"
+      - ".github/workflows/planetary-council-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: planetary-council
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run pytest -q
