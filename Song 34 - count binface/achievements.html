@@ -79,8 +79,14 @@
   /* Achievement timeline: rail of unlock pips under the square + toast pop-ups.
      All motion is driven from song time in JS (no CSS animations) so the 10× capture speed-up stays correct. */
   #achieveDock{position:absolute;z-index:6;left:50%;top:calc(45.5% + min(27vh,27vw)*var(--shell-scale,1));transform:translateX(-50%);width:calc(min(54vh,54vw)*var(--shell-scale,1));pointer-events:none}
-  #achieveRail{position:relative;margin-top:2.1vh;height:4px;background:rgba(255,255,255,.08)}
-  #achieveRail>i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--pink),var(--gold),var(--cyan));box-shadow:0 0 14px rgba(37,220,255,.5)}
+  #railStack{margin-top:2.1vh;display:flex;flex-direction:column;gap:7px}
+  .railRow{display:flex;align-items:center;gap:9px;font:700 8px/1 ui-monospace,"SFMono-Regular",Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+  .railTag{width:30px;text-align:right}
+  .railVal{width:36px;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 8px rgba(255,255,255,.35)}
+  .rail{position:relative;flex:1;height:4px;background:rgba(255,255,255,.08)}
+  .rail>i{position:absolute;left:0;top:0;bottom:0;width:0}
+  #timeFill{background:var(--cyan);box-shadow:0 0 10px rgba(37,220,255,.6)}
+  #achieveFill{background:linear-gradient(90deg,var(--pink),var(--gold));box-shadow:0 0 12px rgba(255,229,107,.5)}
   .pip{position:absolute;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);background:#0b0e1d;border:1px solid rgba(255,255,255,.3)}
   .pip.lit{background:var(--gold);border-color:#fff;box-shadow:0 0 10px var(--gold),0 0 24px rgba(255,229,107,.45)}
   .pip>b{position:absolute;inset:-3px;border:1px solid var(--gold);opacity:0;will-change:transform,opacity}
@@ -127,7 +133,10 @@
   <div id="stemLegend"></div>
   <div id="achieveDock" aria-live="polite">
     <div id="toastStack"></div>
-    <div id="achieveRail"><i id="achieveFill"></i></div>
+    <div id="railStack">
+      <div class="railRow"><span class="railTag">Time</span><div class="rail" id="timeRail"><i id="timeFill"></i></div><span class="railVal" id="timeVal">0%</span></div>
+      <div class="railRow"><span class="railTag">Achv</span><div class="rail" id="achieveRail"><i id="achieveFill"></i></div><span class="railVal" id="achieveVal">0/0</span></div>
+    </div>
   </div>
 </main>
 
@@ -204,18 +213,22 @@ const CONFIG={
 };
 
 // Achievement timeline. `at` = song seconds, `pct` = fraction of the full song — mix freely,
-// add story beats like {at:143,icon:'🎭',label:'Farage Arrives'} and they slot into the rail automatically.
+// add story beats like {at:143,icon:'🎭',label:'Farage Arrives'} and they slot in automatically.
+// Deliberately back-loaded: sparse early, dense at the end, so the N/12 counter lags the time bar
+// for most of the song and then sprints to the finish — full impressions get rewarded.
 const ACHIEVEMENTS=[
   {at:10,   icon:'👀', label:'10 Seconds · Still Watching'},
-  {at:30,   icon:'🗑️', label:'30 Seconds of Bin'},
-  {at:60,   icon:'⏱️', label:'1 Minute Unlocked'},
-  {pct:.25, icon:'🔓', label:'25% Complete'},
-  {at:120,  icon:'🧠', label:'2 Minutes · Indoctrinated'},
-  {pct:.5,  icon:'🌗', label:'50% · Halfway There'},
-  {at:180,  icon:'🚀', label:'3 Minutes · No Turning Back'},
-  {pct:.75, icon:'🏁', label:'75% · Final Lap'},
-  {pct:.9,  icon:'🔥', label:'90% · True Believer'},
-  {pct:.995,icon:'🏆', label:'100% · Certified Ultra'}
+  {at:45,   icon:'🗑️', label:'45 Seconds of Bin'},
+  {at:90,   icon:'⏱️', label:'90 Seconds Deep'},
+  {pct:.5,  icon:'🌗', label:'Halfway · No Refunds'},
+  {pct:.62, icon:'🧠', label:'62% · Fully Indoctrinated'},
+  {pct:.72, icon:'🚀', label:'72% · No Turning Back'},
+  {pct:.80, icon:'🏁', label:'80% · Final Lap'},
+  {pct:.86, icon:'🔥', label:'86% · True Believer'},
+  {pct:.91, icon:'💎', label:'91% · Diamond Attention Span'},
+  {pct:.95, icon:'👑', label:'95% · Binface Royalty'},
+  {pct:.98, icon:'🏆', label:'98% · Almost Immortal'},
+  {pct:.998,icon:'🛸', label:'100% · Full Impression · Certified Ultra'}
 ];
 
 const $=s=>document.querySelector(s);
@@ -277,17 +290,20 @@ function buildLegend(){
 // Achievement engine. Toast in/hold/out phases are measured in song seconds and evaluated per frame,
 // so the pop-ups run at 0.1× with the capture and land at full speed after the 10× edit.
 const TOAST_IN=.45,TOAST_HOLD=3.3,TOAST_OUT=.65,TOAST_LIFE=TOAST_IN+TOAST_HOLD+TOAST_OUT,RING_LIFE=1.1;
-const achieveFill=$('#achieveFill'),achieveRail=$('#achieveRail'),toastStack=$('#toastStack');
-let achievements=[];
+const achieveFill=$('#achieveFill'),achieveRail=$('#achieveRail'),toastStack=$('#toastStack'),timeFill=$('#timeFill'),timeVal=$('#timeVal'),achieveVal=$('#achieveVal');
+let achievements=[],achieveProgress=0,lastAchvT=0;
 function buildAchievements(){
   for(const a of achievements)if(a.toastEl)a.toastEl.remove();
   for(const pip of achieveRail.querySelectorAll('.pip'))pip.remove();
   achievements=ACHIEVEMENTS.map(a=>({...a,time:a.at!=null?a.at:a.pct*(duration||0),unlockedAt:null,toastEl:null,pip:null,ring:null}))
     .filter(a=>Number.isFinite(a.time)&&a.time<=(duration||0)+.01).sort((x,y)=>x.time-y.time);
-  for(const a of achievements){
-    const pip=document.createElement('span');pip.className='pip';pip.style.left=(duration?a.time/duration*100:0)+'%';pip.title=a.label;
+  // Pips sit at equal count-spacing (k/N), not at their time positions — the achievement bar
+  // measures unlocks, not seconds, so it lags the time bar until the back-loaded finale.
+  achievements.forEach((a,i)=>{
+    const pip=document.createElement('span');pip.className='pip';pip.style.left=((i+1)/achievements.length*100)+'%';pip.title=a.label;
     a.ring=document.createElement('b');pip.appendChild(a.ring);achieveRail.appendChild(pip);a.pip=pip;
-  }
+  });
+  achieveProgress=0;achieveVal.textContent='0/'+achievements.length;
 }
 function silenceAchievementsUpTo(t){
   for(const a of achievements){
@@ -297,15 +313,19 @@ function silenceAchievementsUpTo(t){
 }
 function spawnToast(a){
   const el=document.createElement('div');el.className='toast';el.style.opacity=0;
-  el.innerHTML='<span class="tIcon"></span><span class="tText"><em>Achievement unlocked</em><strong></strong></span>';
+  el.innerHTML='<span class="tIcon"></span><span class="tText"><em></em><strong></strong></span>';
+  const count=achievements.filter(x=>x.unlockedAt!=null).length;
+  el.querySelector('em').textContent=`Achievement unlocked · ${count}/${achievements.length}`;
   el.querySelector('.tIcon').textContent=a.icon;el.querySelector('strong').textContent=a.label;
   toastStack.appendChild(el);a.toastEl=el;physToastKick();
 }
 const easeOutBack=p=>{const c=1.70158;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2)};
 function renderAchievements(t){
   if(!achievements.length)return;
-  achieveFill.style.width=(duration?Math.min(1,t/duration)*100:0).toFixed(2)+'%';
+  const frac=duration?Math.min(1,t/duration):0;
+  timeFill.style.width=(frac*100).toFixed(2)+'%';timeVal.textContent=Math.floor(frac*100)+'%';
   const live=running&&!paused&&!scrubbing;
+  let unlockedCount=0;
   for(const a of achievements){
     if(t>=a.time){
       if(a.unlockedAt==null){
@@ -313,7 +333,7 @@ function renderAchievements(t){
         if(a.unlockedAt===t){spawnToast(a);shock=Math.max(shock,.42);wordPunch=Math.max(wordPunch,.5)}
       }
     }else if(a.unlockedAt!=null){a.unlockedAt=null;if(a.toastEl){a.toastEl.remove();a.toastEl=null}}
-    const lit=a.unlockedAt!=null;a.pip.classList.toggle('lit',lit);
+    const lit=a.unlockedAt!=null;if(lit)unlockedCount++;a.pip.classList.toggle('lit',lit);
     const age=lit?t-a.unlockedAt:1e9;
     if(age<RING_LIFE){const p=age/RING_LIFE;a.ring.style.opacity=((1-p)*.9).toFixed(3);a.ring.style.transform=`scale(${(1+p*3.2).toFixed(3)})`}
     else a.ring.style.opacity=0;
@@ -324,6 +344,12 @@ function renderAchievements(t){
     else if(age>TOAST_IN+TOAST_HOLD){const p=(age-TOAST_IN-TOAST_HOLD)/TOAST_OUT;opacity=1-p;transform=`translateY(${(-p*45).toFixed(2)}%) scale(${(1-p*.06).toFixed(3)})`;blur=p*6}
     a.toastEl.style.opacity=Math.max(0,opacity).toFixed(3);a.toastEl.style.transform=transform;a.toastEl.style.filter=blur?`blur(${blur.toFixed(2)}px)`:'';
   }
+  // The achievement bar chases unlocks/total with an eased catch-up, so it visibly trails the time bar.
+  achieveVal.textContent=unlockedCount+'/'+achievements.length;
+  const target=unlockedCount/achievements.length,dtA=Math.max(0,Math.min(.12,t-lastAchvT));lastAchvT=t;
+  achieveProgress+=(target-achieveProgress)*Math.min(1,dtA*2.4);
+  if(Math.abs(target-achieveProgress)<.0015)achieveProgress=target;
+  achieveFill.style.width=(achieveProgress*100).toFixed(2)+'%';
 }
 
 // THREE: five reactive dimensions around a square-safe centre.
