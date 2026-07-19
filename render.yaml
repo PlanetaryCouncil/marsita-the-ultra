@@ -1,0 +1,18 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+# One always-on service with a persistent disk: sleek (no cold starts),
+# always growing (SQLite survives every deploy and restart).
+
+services:
+  - type: web
+    name: planetary-council
+    runtime: docker
+    rootDir: planetary-council
+    plan: starter          # always-on; free tier would sleep and wipe data
+    healthCheckPath: /health
+    disk:
+      name: pc-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PC_DB_PATH
+        value: /data/planetary_council.db
