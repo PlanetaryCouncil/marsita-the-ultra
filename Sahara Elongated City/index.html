@@ -251,6 +251,33 @@
   }
   .plan-steps li strong { color: var(--ink); }
 
+  .refill-banner {
+    margin: 2.5rem 0 3rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    border: 2px solid var(--glacier-deep);
+    background:
+      radial-gradient(ellipse 80% 120% at 50% 0%, rgba(58,176,216,0.18) 0%, transparent 70%),
+      linear-gradient(180deg, rgba(155,231,255,0.04), transparent);
+  }
+  .refill-banner .meme {
+    font-size: clamp(2rem, 8vw, 5rem);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+    color: var(--glacier);
+    text-shadow: 0 0 30px rgba(58,176,216,0.4);
+  }
+  .refill-banner .versus {
+    display: block;
+    margin-top: 1.2rem;
+    font-size: 0.95rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .refill-banner .versus s { color: #5e5470; }
+
   /* FAQ */
   details {
     border-bottom: 1px solid #2f2540;
@@ -501,6 +528,11 @@
     <h2>We will restore the aquifers.</h2>
     <p class="lede">Yes, the ancient aquifers under the Sahara. The ones that took 20,000 years to fill. We're going to top them up. Here's the plan, which we workshopped extensively:</p>
 
+    <div class="refill-banner">
+      <div class="meme">Refill,<br>baby,<br>refill.</div>
+      <span class="versus">The last century said <s>"drill, baby, drill"</s> and pumped the ground dry. We took the same rigs, the same crews, the same chant — and reversed exactly one word. Meltwater goes <em class="cold">down</em>. The aquifer comes back.</span>
+    </div>
+
     <div class="plan-box">
       <p class="strike">Plan A: Cure the salty sea. Take the ocean, remove the salt, pour it in. (Desalination at septillion-grain scale. Too obvious. Everyone's doing it.)</p>
       <span class="plan-final">Plan B: Fresh. Fresh, fresh, <em>fresh</em> melting glaciers will replenish the aquifers. That's the plan.</span>
@@ -532,7 +564,7 @@
       <div class="card">
         <span class="icon">⛏️</span>
         <h3>Refill, Baby, Refill</h3>
-        <p>The drilling crews keep their rigs, their hard hats, and their enormous salaries. The only change order: this time, put the liquid <em>back</em>. Injection wells straight into the aquifer. Same skill, opposite sin.</p>
+        <p>The chant stays; the direction flips. Crews keep their rigs, their hard hats, and their enormous salaries — the only change order is to put the liquid <em>back</em>. Injection wells straight into the aquifer. Same skill, opposite sin.</p>
       </div>
     </div>
   </div>
