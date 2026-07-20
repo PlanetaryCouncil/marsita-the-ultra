@@ -89,6 +89,13 @@
   #achieveFill{background:linear-gradient(90deg,var(--pink),var(--gold));box-shadow:0 0 12px rgba(255,229,107,.5)}
   .pip{position:absolute;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);background:#0b0e1d;border:1px solid rgba(255,255,255,.3)}
   .pip.lit{background:var(--gold);border-color:#fff;box-shadow:0 0 10px var(--gold),0 0 24px rgba(255,229,107,.45)}
+  .charPip{width:11px;height:11px;border-color:var(--accent,#fff);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  .charPip.lit{background:var(--accent,var(--gold));border-color:#fff;box-shadow:0 0 12px var(--accent,var(--gold)),0 0 26px var(--accent,var(--gold))}
+  .charPip>b{border-color:var(--accent,var(--gold))}
+  .toast.challenger{border-color:var(--accent,var(--pink));box-shadow:0 0 30px var(--accent,var(--pink)),0 8px 34px rgba(0,0,0,.6),inset 0 0 26px color-mix(in srgb,var(--accent,var(--pink)) 22%,transparent)}
+  .toast.challenger em{color:var(--accent,var(--pink));text-shadow:0 0 12px var(--accent,var(--pink))}
+  .toast.challenger strong{font-size:clamp(16px,2vw,28px);text-shadow:-2px 0 var(--accent,rgba(255,43,214,.8)),2px 0 rgba(37,220,255,.8),0 0 22px var(--accent,#fff)}
+  .toast.challenger .tIcon{font-size:clamp(24px,3vw,38px)}
   .pip>b{position:absolute;inset:-3px;border:1px solid var(--gold);opacity:0;will-change:transform,opacity}
   #toastStack{position:absolute;left:0;right:0;bottom:calc(100% + 1.2vh);display:flex;flex-direction:column-reverse;align-items:center;gap:8px}
   .toast{display:flex;align-items:center;gap:12px;padding:10px 20px 10px 14px;background:rgba(3,4,14,.84);border:1px solid rgba(255,229,107,.5);box-shadow:0 0 24px rgba(255,229,107,.16),0 8px 30px rgba(0,0,0,.55),inset 0 0 22px rgba(255,43,214,.06);backdrop-filter:blur(10px);will-change:transform,opacity,filter}
@@ -212,15 +219,20 @@ const CONFIG={
   ]
 };
 
-// Achievement timeline. `at` = song seconds, `pct` = fraction of the full song — mix freely,
-// add story beats like {at:143,icon:'🎭',label:'Farage Arrives'} and they slot in automatically.
-// Deliberately back-loaded: sparse early, dense at the end, so the N/12 counter lags the time bar
-// for most of the song and then sprints to the finish — full impressions get rewarded.
+// Achievement timeline. `at` = song seconds, `pct` = fraction of the full song — mix freely.
+// Two kinds:
+//   milestone (default) → gold diamond pip, "ACHIEVEMENT UNLOCKED · N/total" toast.
+//   character           → add `char:'Name'` + `accent:'#hex'`. Star pip in the accent colour,
+//                         "NEW CHALLENGER APPROACHING" toast, harder slam. Set `at:` to the second
+//                         the character appears in YOUR video. Add as many as you like — all dynamic.
 const ACHIEVEMENTS=[
   {at:10,   icon:'👀', label:'10 Seconds · Still Watching'},
   {at:45,   icon:'🗑️', label:'45 Seconds of Bin'},
+  {at:70,   char:'Trump', icon:'🇺🇸', accent:'#ff315f', label:'Trump Arrives'},
   {at:90,   icon:'⏱️', label:'90 Seconds Deep'},
+  {at:120,  char:'Putin', icon:'🐻', accent:'#25dcff', label:'Putin Arrives'},
   {pct:.5,  icon:'🌗', label:'Halfway · No Refunds'},
+  {at:160,  char:'The Pope', icon:'⛪', accent:'#ffe56b', label:'The Pope Arrives'},
   {pct:.62, icon:'🧠', label:'62% · Fully Indoctrinated'},
   {pct:.72, icon:'🚀', label:'72% · No Turning Back'},
   {pct:.80, icon:'🏁', label:'80% · Final Lap'},
@@ -300,7 +312,7 @@ function buildAchievements(){
   // Pips sit at equal count-spacing (k/N), not at their time positions — the achievement bar
   // measures unlocks, not seconds, so it lags the time bar until the back-loaded finale.
   achievements.forEach((a,i)=>{
-    const pip=document.createElement('span');pip.className='pip';pip.style.left=((i+1)/achievements.length*100)+'%';pip.title=a.label;
+    const pip=document.createElement('span');pip.className=a.char?'pip charPip':'pip';pip.style.left=((i+1)/achievements.length*100)+'%';pip.title=a.label;if(a.accent)pip.style.setProperty('--accent',a.accent);
     a.ring=document.createElement('b');pip.appendChild(a.ring);achieveRail.appendChild(pip);a.pip=pip;
   });
   achieveProgress=0;achieveVal.textContent='0/'+achievements.length;
@@ -315,9 +327,10 @@ function spawnToast(a){
   const el=document.createElement('div');el.className='toast';el.style.opacity=0;
   el.innerHTML='<span class="tIcon"></span><span class="tText"><em></em><strong></strong></span>';
   const count=achievements.filter(x=>x.unlockedAt!=null).length;
-  el.querySelector('em').textContent=`Achievement unlocked · ${count}/${achievements.length}`;
+  if(a.char){el.classList.add('challenger');if(a.accent)el.style.setProperty('--accent',a.accent);el.querySelector('em').textContent='⚔ New challenger approaching';}
+  else el.querySelector('em').textContent=`Achievement unlocked · ${count}/${achievements.length}`;
   el.querySelector('.tIcon').textContent=a.icon;el.querySelector('strong').textContent=a.label;
-  toastStack.appendChild(el);a.toastEl=el;physToastKick();
+  toastStack.appendChild(el);a.toastEl=el;physToastKick(a.char?1.7:1);
 }
 const easeOutBack=p=>{const c=1.70158;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2)};
 function renderAchievements(t){
@@ -605,10 +618,10 @@ const layerBodies=[
   {el:$('#bigTimer'),base:'translateX(-50%)',m:.8,x:0,y:0,vx:0,vy:0,rot:0,vrot:0,thump:-520},
   {el:$('#achieveDock'),base:'translateX(-50%)',m:1.2,x:0,y:0,vx:0,vy:0,rot:0,vrot:0,thump:0}
 ];
-function physToastKick(){
+function physToastKick(force=1){
   if(!physicsOn)return;
-  layerBodies[2].vy+=120;layerBodies[2].vrot+=(Math.random()-.5)*14;
-  shellBody.vy-=28;layerBodies[0].vrot+=(Math.random()-.5)*6;
+  layerBodies[2].vy+=120*force;layerBodies[2].vrot+=(Math.random()-.5)*14*force;
+  shellBody.vy-=28*force;layerBodies[0].vrot+=(Math.random()-.5)*6*force;
 }
 function pushApart(rect,body,bodyRect,dt){
   if(!rect||!bodyRect||!rect.width||!bodyRect.width)return;
