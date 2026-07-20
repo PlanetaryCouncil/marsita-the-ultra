@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Qattara Depression Project — Sahara Elongated City</title>
+<style>
+  :root {
+    --sand: #e8c98a;
+    --sand-deep: #c99a4b;
+    --dune-shadow: #8a5a1e;
+    --night: #0d0a14;
+    --night-2: #1a1226;
+    --dusk: #ff7a3c;
+    --glacier: #9be7ff;
+    --glacier-deep: #3ab0d8;
+    --sea: #2e7bb0;
+    --ink: #f5eede;
+    --muted: #b9a98c;
+    --danger: #ff5d5d;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--night);
+    color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .mono { font-family: 'Courier New', monospace; letter-spacing: 0.08em; }
+
+  .topnav {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #1f1a2e;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+  }
+  .topnav a { color: var(--muted); text-decoration: none; }
+  .topnav a:hover { color: var(--dusk); }
+
+  /* HERO */
+  .hero {
+    min-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 5rem 1.5rem 10rem;
+    background:
+      radial-gradient(ellipse 120% 70% at 50% 120%, var(--sea) 0%, transparent 55%),
+      linear-gradient(180deg, var(--night) 0%, #0f2233 60%, #06131f 100%);
+  }
+  .hero .kicker {
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.45em;
+    color: var(--glacier); margin-bottom: 1.4rem;
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 8vw, 6rem); font-weight: 900; line-height: 0.95;
+    text-transform: uppercase; letter-spacing: -0.02em;
+    background: linear-gradient(180deg, var(--ink) 30%, var(--glacier-deep) 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline {
+    margin-top: 2rem; font-size: clamp(1rem, 2.5vw, 1.35rem); font-style: italic;
+    color: var(--muted); max-width: 42rem;
+  }
+  .hero .depth {
+    margin-top: 2.5rem; font-family: 'Courier New', monospace; color: var(--glacier);
+    font-size: 0.9rem; letter-spacing: 0.15em;
+  }
+
+  /* sea-level cross-section */
+  .xsection { position: absolute; bottom: 0; left: 0; right: 0; height: 9rem; pointer-events: none; }
+  .xsection svg { display: block; width: 100%; height: 100%; }
+
+  section { padding: 5.5rem 1.5rem; position: relative; }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  .section-num { font-size: 0.75rem; color: var(--glacier-deep); text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 1rem; }
+  h2 { font-size: clamp(1.7rem, 5vw, 3rem); font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 1.8rem; line-height: 1.05; }
+  .lede { font-size: 1.18rem; color: var(--ink); max-width: 44rem; margin-bottom: 1.2rem; }
+  p.body-text { color: var(--muted); max-width: 44rem; margin-bottom: 1.2rem; }
+  em.cold { color: var(--glacier); font-style: italic; }
+  em.hot { color: var(--dusk); font-style: italic; }
+  em.warn { color: var(--danger); font-style: italic; }
+  strong { color: var(--ink); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1px; background: #1c2a38; border: 1px solid #1c2a38; margin: 3rem 0; }
+  .stat { background: var(--night); padding: 1.7rem 1.4rem; }
+  .stat .n { font-size: 2rem; font-weight: 900; color: var(--glacier); display: block; line-height: 1.1; }
+  .stat .l { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-top: 0.4rem; display: block; }
+  .stat .fine { font-size: 0.68rem; color: #6b5f4e; display: block; margin-top: 0.5rem; font-style: italic; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.4rem; margin-top: 3rem; }
+  .card { border: 1px solid #223142; padding: 2rem 1.6rem; background: linear-gradient(160deg, #101d29, var(--night)); }
+  .card h3 { font-size: 1.02rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--glacier); margin-bottom: 0.9rem; }
+  .card p { font-size: 0.92rem; color: var(--muted); }
+  .card .icon { font-size: 1.8rem; display: block; margin-bottom: 1rem; }
+
+  .alt { background: linear-gradient(180deg, var(--night), #0c1a26, var(--night)); }
+
+  /* the nukes toggle */
+  .toggle-box { border: 2px solid var(--sand-deep); padding: 2.5rem 2rem; margin: 3rem 0; text-align: center; }
+  .toggle-box .q { font-size: clamp(1.3rem, 4vw, 2rem); font-weight: 900; text-transform: uppercase; color: var(--sand); margin-bottom: 2rem; }
+  .toggle-row { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+  .opt { flex: 1 1 14rem; border: 1px solid #33465a; padding: 1.5rem 1.2rem; text-align: left; }
+  .opt.no { border-color: var(--glacier-deep); }
+  .opt.yes { border-color: var(--danger); opacity: 0.85; }
+  .opt h4 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.7rem; }
+  .opt.no h4 { color: var(--glacier); }
+  .opt.yes h4 { color: var(--danger); }
+  .opt p { font-size: 0.86rem; color: var(--muted); }
+  .verdict { margin-top: 2rem; font-size: 0.95rem; color: var(--glacier); font-style: italic; }
+
+  /* demine — serious block */
+  .serious { background: linear-gradient(180deg, var(--night), #1a0f0f 55%, var(--night)); border-top: 1px solid rgba(255,93,93,0.2); border-bottom: 1px solid rgba(255,93,93,0.2); }
+  .serious h2 { color: var(--danger); }
+  .serious .section-num { color: var(--danger); }
+  .real-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--night); background: var(--glacier); padding: 0.2rem 0.6rem; margin-bottom: 1.2rem; }
+  .real-tag.red { background: var(--danger); }
+
+  .steps { list-style: none; counter-reset: s; max-width: 44rem; margin-top: 2rem; }
+  .steps li { counter-increment: s; padding: 1.1rem 0 1.1rem 3.4rem; position: relative; border-bottom: 1px solid #1f1a2e; color: var(--muted); }
+  .steps li::before { content: counter(s, decimal-leading-zero); position: absolute; left: 0; top: 1.1rem; font-family: 'Courier New', monospace; color: var(--glacier-deep); font-size: 1.05rem; }
+
+  footer { padding: 3rem 1.5rem; text-align: center; font-size: 0.75rem; color: #574c60; border-top: 1px solid #1f1a2e; }
+  footer a { color: var(--glacier-deep); text-decoration: none; }
+  .disclaimer { max-width: 42rem; margin: 1rem auto 0; font-style: italic; }
+  .backlink { display: inline-block; margin-top: 2.5rem; padding: 0.9rem 2.2rem; border: 2px solid var(--glacier-deep); color: var(--ink); text-decoration: none; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; transition: all 0.25s; }
+  .backlink:hover { background: var(--glacier-deep); color: var(--night); }
+</style>
+</head>
+<body>
+
+<nav class="topnav mono">
+  <a href="index.html">&larr; Sahara Elongated City</a> &nbsp;/&nbsp; <span style="color:var(--glacier)">The Qattara Depression Project</span>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="kicker mono">Sister project &middot; a real hole in the ground</div>
+  <h1>The Qattara<br>Depression<br>Project</h1>
+  <p class="tagline">There is a piece of the Sahara that is already below the sea. Egypt's Qattara Depression sinks 133 metres beneath the Mediterranean it never meets. So we introduce them.</p>
+  <div class="depth mono">SEA LEVEL &nbsp;0m &nbsp;·&nbsp; QATTARA FLOOR &nbsp;&minus;133m &nbsp;·&nbsp; DROP: a whole power station's worth</div>
+
+  <div class="xsection">
+    <svg viewBox="0 0 1440 150" preserveAspectRatio="none" aria-hidden="true">
+      <rect x="0" y="40" width="1440" height="12" fill="#2e7bb0" opacity="0.5"/>
+      <path d="M0,52 L520,52 L640,140 L900,140 L1010,52 L1440,52 L1440,150 L0,150 Z" fill="#0c1a26"/>
+      <path d="M640,140 L900,140 L900,150 L640,150 Z" fill="#2e7bb0" opacity="0.35"/>
+      <line x1="0" y1="52" x2="1440" y2="52" stroke="#9be7ff" stroke-dasharray="6 6" stroke-width="1" opacity="0.5"/>
+    </svg>
+  </div>
+</header>
+
+<!-- THE HOLE -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">01 / The Hole</div>
+    <span class="real-tag">Real geography</span>
+    <h2>Nature dug it. We just noticed.</h2>
+    <p class="lede">The Qattara Depression is a genuine, enormous basin in Egypt's Western Desert — roughly the size of Belgium, and its floor lies as much as <strong>133 metres below sea level</strong>. It is one of the lowest points in Africa, and it has been sitting there, empty and dry, waiting for someone with a canal.</p>
+    <p class="body-text">Engineers have wanted to flood it for over a century. The idea is beautiful in its laziness: the Mediterranean is right there, ~55 to 80 km away and 133 metres <em>higher</em>. You don't have to lift the water. You have to let go of it.</p>
+
+    <div class="stats">
+      <div class="stat"><span class="n">&minus;133 m</span><span class="l">below sea level</span><span class="fine">gravity is the only pump in the budget</span></div>
+      <div class="stat"><span class="n">~19,500</span><span class="l">km&sup2; of basin</span><span class="fine">about the size of Belgium, currently sand</span></div>
+      <div class="stat"><span class="n">1912</span><span class="l">first proposed</span><span class="fine">by geographer John Ball. still not built. classic</span></div>
+      <div class="stat"><span class="n">~55&ndash;80 km</span><span class="l">to the Mediterranean</span><span class="fine">the entire project is this gap, solved once</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE WATER -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">02 / The Hydro</div>
+    <span class="real-tag">Real engineering</span>
+    <h2>A waterfall that never stops falling</h2>
+    <p class="lede">Cut a channel from the sea to the basin and the Mediterranean pours downhill through turbines — <em class="cold">continuous hydroelectric power with no river and no dam reservoir to fill.</em></p>
+    <p class="body-text">Here's the trick that makes it perpetual: the Sahara evaporates water ferociously. Seawater flows in and the sun boils it off almost as fast, so the lake rises to an equilibrium and then stops — inflow forever balanced by evaporation. You can keep running the turbines indefinitely, because the desert keeps making room. The basin becomes a permanent salt lake and a permanent power station at the same time.</p>
+    <div class="cards">
+      <div class="card"><span class="icon">🌊</span><h3>Gravity In</h3><p>133 metres of head, delivered free by geography. The same physics as any hydro dam, except the reservoir is a continent-sized hole and the river is the entire Mediterranean.</p></div>
+      <div class="card"><span class="icon">☀️</span><h3>Sun Out</h3><p>Evaporation is the release valve. The lake never overflows because the Sahara drinks it. Inflow = evaporation = equilibrium. The most patient machine on Earth.</p></div>
+      <div class="card"><span class="icon">🧂</span><h3>Salt Stays</h3><p>Evaporated seawater leaves its salt behind. Over decades: solar salt ponds, mineral harvesting, brine chemistry. The lake pays a second dividend in white.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE TUNNEL / NUKES -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">03 / The Cut</div>
+    <span class="real-tag red">Real historical debate</span>
+    <h2>With nukes, or without nukes?</h2>
+    <p class="lede">You still have to move the water from A to B through 55&ndash;80 km of desert. There are three ways to make that cut, and history genuinely argued about all three.</p>
+
+    <div class="toggle-box">
+      <div class="q">How do we dig it?</div>
+      <div class="toggle-row">
+        <div class="opt yes">
+          <h4>☢️ With Nukes</h4>
+          <p>The 1970s Bassler plan seriously proposed excavating the canal with <strong>~213 nuclear devices</strong> — Cold War "peaceful nuclear explosions." It was real, it was studied, and Egypt said no. We also say no. Fun to know. Never to do.</p>
+        </div>
+        <div class="opt no">
+          <h4>🕳️ With Boring</h4>
+          <p>The modern answer: tunnel-boring machines. Bore a pressurised conduit from the sea to the basin — no fallout, no giant open scar, no treaty violations. Same hole in the ground, minus the mushroom cloud. This is the plan.</p>
+        </div>
+      </div>
+      <p class="verdict">Verdict: <strong>without nukes.</strong> We are an Elon-gated community, so naturally we prefer a boring company to a bombing one. The joke writes itself; the tunnel does not.</p>
+    </div>
+    <p class="body-text">Open canal is option three — cheapest on paper, but it's a 80 km trench through shifting sand that wants to fill back in. A bored, lined tunnel is slower to dig and calmer forever after. We optimise for the century, not the quarter.</p>
+  </div>
+</section>
+
+<!-- DEMINE - serious -->
+<section class="serious">
+  <div class="wrap">
+    <div class="section-num mono">04 / First, Demine</div>
+    <span class="real-tag red">Real, and not a joke</span>
+    <h2>Before any of it: clear the minefields.</h2>
+    <p class="lede">The Western Desert around Qattara and El Alamein is one of the <strong>most heavily mined regions on Earth</strong>. Millions of unexploded WWII landmines still sit in the sand, and they still kill and maim civilians and Bedouin communities today, eighty years on.</p>
+    <p class="body-text">So step one of this project isn't the tunnel or the turbines. It's <em class="warn">demining</em> — slow, dangerous, expensive, unglamorous, and worth doing whether or not a single drop of seawater ever arrives. You cannot build a future on ground that still detonates.</p>
+    <ol class="steps">
+      <li><strong>Survey &amp; map.</strong> Drones, magnetometry, and ground-penetrating radar to chart the belts left by the 1942 battles — much of it never properly recorded.</li>
+      <li><strong>Clear &amp; verify.</strong> Certified deminers, machines, and detection dogs, corridor by corridor. Every metre signed off before anyone follows.</li>
+      <li><strong>Return the land.</strong> Cleared ground goes back to the communities who've lived beside these mines for generations — farmland, grazing, safe roads. That's the real deliverable, tunnel or no tunnel.</li>
+      <li><strong>Then, and only then, build.</strong> The canal route becomes buildable as a by-product of doing the humane thing first.</li>
+    </ol>
+    <p class="body-text" style="margin-top:2rem;">This is the part of the brochure with no punchline. Demining Egypt's Western Desert is a genuine, ongoing humanitarian need. If the ridiculous city is what makes someone care about it, good.</p>
+  </div>
+</section>
+
+<!-- THE LAKE -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">05 / The Lake</div>
+    <span class="real-tag">Part real, part dream</span>
+    <h2>A new sea in the sand</h2>
+    <p class="lede">Fill the basin and Egypt gains an inland sea the size of a small country — power, a microclimate, humidity where there was none, and a coastline nobody had yesterday.</p>
+    <p class="body-text">This connects straight back to the main project: the new shores get the <a href="index.html" style="color:var(--glacier)">mangrove and lagoon treatment</a>, the excess excavated sand goes to build habitat, and the shoreline becomes a living edge instead of a dead one. Hydropower on one side of the ledger, blue carbon on the other.</p>
+    <div class="cards">
+      <div class="card"><span class="icon">⚡</span><h3>Baseload Power</h3><p>A steady hydro output feeding the Elongated City's foundries — the one form of solar power that keeps running at night, because gravity doesn't clock off.</p></div>
+      <div class="card"><span class="icon">🌦️</span><h3>A Made Microclimate</h3><p>Thousands of km² of open water in a desert changes local humidity and could seed greenery around its shores. Modest, real, and more than the sand offered before.</p></div>
+      <div class="card"><span class="icon">🐟</span><h3>Life at the Edge</h3><p>Salt-tolerant aquaculture, migratory birds, mangrove-fringed shallows. A brand-new ecosystem accounting, honestly, for the disruption of making it.</p></div>
+    </div>
+    <a class="backlink mono" href="index.html">&larr; Back to the Elongated City</a>
+  </div>
+</section>
+
+<footer>
+  <div class="mono">THE QATTARA DEPRESSION PROJECT — a sub-initiative of Sahara Elongated City &middot; Marsita the Ultra</div>
+  <div class="disclaimer">The Qattara Depression, its sub-sea-level floor, the century of hydro proposals, the 1970s nuclear-excavation plan Egypt rejected, and the El Alamein minefields are all real. The elongated city around them is satire. The landmines, and the case for clearing them, are not. Not affiliated with any billionaire, boring or otherwise.</div>
+</footer>
+
+</body>
+</html>
