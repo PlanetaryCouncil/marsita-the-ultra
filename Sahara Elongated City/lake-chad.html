@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Lake Chad Refill — Sahara Elongated City</title>
+<style>
+  :root {
+    --sand: #e8c98a;
+    --sand-deep: #c99a4b;
+    --night: #0d0a14;
+    --night-2: #12160f;
+    --leaf: #7fe0a3;
+    --leaf-deep: #2f9e5f;
+    --water: #4fb3c9;
+    --ink: #f2f0e6;
+    --muted: #a9b39c;
+    --danger: #ff5d5d;
+    --dusk: #ff7a3c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--night); color: var(--ink); font-family: Georgia, 'Times New Roman', serif; line-height: 1.6; overflow-x: hidden; }
+  .mono { font-family: 'Courier New', monospace; letter-spacing: 0.08em; }
+
+  .topnav { padding: 1rem 1.5rem; border-bottom: 1px solid #1f261a; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.2em; }
+  .topnav a { color: var(--muted); text-decoration: none; }
+  .topnav a:hover { color: var(--leaf); }
+
+  .hero {
+    min-height: 82vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; position: relative; padding: 5rem 1.5rem 9rem;
+    background:
+      radial-gradient(ellipse 110% 70% at 50% 120%, var(--leaf-deep) 0%, transparent 55%),
+      linear-gradient(180deg, var(--night) 0%, #0f1a12 60%, #08130c 100%);
+  }
+  .hero .kicker { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.45em; color: var(--leaf); margin-bottom: 1.4rem; }
+  .hero h1 {
+    font-size: clamp(2.4rem, 8vw, 6rem); font-weight: 900; line-height: 0.95; text-transform: uppercase; letter-spacing: -0.02em;
+    background: linear-gradient(180deg, var(--ink) 30%, var(--leaf-deep) 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline { margin-top: 2rem; font-size: clamp(1rem, 2.5vw, 1.35rem); font-style: italic; color: var(--muted); max-width: 42rem; }
+  .hero .depth { margin-top: 2.5rem; font-family: 'Courier New', monospace; color: var(--leaf); font-size: 0.85rem; letter-spacing: 0.12em; }
+
+  .shrink-vis { position: absolute; bottom: 0; left: 0; right: 0; height: 8rem; pointer-events: none; }
+  .shrink-vis svg { display: block; width: 100%; height: 100%; }
+
+  section { padding: 5.5rem 1.5rem; position: relative; }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  .section-num { font-size: 0.75rem; color: var(--leaf-deep); text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 1rem; }
+  h2 { font-size: clamp(1.7rem, 5vw, 3rem); font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 1.8rem; line-height: 1.05; }
+  .lede { font-size: 1.18rem; color: var(--ink); max-width: 44rem; margin-bottom: 1.2rem; }
+  p.body-text { color: var(--muted); max-width: 44rem; margin-bottom: 1.2rem; }
+  em.green { color: var(--leaf); font-style: italic; }
+  em.warn { color: var(--danger); font-style: italic; }
+  strong { color: var(--ink); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1px; background: #1d261a; border: 1px solid #1d261a; margin: 3rem 0; }
+  .stat { background: var(--night); padding: 1.7rem 1.4rem; }
+  .stat .n { font-size: 2rem; font-weight: 900; color: var(--leaf); display: block; line-height: 1.1; }
+  .stat .l { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-top: 0.4rem; display: block; }
+  .stat .fine { font-size: 0.68rem; color: #5f6b52; display: block; margin-top: 0.5rem; font-style: italic; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.4rem; margin-top: 3rem; }
+  .card { border: 1px solid #223020; padding: 2rem 1.6rem; background: linear-gradient(160deg, #101d14, var(--night)); }
+  .card h3 { font-size: 1.02rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--leaf); margin-bottom: 0.9rem; }
+  .card p { font-size: 0.92rem; color: var(--muted); }
+  .card .icon { font-size: 1.8rem; display: block; margin-bottom: 1rem; }
+
+  .alt { background: linear-gradient(180deg, var(--night), #0c160e, var(--night)); }
+  .real-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--night); background: var(--leaf); padding: 0.2rem 0.6rem; margin-bottom: 1.2rem; }
+  .real-tag.red { background: var(--danger); }
+
+  /* transaqua route */
+  .route-box { border: 2px solid var(--leaf-deep); padding: 2.5rem 2rem; margin: 3rem 0; }
+  .route-box h3 { color: var(--leaf); text-transform: uppercase; letter-spacing: 0.1em; font-size: 1.1rem; margin-bottom: 1.5rem; text-align: center; }
+  .route { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.4rem; font-family: 'Courier New', monospace; font-size: 0.8rem; }
+  .route .node { border: 1px solid #33452c; padding: 0.5rem 0.9rem; color: var(--ink); background: #0e1a10; }
+  .route .arrow { color: var(--leaf-deep); font-size: 1.1rem; }
+  .route-note { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 1.5rem; font-style: italic; }
+
+  .serious { background: linear-gradient(180deg, var(--night), #1a0f0f 55%, var(--night)); border-top: 1px solid rgba(255,93,93,0.2); border-bottom: 1px solid rgba(255,93,93,0.2); }
+  .serious h2 { color: var(--danger); }
+  .serious .section-num { color: var(--danger); }
+
+  .steps { list-style: none; counter-reset: s; max-width: 44rem; margin-top: 2rem; }
+  .steps li { counter-increment: s; padding: 1.1rem 0 1.1rem 3.4rem; position: relative; border-bottom: 1px solid #1f261a; color: var(--muted); }
+  .steps li::before { content: counter(s, decimal-leading-zero); position: absolute; left: 0; top: 1.1rem; font-family: 'Courier New', monospace; color: var(--leaf-deep); font-size: 1.05rem; }
+
+  footer { padding: 3rem 1.5rem; text-align: center; font-size: 0.75rem; color: #55604c; border-top: 1px solid #1f261a; }
+  footer a { color: var(--leaf-deep); text-decoration: none; }
+  .disclaimer { max-width: 42rem; margin: 1rem auto 0; font-style: italic; }
+  .backlink { display: inline-block; margin-top: 2.5rem; padding: 0.9rem 2.2rem; border: 2px solid var(--leaf-deep); color: var(--ink); text-decoration: none; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; transition: all 0.25s; }
+  .backlink:hover { background: var(--leaf-deep); color: var(--night); }
+  .siblinks { margin-top: 1.2rem; font-size: 0.8rem; }
+  .siblinks a { color: var(--water); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav class="topnav mono">
+  <a href="index.html">&larr; Sahara Elongated City</a> &nbsp;/&nbsp; <span style="color:var(--leaf)">The Lake Chad Refill</span>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="kicker mono">Sister project &middot; put the lake back</div>
+  <h1>The Lake<br>Chad Refill</h1>
+  <p class="tagline">Thirty million people live around a lake that has almost disappeared. This is the least funny and most important page on the whole site. We want to put the water back.</p>
+  <div class="depth mono">1960s: ~25,000 KM&sup2; &nbsp;·&nbsp; TODAY: as little as ~1,350 KM&sup2; &nbsp;·&nbsp; ~90% GONE</div>
+
+  <div class="shrink-vis">
+    <svg viewBox="0 0 1440 130" preserveAspectRatio="none" aria-hidden="true">
+      <ellipse cx="720" cy="120" rx="700" ry="95" fill="#2f9e5f" opacity="0.18"/>
+      <ellipse cx="720" cy="122" rx="430" ry="60" fill="#2f9e5f" opacity="0.3"/>
+      <ellipse cx="720" cy="125" rx="150" ry="30" fill="#7fe0a3" opacity="0.55"/>
+    </svg>
+  </div>
+</header>
+
+<!-- THE PEOPLE -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">01 / The People</div>
+    <span class="real-tag">Real, and staggering</span>
+    <h2>Thirty million people. One shrinking lake.</h2>
+    <p class="lede">Around <strong>30 million people</strong> across <strong>Chad, Niger, Nigeria, and Cameroon</strong> depend on the Lake Chad basin for fishing, farming, and herding — some estimates for the wider basin run far higher. It is one of the most important water bodies in Africa, and it is <em class="warn">nearly empty.</em></p>
+    <p class="body-text">Read that number again, because it is the whole reason this page exists. Not tourists. Not residents-in-waiting. Thirty million people whose food and water sit on top of a lake that has lost most of itself inside a single lifetime. That is not a brochure statistic. That is an emergency wearing a statistic's clothes.</p>
+
+    <div class="stats">
+      <div class="stat"><span class="n">~30M</span><span class="l">people in the basin</span><span class="fine">across four countries. estimates for the wider basin go higher</span></div>
+      <div class="stat"><span class="n">4</span><span class="l">nations on one shore</span><span class="fine">Chad · Niger · Nigeria · Cameroon</span></div>
+      <div class="stat"><span class="n">~90%</span><span class="l">of the lake, gone</span><span class="fine">since the 1960s. within one human lifetime</span></div>
+      <div class="stat"><span class="n">1</span><span class="l">reason for this page</span><span class="fine">the people. everything else is scaffolding</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE SHRINK -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">02 / The Shrink</div>
+    <span class="real-tag">Real hydrology</span>
+    <h2>How a great lake vanished in sixty years</h2>
+    <p class="lede">In the 1960s Lake Chad covered around <strong>25,000 km²</strong>. By the 2000s it had collapsed to as little as <strong>~1,350 km²</strong> — a loss of roughly nine-tenths. It's shallow, it's endorheic (no outlet to the sea), and that makes it terrifyingly sensitive.</p>
+    <p class="body-text">Three forces drained it at once: a drier, hotter climate; booming demand for irrigation as the basin's population grew; and the plain shallowness of the lake, which was never more than a few metres deep. A small drop in rainfall or a big rise in withdrawal, and the map redraws itself. The honest picture: the lake fluctuates and the southern pool persists, but the long trend has been brutal.</p>
+    <div class="cards">
+      <div class="card"><span class="icon">🌡️</span><h3>Less Rain</h3><p>The Sahel dried through the 1970s–80s. Inflow from the Chari River — which supplies most of the lake — fell with it.</p></div>
+      <div class="card"><span class="icon">🚜</span><h3>More Straws</h3><p>More people, more irrigation, more water pulled out upstream. Demand climbed exactly as supply fell. The lake paid the difference.</p></div>
+      <div class="card"><span class="icon">📏</span><h3>Too Shallow To Forgive</h3><p>A lake a few metres deep has no buffer. Endorheic and flat, it turns small deficits into vast retreating shorelines.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE REFILL / TRANSAQUA -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">03 / The Refill</div>
+    <span class="real-tag">Real megaproject &middot; genuinely proposed</span>
+    <h2>Transaqua: borrow water from the Congo</h2>
+    <p class="lede">Here's the "insane, but real" part. There is a genuine, decades-old plan to refill Lake Chad by moving water across the continent from the mighty Congo basin — the second-largest river system on Earth, which pours most of its flow uselessly into the Atlantic. It's called <em class="green">Transaqua.</em></p>
+    <p class="body-text">Proposed by the Italian engineering firm Bonifica in the 1980s and seriously revived at an international conference in Abuja in 2018, the scheme would build a long canal from tributaries of the Congo, channel a small fraction of their flow northward into the Chari River, and let it flow down into Lake Chad — refilling it, generating hydropower along the way, and supporting irrigation and transport for the countries it crosses.</p>
+
+    <div class="route-box">
+      <h3>The Transaqua idea, in one line</h3>
+      <div class="route">
+        <span class="node">Congo basin</span>
+        <span class="arrow">→</span>
+        <span class="node">~2,400 km canal</span>
+        <span class="arrow">→</span>
+        <span class="node">Chari River</span>
+        <span class="arrow">→</span>
+        <span class="node">Lake Chad</span>
+        <span class="arrow">→</span>
+        <span class="node">refilled</span>
+      </div>
+      <p class="route-note">A fraction of the Congo's flow, borrowed and sent north. Hydropower and irrigation the whole way. Real proposal. Real feasibility studies. Not yet a real canal.</p>
+    </div>
+
+    <div class="cards">
+      <div class="card"><span class="icon">💧</span><h3>Water To Spare</h3><p>The Congo discharges an ocean's worth of freshwater into the Atlantic. Transaqua asks for a single-digit percentage of it. The donor barely notices; the recipient comes back to life.</p></div>
+      <div class="card"><span class="icon">⚡</span><h3>Power En Route</h3><p>A canal with that much fall can run hydro stations along its length — the project could pay part of its own way in electricity for the region it crosses.</p></div>
+      <div class="card"><span class="icon">🤝</span><h3>Shared By Design</h3><p>It would cross and benefit a string of nations — irrigation, navigation, power. That's also the hard part: a project this big needs unprecedented cross-border trust. That, not the digging, is the real obstacle.</p></div>
+    </div>
+    <p class="body-text" style="margin-top:2.5rem;">We would not pretend this is easy, cheap, or without serious environmental questions of its own — interbasin transfers can do real ecological harm and deserve real scrutiny. But it is a genuine idea that serious people keep returning to, precisely because the alternative is watching thirty million livelihoods dry out.</p>
+  </div>
+</section>
+
+<!-- THE HUMAN CORE - serious -->
+<section class="serious">
+  <div class="wrap">
+    <div class="section-num mono">04 / Why It Matters</div>
+    <span class="real-tag red">No punchline here either</span>
+    <h2>A dry lake is a security crisis.</h2>
+    <p class="lede">When a lake that feeds millions retreats, the people don't vanish with it — they crowd onto the last wet ground, they migrate, they lose their income, and desperation becomes a resource that armed groups recruit from. The shrinking of Lake Chad is tangled up with displacement, hunger, and years of violent instability across the region.</p>
+    <p class="body-text">So "refill Lake Chad" isn't landscape gardening. It's food for farmers, water for herders, fish for fishers, and a reason for young people to stay and build instead of flee or fight. Restore the lake and you're not just moving water — you're removing the vacuum that catastrophe grows in.</p>
+    <ol class="steps">
+      <li><strong>Support what already exists.</strong> The Lake Chad Basin Commission and the four riparian states are real institutions already working on this. Any serious effort strengthens them, it doesn't bypass them.</li>
+      <li><strong>Small, local wins first.</strong> Efficient irrigation, restored wetlands, and better water management help now — years before any continental canal could.</li>
+      <li><strong>Study the big transfer honestly.</strong> Transaqua deserves rigorous, independent environmental and hydrological review — not hype, and not dismissal.</li>
+      <li><strong>Keep the people at the centre.</strong> Thirty million of them. They are the project. The engineering is just how we keep the promise.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- CONNECT BACK -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">05 / One Water Story</div>
+    <span class="real-tag">Ties it together</span>
+    <h2>Aquifers, a new sea, and a lake brought back</h2>
+    <p class="lede">Lake Chad completes the water trilogy of the Elongated City: recharge the <strong>aquifers</strong>, flood the <strong>Qattara Depression</strong>, and refill <strong>Lake Chad.</strong> Three ways to put water back where it belongs, on a continent the last century mostly took it from.</p>
+    <p class="body-text">One is deep underground, one is below sea level, one is a lake in plain sight. Different physics, same sentence: <em class="green">refill, baby, refill.</em></p>
+    <a class="backlink mono" href="index.html">&larr; Back to the Elongated City</a>
+    <div class="siblinks mono"><a href="qattara.html">See also: The Qattara Depression Project →</a></div>
+  </div>
+</section>
+
+<footer>
+  <div class="mono">THE LAKE CHAD REFILL — a sub-initiative of Sahara Elongated City &middot; Marsita the Ultra</div>
+  <div class="disclaimer">Lake Chad, its ~90% collapse since the 1960s, the roughly 30 million people who depend on its basin, the Transaqua interbasin-transfer proposal, the Lake Chad Basin Commission, and the region's water-linked instability are all real. The elongated city framing is satire; the lake, the people, and the stakes are not. Interbasin water transfers carry genuine ecological risks and are presented here as a real proposal under real debate, not a settled solution.</div>
+</footer>
+
+</body>
+</html>
