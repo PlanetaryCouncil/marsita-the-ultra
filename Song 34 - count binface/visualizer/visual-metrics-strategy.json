@@ -1,0 +1,99 @@
+{
+  "_doc": [
+    "LIVING REGISTRY of candidate metrics for VIDEO-derived dynamism.",
+    "Purpose: today the reactive energy is 100% audio (max stem envelope per frame).",
+    "The video edit is itself danceable/dynamic — so energy should also read the PICTURE.",
+    "This file collects metric ideas; the processor (compute_visual_dynamism.py) implements the",
+    "ones marked IMPLEMENTED and writes a per-frame signal (visual-dynamism.json).",
+    "NOTHING here is wired into the artwork yet — this is exploration until one proves reliable.",
+    "Reusable: the same frame_metrics() runs on a single image too (for scoring stills later)."
+  ],
+  "goal": "A per-frame 0..1 'how much is going on in this frame' signal, from the pixels.",
+  "eventual_use": [
+    "Blend into scene energy / field intensity ALONGSIDE audio (e.g. energy = max(audioEnv, k*visualDynamism)).",
+    "Could also drive RGB-split amount, morph rate, particle density — the busier the frame, the wilder the field.",
+    "User will later run the same metric against a folder of still images to rank them."
+  ],
+  "status": "exploration",
+  "ideas": [
+    {
+      "id": 1,
+      "name": "grid differentiation (spatial 'mind-fuck' density)",
+      "author": "user",
+      "status": "IMPLEMENTED (first pass)",
+      "hypothesis": "A busy/trippy frame has many distinct, high-contrast regions; a calm frame is flat and uniform.",
+      "method": "Split each frame into a GRID (default 10x10). Per cell compute within-cell luminance contrast (texture) and within-cell colour spread (palette). Aggregate two ways: (a) BUSYNESS = mean cell contrast (how textured cells are on average); (b) DIFFERENTIATION = spread of cell MEANS across the grid (how different one region is from another — 'different palettes on different squares').",
+      "channels": ["grid_busyness", "grid_palette", "grid_diff"],
+      "knobs": {"grid": 10, "sample_size_px": 200},
+      "notes": "grid_diff is the closest to the user's 'different palettes on different squares'. grid_busyness is 'items per cell'."
+    },
+    {
+      "id": 2,
+      "name": "temporal motion (danceability)",
+      "status": "IMPLEMENTED (basic)",
+      "hypothesis": "Danceable footage MOVES — frame-to-frame change is the most direct dynamism cue.",
+      "method": "Mean absolute luminance difference between consecutive sampled frames.",
+      "channels": ["motion"],
+      "notes": "Cheap (one previous-frame buffer). Spikes hard at cuts — may want to separate 'cut spikes' from 'sustained motion' later."
+    },
+    {
+      "id": 3,
+      "name": "global colourfulness (Hasler-Susstrunk)",
+      "status": "IMPLEMENTED",
+      "hypothesis": "Saturated, varied palettes read as more alive than muted/monochrome ones.",
+      "method": "Standard opponent-channel colourfulness: rg=R-G, yb=0.5(R+G)-B; C = sqrt(std_rg^2+std_yb^2) + 0.3*sqrt(mean_rg^2+mean_yb^2).",
+      "channels": ["colorfulness"]
+    },
+    {
+      "id": 4,
+      "name": "global contrast",
+      "status": "IMPLEMENTED",
+      "method": "Whole-frame luminance standard deviation. Reference channel; complements grid_busyness.",
+      "channels": ["global_contrast"]
+    },
+    {
+      "id": 5,
+      "name": "edge density (Sobel/Laplacian)",
+      "status": "idea",
+      "method": "Gradient magnitude per pixel, averaged. 'How many edges' proxy. numpy-only via np.gradient or a 3x3 kernel.",
+      "why_deferred": "grid_busyness already captures texture cheaply; add if we want finer edge sensitivity."
+    },
+    {
+      "id": 6,
+      "name": "palette entropy / unique-colour count",
+      "status": "idea",
+      "method": "Quantise colours (e.g. 4 bits/channel) and measure histogram entropy or count of populated bins. High entropy = rich palette.",
+      "why_interesting": "Directly answers 'how many different colours/palettes are present'."
+    },
+    {
+      "id": 7,
+      "name": "per-cell spectral energy (FFT high-freq)",
+      "status": "idea",
+      "method": "2D FFT per cell, ratio of high-frequency to total energy = detail/'chaos' density. More rigorous 'mind-fuck' measure than std.",
+      "why_deferred": "Heavier; validate simpler contrast first."
+    },
+    {
+      "id": 8,
+      "name": "optical-flow magnitude",
+      "status": "idea (needs opencv, not installed)",
+      "method": "Dense optical flow between frames; mean vector magnitude = true motion (not just pixel diff). Distinguishes camera move / dancing from flicker."
+    },
+    {
+      "id": 9,
+      "name": "reuse scene-cut spikes",
+      "status": "idea",
+      "method": "The ffmpeg scene_score we already bake is per-frame change; could feed a 'cut intensity' channel directly. Free — already computed.",
+      "cross_ref": "visualizer-scenes.json bake"
+    }
+  ],
+  "combining": {
+    "note": "The processor outputs each channel SEPARATELY plus a provisional 'dynamism' blend, so weights can change WITHOUT re-processing the video.",
+    "provisional_weights": {"grid_busyness": 0.30, "grid_diff": 0.25, "motion": 0.25, "colorfulness": 0.20},
+    "todo": "Correlate each channel against the audio energy — keep the channels that add NEW information (low correlation), drop redundant ones."
+  },
+  "open_questions": [
+    "Should dynamism ADD to audio energy (union of busy) or MODULATE it (audio gates, video colours)?",
+    "Sustained motion vs cut-spike: separate channels?",
+    "Normalize per-video (min-max over the song) or with a fixed absolute scale (so different videos compare)? Currently per-video; fixed scale needed for cross-image ranking (idea: store raw stats to allow both)."
+  ]
+}

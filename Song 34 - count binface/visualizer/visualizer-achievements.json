@@ -1,0 +1,29 @@
+{
+  "_doc": [
+    "AUTHORING SURFACE — hand-edit freely. The page reloads this every boot (no-cache).",
+    "One entry per unlock. Order does not matter; the page sorts by time.",
+    "  t     absolute seconds into the song (song is 256.84s). Preferred — this is the timeline.",
+    "  pct   fraction of duration 0..1 — use INSTEAD of t if you want it to float with length.",
+    "  icon  any emoji or short string",
+    "  label the toast text",
+    "Delete an entry to remove it, add one to create it. The ACHV rail spaces pips by COUNT,",
+    "not by time, so adding or removing entries is always safe.",
+    "NOTE: labels below say '62%', '80%' etc. If you move a time, edit the label text too —",
+    "nothing recomputes it for you.",
+    "If this file is missing or invalid, the page falls back to the 12 built into the HTML."
+  ],
+  "achievements": [
+    { "t": 10,     "icon": "👀", "label": "10 Seconds · Still Watching" },
+    { "t": 45,     "icon": "🗑️", "label": "45 Seconds of Bin" },
+    { "t": 90,     "icon": "⏱️", "label": "90 Seconds Deep" },
+    { "t": 128.42, "icon": "🌗", "label": "Halfway · No Refunds" },
+    { "t": 159.24, "icon": "🧠", "label": "62% · Fully Indoctrinated" },
+    { "t": 184.92, "icon": "🚀", "label": "72% · No Turning Back" },
+    { "t": 205.47, "icon": "🏁", "label": "80% · Final Lap" },
+    { "t": 220.88, "icon": "🔥", "label": "86% · True Believer" },
+    { "t": 233.72, "icon": "💎", "label": "91% · Diamond Attention Span" },
+    { "t": 244.00, "icon": "👑", "label": "95% · Binface Royalty" },
+    { "t": 251.70, "icon": "🏆", "label": "98% · Almost Immortal" },
+    { "t": 256.33, "icon": "🛸", "label": "100% · Full Impression · Certified Ultra" }
+  ]
+}

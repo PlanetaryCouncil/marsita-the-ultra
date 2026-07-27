@@ -1,0 +1,2162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>VOTE FOR THE BIN — DOUBLE WIDE 01 - THE DIPTYCH</title>
+<style>
+/* ===== SECTION: THEME & RESET ===== */
+:root{
+  --void:#010207; --ink:#f7fbff; --acid:#63ff9d; --pink:#ff2bd6;
+  --cyan:#25dcff; --gold:#ffe56b; --red:#ff315f; --violet:#735cff;
+}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--void);color:var(--ink)}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Arial Black",Arial,sans-serif}
+
+/* ===== SECTION: THE STAGE — exact pixel dimensions =====
+   Every visual layer lives inside #stage, a fixed 1920×1080 canvas-of-canvases
+   (dimensions come from STAGE_W/STAGE_H in the JS CONFIG — single source of truth).
+   The stage is centered and uniformly scaled to fit the window; recorded fullscreen
+   at 1920×1080 the scale is exactly 1 and every field pixel is exact. */
+#stage{position:fixed;left:50%;top:50%;width:1920px;height:1080px;
+  transform:translate(-50%,-50%) scale(var(--stage-scale,1));transform-origin:center;
+  overflow:hidden;background:var(--void)}
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:9;
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:inset 0 0 0 1px rgba(2,3,10,.6)}
+#stage.noframe::after{display:none}
+/* z1 webgl (director field: mirror/portal/pure + physics) · z2 wash vignette ·
+   z3 anatomy canvas · z4 safe DOM (video, lyrics, HUD) */
+#webgl,#fx{position:absolute;inset:0;width:100%;height:100%;display:block}
+#webgl{z-index:1}
+#fx{z-index:3;pointer-events:none;mix-blend-mode:screen}
+#wash{position:absolute;inset:0;z-index:2;pointer-events:none;background:
+  radial-gradient(circle at 50% 47%,transparent 0 30%,rgba(1,2,7,.14) 46%,rgba(1,2,7,.92) 100%)}
+#safe{position:absolute;z-index:4;inset:0;display:grid;place-items:center;pointer-events:none}
+
+/* ===== SECTION: CENTRAL SQUARE ===== */
+/* Clear, normal, borderless, untrimmed, FULL brightness edge to edge: no mask, no scrim.
+   The field's inner ring outside stays a subtle video-derived continuation, so no harsh gap. */
+#mediaShell{
+  position:absolute;left:50%;top:50%;width:var(--sq,583px);aspect-ratio:1;transform:translate(-50%,-50%);
+  background:#04050e;overflow:hidden;isolation:isolate;border:0;border-radius:0;box-shadow:none;
+  will-change:transform;transition:opacity .3s;
+}
+#centerVideo,#centerImage{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+#centerImage{z-index:-1}
+#centerVideo{z-index:0}
+#diptych{position:absolute;inset:0;z-index:1;pointer-events:none}
+#titleBug{position:absolute;top:34px;left:50%;transform:translateX(-50%);width:972px;text-align:center;text-transform:uppercase;letter-spacing:.36em;font:700 13px/1.4 ui-monospace,"SFMono-Regular",Menlo,monospace;color:rgba(255,255,255,.5);text-shadow:0 0 14px rgba(37,220,255,.4)}
+#titleBug b{display:block;font:1000 44px/.92 "Arial Black",Impact,sans-serif;letter-spacing:-.045em;color:#fff;text-shadow:-3px 0 rgba(255,43,214,.55),3px 0 rgba(37,220,255,.55),0 0 26px rgba(255,255,255,.12)}
+
+/* ===== SECTION: SCENE HUD — the director's slate, part of the artwork ===== */
+#sceneHud{position:absolute;z-index:6;left:40px;top:36px;pointer-events:none;
+  font:700 12px/1.5 ui-monospace,"SFMono-Regular",Menlo,monospace;letter-spacing:.32em;
+  text-transform:uppercase;color:rgba(255,255,255,.34);
+  text-shadow:0 0 10px rgba(37,220,255,.25);font-variant-numeric:tabular-nums}
+#sceneHud.hidden{display:none}
+
+/* ===== SECTION: HERO LYRIC (inside the square, never covered) ===== */
+#lyrics{position:absolute;z-index:5;left:50%;bottom:4.5%;transform:translateX(-50%);width:94%;padding:9% 2% 2%;text-align:center;text-transform:uppercase;filter:drop-shadow(0 3px 8px #000) drop-shadow(0 0 18px rgba(0,0,0,.9));will-change:transform,opacity;pointer-events:none}
+/* Lyrics backdrop scrim removed — full-brightness video; legibility rests on the
+   drop-shadows on #lyrics and the per-glyph text-shadow on #heroWord. */
+#heroWord{--gx:3px;--gy:1px;position:relative;min-height:1.06em;display:flex;align-items:center;justify-content:center;white-space:nowrap;font:1000 88px/.88 "Arial Black",Impact,sans-serif;letter-spacing:-.06em;color:#fff;text-shadow:-3px 0 var(--pink),3px 0 var(--cyan),0 0 22px rgba(255,255,255,.28);isolation:isolate}
+#heroWord::before,#heroWord::after{content:attr(data-word);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;mix-blend-mode:screen}
+#heroWord::before{color:var(--cyan);clip-path:inset(8% 0 57% 0);transform:translate(var(--gx),calc(var(--gy) * -1));animation:glitchTop calc(.22s*var(--slow,1)) steps(2,end) infinite alternate}
+#heroWord::after{color:var(--pink);clip-path:inset(58% 0 8% 0);transform:translate(calc(var(--gx) * -1),var(--gy));animation:glitchBottom calc(.17s*var(--slow,1)) steps(2,end) infinite alternate-reverse}
+#heroWord.slam{animation:wordSlam calc(.24s*var(--slow,1)) cubic-bezier(.12,.8,.18,1)}
+/* PER-LETTER LYRICS: in this mode the whole-word ghost is off and each glyph is
+   its own inline-block body, transformed independently in the render loop. */
+#heroWord.perletter{display:inline-block;white-space:nowrap}
+#heroWord.perletter::before,#heroWord.perletter::after{display:none}
+#heroWord .gl{display:inline-block;will-change:transform;transform-origin:center 62%}
+#heroWord .sp{display:inline-block}
+#lyrics.boom{padding:2%;filter:drop-shadow(0 3px 8px #000) drop-shadow(0 0 26px rgba(0,0,0,.95))}
+@keyframes wordBoom{0%{opacity:0;transform:scale(.15) rotate(-4deg);filter:blur(16px)}42%{opacity:1;transform:scale(1.4) rotate(1.5deg);filter:blur(0)}70%{transform:scale(.94)}100%{transform:scale(1)}}
+#heroWord.boomslam{animation:wordBoom calc(.55s*var(--slow,1)) cubic-bezier(.16,.9,.22,1)}
+/* STAR-BOOM OVERFLOW: a starred climax is allowed to break onto new lines and
+   KEEP its size, instead of shrinking to fit one line — the crescendo grows.
+   Block layout (not flex) so the lines stack; the ::before/::after RGB-split
+   ghosts switch to block too or they would wrap differently and de-register. */
+#heroWord.multiline,#heroWord.multiline::before,#heroWord.multiline::after{
+  display:block;white-space:normal;line-height:.9;text-align:center}
+#heroWord.calm::before,#heroWord.calm::after{animation:none;opacity:.45}
+@keyframes wordSlam{0%{opacity:0;transform:scale(1.5) skewX(-8deg);filter:blur(8px)}45%{opacity:1;transform:scale(.93) skewX(2deg);filter:blur(0)}100%{transform:scale(1) skewX(0)}}
+@keyframes glitchTop{0%{translate:-2px 0}48%{translate:4px -1px}52%{translate:-5px 2px}100%{translate:2px 0}}
+@keyframes glitchBottom{0%{translate:3px 1px}45%{translate:-4px 0}55%{translate:6px -2px}100%{translate:-2px 1px}}
+
+/* ===== SECTION: MORPH FORM (ORNAMENT) ===== */
+#morphForm{--shape-energy:.15;position:absolute;z-index:2;left:calc(50% - 454px);top:63%;width:78px;aspect-ratio:1;pointer-events:none;
+  opacity:calc(.06 + var(--shape-energy) * .26);
+  background:radial-gradient(circle at 32% 27%,rgba(255,255,255,.6),rgba(37,220,255,.15) 30%,rgba(115,92,255,.07) 62%,rgba(255,43,214,.12));
+  border:1px solid rgba(255,255,255,.38);box-shadow:inset 0 0 18px rgba(37,220,255,.22),0 0 20px rgba(255,43,214,.12);
+  mix-blend-mode:screen;transform-style:preserve-3d;will-change:clip-path,transform,opacity,border-radius}
+#morphForm::after{content:"";position:absolute;inset:20%;border:1px solid rgba(255,255,255,.28);transform:translateZ(10px) rotate(45deg)}
+
+/* ===== SECTION: LEGEND ===== */
+#stemLegend{position:absolute;left:38px;right:38px;bottom:26px;display:flex;justify-content:space-between;align-items:flex-end;gap:19px;font:700 10px/1.25 ui-monospace,"SFMono-Regular",Menlo,monospace;letter-spacing:.14em;text-transform:uppercase}
+.stemMeter{flex:1;max-width:288px;color:var(--c);opacity:.62}
+.stemMeter .label{display:flex;justify-content:space-between;gap:8px;white-space:nowrap}
+.stemMeter .bar{height:2px;margin-top:5px;background:rgba(255,255,255,.1);overflow:hidden}
+.stemMeter i{display:block;width:100%;height:100%;background:currentColor;transform:scaleX(.04);transform-origin:left center;will-change:transform}
+
+/* ===== SECTION: LAYER MENU (toggle features on/off; persisted) ===== */
+#layerMenu{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:14;display:flex;flex-direction:column;gap:7px;padding:14px 16px;background:rgba(2,3,10,.9);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);font:700 10px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.12em;color:rgba(255,255,255,.82);text-transform:uppercase}
+#layerMenu.hidden{display:none}
+#layerMenu h3{margin:0 0 4px;font:inherit;color:var(--cyan);letter-spacing:.3em}
+#layerMenu label{display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;pointer-events:auto}
+#layerMenu input{accent-color:var(--acid);width:13px;height:13px;margin:0;cursor:pointer}
+#layerMenu .presets{display:flex;gap:6px;margin-top:8px}
+#layerMenu .presets button{flex:1;border:1px solid rgba(255,255,255,.2);color:#fff;background:rgba(1,2,7,.6);padding:6px 8px;font:inherit;cursor:pointer;letter-spacing:.1em}
+#layerMenu .presets button:hover{border-color:var(--acid);color:var(--acid)}
+#layerMenu label.opt{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#layerMenu label.opt select{background:#080b16;color:#fff;border:1px solid rgba(255,255,255,.2);font:inherit;padding:2px 4px;cursor:pointer}
+
+/* ===== SECTION: SUDDEN ACHIEVEMENTS (PURE) — styled like the on-screen lyrics:
+   same Arial Black, same RGB-split shadows, bottom-centre where words live.
+   No card, no border — an achievement IS a lyric the song didn't sing. ===== */
+#pureToasts{position:absolute;z-index:7;left:50%;top:16%;transform:translate(-50%,-50%);width:var(--sq,1080px);max-width:var(--sq,1080px);display:flex;flex-direction:column-reverse;align-items:center;gap:12px;pointer-events:none;text-align:center;filter:drop-shadow(0 3px 8px #000) drop-shadow(0 0 18px rgba(0,0,0,.9))}
+.pureToast{will-change:transform,opacity;
+  padding:20px 42px 24px;border-radius:16px;
+  background:rgba(6,8,16,.5);                 /* ~50% — the video shows through */
+  border:1px solid rgba(255,255,255,.24);
+  box-shadow:0 12px 44px rgba(0,0,0,.42),inset 0 0 26px rgba(255,255,255,.05);
+  backdrop-filter:blur(3px)}
+.pureToast .ptIcon{display:none}
+.pureToast em{display:block;font:700 13px/1 ui-monospace,Menlo,monospace;letter-spacing:.34em;text-transform:uppercase;color:var(--gold,#ffe56b);font-style:normal;margin-bottom:11px;text-shadow:0 0 14px rgba(255,229,107,.55)}
+.pureToast strong{display:block;font:1000 56px/.95 "Arial Black",Impact,sans-serif;letter-spacing:-.04em;color:#fff;text-transform:uppercase;text-shadow:-3px 0 var(--pink,#ff2bd6),3px 0 var(--cyan,#25dcff),0 0 22px rgba(255,255,255,.28);white-space:nowrap}
+
+/* ===== SECTION: HELP PANEL (H) ===== */
+#helpPanel,#aboutPanel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;width:min(760px,92vw);max-height:86vh;overflow:auto;padding:26px 30px;background:rgba(2,3,10,.94);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(14px);font:500 12px/1.75 ui-monospace,Menlo,monospace;color:rgba(255,255,255,.85)}
+#helpPanel.hidden,#aboutPanel.hidden{display:none}
+#aboutPanel h3{font:1000 13px/1 "Arial Black",Impact,sans-serif;letter-spacing:.14em;color:var(--gold);margin:20px 0 8px;text-transform:uppercase}
+#aboutPanel p{margin:0 0 10px;color:rgba(255,255,255,.8)}
+#btnRow{display:flex;gap:14px;justify-content:center;margin-top:6px}
+#rec{border:0;background:var(--pink);color:#fff;padding:14px 30px;min-width:190px;font:900 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;cursor:pointer;text-transform:uppercase;box-shadow:0 0 32px rgba(255,43,214,.28)}
+#rec:disabled{opacity:.35;cursor:wait}
+#linkRow{display:flex;gap:22px;justify-content:center;margin-top:16px}
+#linkRow button{background:none;border:0;color:rgba(255,255,255,.55);font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.22em;cursor:pointer;text-transform:uppercase;padding:6px}
+#linkRow button:hover{color:var(--acid)}
+#helpPanel h2{margin:0 0 10px;font:1000 22px/1 "Arial Black",Impact,sans-serif;letter-spacing:-.02em;text-shadow:-2px 0 var(--pink),2px 0 var(--cyan)}
+#helpPanel table{width:100%;border-collapse:collapse}
+#helpPanel td{padding:4px 10px 4px 0;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.06)}
+#helpPanel td:first-child{color:var(--gold);white-space:nowrap;font-weight:700;width:120px}
+#helpPanel .close{margin-top:14px;color:var(--cyan)}
+
+/* ===== SECTION: TRANSPORT ===== */
+#transport{position:fixed;left:50%;bottom:12px;z-index:8;width:min(1120px,calc(100vw - 24px));transform:translateX(-50%);display:grid;grid-template-columns:auto minmax(120px,1fr) auto;align-items:center;gap:10px;padding:8px 10px;background:rgba(1,2,7,.7);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(12px);font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(255,255,255,.72);transition:opacity .25s}
+#transport .transportButtons{display:flex;align-items:center;gap:6px}
+#time{min-width:118px;text-align:center;color:#fff;white-space:nowrap;font-variant-numeric:tabular-nums}
+#seek{--seek:0%;width:100%;height:18px;margin:0;cursor:pointer;appearance:none;background:transparent}
+#seek::-webkit-slider-runnable-track{height:4px;background:linear-gradient(90deg,var(--pink) 0,var(--cyan) var(--seek),rgba(255,255,255,.14) var(--seek))}
+#seek::-webkit-slider-thumb{appearance:none;width:16px;height:16px;margin-top:-6px;border:2px solid #fff;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
+#seek::-moz-range-track{height:4px;background:rgba(255,255,255,.14)}
+#seek::-moz-range-progress{height:4px;background:linear-gradient(90deg,var(--pink),var(--cyan))}
+#seek::-moz-range-thumb{width:14px;height:14px;border:2px solid #fff;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
+#transport button{border:1px solid rgba(255,255,255,.2);color:#fff;background:rgba(1,2,7,.55);padding:8px 10px;font:inherit;cursor:pointer;backdrop-filter:blur(10px)}
+#speedWrap{display:flex;align-items:center;gap:5px;color:var(--cyan);white-space:nowrap}
+#speed{border:1px solid rgba(255,255,255,.2);color:#fff;background:#080b16;padding:7px 6px;font:inherit;cursor:pointer}
+#transport.hidden{opacity:0;pointer-events:none}
+
+/* ===== SECTION: TIMECODE ===== */
+#timecode{position:fixed;top:14px;right:18px;z-index:12;pointer-events:auto;cursor:grab;touch-action:none;user-select:none;
+  font:700 clamp(13px,1.3vw,19px)/1 ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color:#fff;letter-spacing:.1em;opacity:.86;
+  text-shadow:-2px 0 rgba(255,43,214,.5),2px 0 rgba(37,220,255,.5),0 0 14px rgba(255,255,255,.22);
+  font-variant-numeric:tabular-nums}
+#timecode:hover{opacity:1}
+#timecode.dragging{cursor:grabbing;opacity:1}
+
+/* ===== SECTION: START CARD ===== */
+#start{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 44%,rgba(30,16,62,.72),rgba(1,2,7,.97) 60%)}
+#start.hidden{display:none}
+#card{width:min(720px,92vw);text-align:center;padding:clamp(22px,4vw,48px);border:1px solid rgba(255,255,255,.16);background:rgba(3,4,14,.8);box-shadow:0 0 100px rgba(255,43,214,.1);backdrop-filter:blur(18px)}
+#card .kicker{font:700 10px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.42em;color:var(--cyan);text-transform:uppercase}
+#card h1{margin:.25em 0 .12em;font:1000 clamp(42px,9vw,108px)/.78 "Arial Black",Impact,sans-serif;letter-spacing:-.08em;text-transform:uppercase;text-shadow:-5px 0 rgba(255,43,214,.7),5px 0 rgba(37,220,255,.7)}
+#card h1 em{display:block;color:var(--gold);font-style:normal}
+#card p{max-width:590px;margin:18px auto;color:rgba(255,255,255,.6);font:500 12px/1.7 ui-monospace,Menlo,monospace}
+#loadStatus{margin:18px auto 12px;min-height:52px;color:rgba(255,255,255,.76);font:700 11px/1.5 ui-monospace,Menlo,monospace}
+#progress{width:min(460px,80vw);height:3px;margin:0 auto 22px;background:rgba(255,255,255,.1);overflow:hidden}
+#progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--pink),var(--gold),var(--cyan));transition:width .22s}
+#go{border:0;background:var(--acid);color:#031008;padding:14px 30px;min-width:190px;font:900 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;cursor:pointer;text-transform:uppercase;box-shadow:0 0 32px rgba(99,255,157,.22)}
+#go:disabled{opacity:.35;cursor:wait}
+#card details{margin-top:18px;color:rgba(255,255,255,.45);font:500 10px/1.7 ui-monospace,Menlo,monospace}
+#card details div{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;text-align:left}
+#card input{max-width:100%;color:#aaa;font:inherit}
+#error{color:#ff6f91}
+
+/* No aspect-ratio media queries: the stage is a fixed frame; the window only scales it. */
+@media (max-width:680px){#transport{grid-template-columns:1fr auto;gap:6px}#seek{grid-column:1/-1;grid-row:1}.transportButtons{grid-column:2}#time{grid-column:1;grid-row:2;text-align:left}#transport button{padding:7px 8px}}
+@media (prefers-reduced-motion:reduce){#heroWord::before,#heroWord::after{animation:none}}
+</style>
+</head>
+<body>
+<audio id="masterAudio" preload="auto" aria-hidden="true"></audio>
+<div id="stage">
+<div id="webgl"></div><div id="wash"></div><canvas id="fx"></canvas>
+<main id="safe">
+  <div id="titleBug"><b>Vote for the Bin</b>Marsita the Ultra · DOUBLE WIDE 01 · 1920×1080</div>
+  <div id="sceneHud" aria-hidden="true">SC 01 - MIRROR</div>
+  <div id="timecode" aria-label="Draggable timecode">00:00:000</div>
+  <div id="morphForm" aria-hidden="true"></div>
+  <div id="mediaShell">
+    <img id="centerImage" alt="Vote for the Bin artwork">
+    <video id="centerVideo" muted loop playsinline preload="auto"></video>
+    <section id="lyrics" aria-live="polite">
+      <div id="heroWord" data-word=""></div>
+    </section>
+  </div>
+  </div>
+  <canvas id="diptych" width="1920" height="1080"></canvas>
+<div id="pureToasts" aria-live="polite"></div>
+  <div id="stemLegend"></div>
+</main>
+</div>
+
+<div id="transport" class="hidden">
+  <span id="time">00:00.000 / 00:00.000</span>
+  <input id="seek" type="range" min="0" max="1" value="0" step="0.01" aria-label="Playback position">
+  <div class="transportButtons"><button id="back5" aria-label="Rewind 5 seconds">−5S</button><button id="pause">PAUSE</button><button id="forward5" aria-label="Forward 5 seconds">+5S</button><label id="speedWrap">SPEED <select id="speed" aria-label="Playback speed"><option value="0.05">0.05×</option><option value="0.1">0.10×</option><option value="0.2">0.20×</option><option value="0.25">0.25×</option><option value="0.333333">0.33×</option><option value="0.5">0.50×</option><option value="0.75">0.75×</option><option value="1" selected>1.00×</option><option value="1.5">1.50×</option><option value="2">2.00×</option></select></label><button id="restart">RESTART</button><button id="full">FULL</button><button id="menuBtn">MENU</button><button id="hide">HIDE</button></div>
+</div>
+
+<div id="layerMenu" class="hidden" aria-label="Feature layers">
+  <h3>Layers</h3>
+  <label><input type="checkbox" data-layer="video" checked>Video square</label>
+  <label><input type="checkbox" data-layer="lyrics" checked>Lyrics</label>
+  <label><input type="checkbox" data-layer="field" checked>Director field</label>
+  <label><input type="checkbox" data-layer="waves" checked>Waveforms</label>
+  <label><input type="checkbox" data-layer="histograms" checked>Histograms</label>
+  <label><input type="checkbox" data-layer="particles" checked>Particles + gravity</label>
+  <label><input type="checkbox" data-layer="morph" checked>Morph form</label>
+  <label><input type="checkbox" data-layer="legend" checked>Stem legend</label>
+  <label><input type="checkbox" data-layer="title" checked>Title</label>
+  <label><input type="checkbox" data-layer="frame" checked>Frame border</label>
+  <label><input type="checkbox" data-layer="halos">Gravity circles</label>
+  <label><input type="checkbox" data-layer="bursts" checked>Particle explosions</label>
+  <label><input type="checkbox" data-layer="uiPhysics" checked>UI physics</label>
+  <label><input type="checkbox" data-layer="metricDrive" checked>Video-metric drive</label>
+  <label><input type="checkbox" data-layer="metricRotate" checked>Metric roulette</label>
+  <label><input type="checkbox" data-layer="lyricReact" checked>Lyric stem reaction</label>
+  <label><input type="checkbox" data-layer="lyricPerLetter" checked>Lyric per-letter</label>
+  <label><input type="checkbox" data-layer="squarePulse">Square bass pulse</label>
+  <label><input type="checkbox" data-layer="achievements" checked>Achievements</label>
+  <label><input type="checkbox" data-layer="amoeba">Amoeba field</label>
+  <label><input type="checkbox" data-layer="amoebaShells" checked>Amoeba shells</label>
+  <label><input type="checkbox" data-layer="amoebaFill" checked>Amoeba filled</label>
+  <label><input type="checkbox" data-layer="amoebaMorph" checked>Amoeba shapeshift</label>
+  <label class="opt">Depth<select data-opt="amoebaDepth">
+    <option value="far">solid far</option><option value="near">solid near</option><option value="flat">flat</option></select></label>
+  <label class="opt">Density<select data-opt="amoebaCount">
+    <option value="5">5</option><option value="9" selected>9</option><option value="14">14</option><option value="20">20</option></select></label>
+  <label><input type="checkbox" data-layer="hud" checked>Scene HUD</label>
+  <div class="presets"><button id="presetLyrics">Lyrics only</button><button id="presetAll">All on</button></div>
+</div>
+
+<div id="helpPanel" class="hidden" aria-label="Keyboard help">
+  <h2>SHORTCUTS</h2>
+  <table>
+    <tr><td>SPACE</td><td>pause / play</td></tr>
+    <tr><td>&#8592; / &#8594;</td><td>jump 5 seconds back / forward</td></tr>
+    <tr><td>[ / ]</td><td>playback speed down / up (default 1.00&times;)</td></tr>
+    <tr><td>R</td><td>restart from the beginning</td></tr>
+    <tr><td>L</td><td>low-strobe mode (calms glitch flicker + inversions)</td></tr>
+    <tr><td>W</td><td>toggle the waveform traces (and their baselines)</td></tr>
+    <tr><td>G</td><td>toggle the 8-band histograms</td></tr>
+    <tr><td>A</td><td>toggle the scene HUD (SC number + language)</td></tr>
+    <tr><td>V</td><td>toggle the central square footage</td></tr>
+    <tr><td>M</td><td>minimize / restore ALL interface (transport, menu, timecode) &mdash; one key to clean the stage for recording</td></tr>
+    <tr><td>B</td><td>toggle the amoeba field (organic blobs that morph between structures; opacity falls off toward the square so the footage always wins)</td></tr>
+    <tr><td>H</td><td>this help</td></tr>
+    <tr><td>F</td><td>fullscreen</td></tr>
+    <tr><td>UI PHYSICS</td><td>the title becomes a spring-mounted body — kicks thump it, the square shoves it (layer menu)</td></tr>
+    <tr><td>MENU button</td><td>layer menu: every visual system on/off (video, lyrics, field, waves, particles, gravity circles, particle explosions, morph, legend, title, frame, HUD) + Lyrics-only / All-on presets. Choices persist.</td></tr>
+    <tr><td>CLICK</td><td>gravity supernova + portal shockwave (outside controls)</td></tr>
+    <tr><td>DRAG timecode</td><td>reposition the timecode; double-click resets; position persists</td></tr>
+    <tr><td>?start=SEC</td><td>URL: start playback at that song second</td></tr>
+    <tr><td>?capture=1</td><td>URL: recording mode &mdash; no transport, no accidental clicks, autopilot gravity only</td></tr>
+    <tr><td>?words=PATH</td><td>URL: load an alternative lyrics JSON (test starred drafts)</td></tr>
+    <tr><td>@ ENTRIES</td><td>a lyrics-JSON entry starting with "@" is a sudden achievement, not a word — "@🛸 Certified Ultra" pops a toast at its time. No timer, no bars.</td></tr>
+  </table>
+  <div class="close">Press H or Esc to close.</div>
+</div>
+
+<div id="aboutPanel" class="hidden" aria-label="About">
+  <h2>ABOUT — HOW THIS ARTWORK THINKS</h2>
+  <h3>The four commandments</h3>
+  <p>The square is sacred — full brightness, nothing covers it. The data is real — every reaction
+  comes from pre-baked stem analysis and pre-baked pixel analysis, no fake randomness. Every version
+  is kept — this page is one of ~50 numbered iterations, each preserved byte-for-byte. Everything is
+  deterministic in song time — seek anywhere, the artwork is identical; captures reproduce exactly.</p>
+  <h3>The journey</h3>
+  <p>It began as a waveform toy, went through a ChatGPT reference build, then a Claude rebuild that
+  discovered the CHRONO PORTAL — a feedback dimension where red is the recent past, green the present,
+  blue the deep past. The ULTIMA line (01–21) added a scene director that reads the real cuts of the
+  edit and casts a field language per shot — MIRROR, PORTAL, DROSTE's infinite corridor of squares —
+  then octopus gravity, star-boom lyrics, and an achievements engine. The PURE line stripped everything
+  back: the video at full height, still and sharp, lyrics whose letters hold still while their RGB
+  shadows dance, achievements that simply happen — authored inside the lyrics file itself.</p>
+  <h3>The two ears</h3>
+  <p>The artwork listens twice. Ten stems were analysed offline into 7,719 frames of energy, onsets and
+  bands — VOICE, CHOIR, RHYTHM, BASS, MUSIC each drive their own limb. Then the PICTURE was analysed
+  too: every frame split into a 10&times;10 grid and scored for busyness, differentiation, palette,
+  colourfulness, contrast and motion. At every audio peak the METRIC ROULETTE turns to the next picture
+  metric, and that metric drives the prism — the busier the frame, the deeper the mirror mosaic cuts.
+  Audio decides WHEN. The picture decides HOW MUCH.</p>
+  <h3>This build</h3>
+  <p>MINDFUCK = the CODEX mirror mosaic (seamless reflections, per-cell flips, transposes, prism zoom)
+  speaking over the PURE RGB-split echo, both at once, driven by both ears. Made by Marsita the Ultra
+  with Claude — planetarycouncil.org/vote &middot; press ABOUT again or Esc to close.</p>
+</div>
+<div id="start">
+  <div id="card">
+    <div class="kicker">DOUBLE WIDE 01 · 1920×1080 · the artwork edits itself</div>
+    <h1>Claude <em>Ultima</em></h1>
+    <p>MINDFUCK: two tongues at once. The CODEX mirror mosaic — seamless mirror reflections, per-cell flips, transposes, PRISM ZOOM — speaks over the PURE RGB-split echo, and the metric roulette turns the picture's own craziness into the prism's depth: the busier the frame, the deeper the kaleidoscope cuts. Audio peaks spin the wheel; the mosaic answers. Deterministic: seek anywhere, same madness.</p>
+    <div id="loadStatus">Scanning the project…</div>
+    <div id="progress"><i></i></div>
+    <div id="btnRow">
+      <button id="go" disabled>Loading</button>
+      <button id="rec" disabled>&#9210; Record</button>
+    </div>
+    <div id="linkRow">
+      <button id="shortcutsBtn">Shortcuts</button>
+      <button id="aboutBtn">About</button>
+    </div>
+    <details>
+      <summary>Manual overrides</summary>
+      <div><label>Master audio<br><input id="masterPick" type="file" accept="../audio/*"></label><label>Square video<br><input id="videoPick" type="file" accept="video/*,image/*"></label></div>
+    </details>
+    <p style="margin-bottom:0;font-size:10px">PLAY — watch at full speed · RECORD — 0.25&times; silky capture mode: stage goes clean and frozen, SPACE starts it (speed &times;4 in your editor afterwards)</p>
+  </div>
+</div>
+<script type="module">
+/* ============================================================================
+   VOTE FOR THE BIN — DOUBLE WIDE 01 · the square cut in half and laid side by side — a diptych strip with the field on all four sides
+   THE FINALE. The artwork edits itself: every real cut in the music video
+   (visualizer-scenes.json) selects the field language for that shot —
+     MIRROR  the seamless mirror-tile continuation (fresh_01 lineage),
+     PORTAL  the chrono-feedback recursion (wild_01 lineage, opened up),
+     PURE    the subdued RGB-split breather (venus lineage, negative space).
+   Languages are assigned deterministically by a seeded hash of the scene
+   index (bias ≈ 40/35/25, never the same language more than twice in a row),
+   precomputed once at load — seeking is perfectly reproducible. Each scene
+   also carries an ENERGY personality (mean baked envelope across the shot)
+   that scales its field intensity: quiet shots stay sparse in any language.
+   At each cut the languages crossfade over 0.7 s inside ONE composite shader
+   with mode weights (wMirror/wPortal/wPure); the feedback ping-pong pass runs
+   only while wPortal>0. Feedback is cleared on every seek AND at portal scene
+   entry, so each portal scene grows its own history.
+   GPU budget: 1 composite fullscreen pass when portal inactive (+ the physics
+   scene), +1 half-res feedback pass during portal scenes/transitions.
+   Exact 1920×1080 stage, layer-menu engine, full transport — venus_train_dvd
+   plumbing. Calm = dark. The background never outshines the square.
+   ==========================================================================*/
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+/* ===== SECTION: CONFIG & STATE ===== */
+const CONFIG={
+  bpm:174,
+  master:'../FINAL AUDIO/Marsita the Ultra — Vote for the Bin (Count Binface vs Farage).mp3',
+  words:'../___lyricsJSON/12_binface_words_pure_achievements.json',
+  features:'visualizer-features-voiceplus.json',
+  scenes:'visualizer-scenes.json',
+  dynamism:'visual-dynamism.json',
+  video:'../video.mp4', // FULL 1080×1080 60fps master — the square is native DOM video, not the 720 proxy
+  fallbackImage:'../Artwork Album Cover/album cover JPG upscaled 3000.jpg',
+  groups:[
+    {id:'VOICE', css:'#ffffff',hex:0xffffff,sources:2,visualGain:1.18},
+    {id:'CHOIR', css:'#ffe56b',hex:0xffe56b,sources:2,visualGain:1},
+    {id:'RHYTHM',css:'#ff315f',hex:0xff315f,sources:2,visualGain:1},
+    {id:'BASS',  css:'#735cff',hex:0x735cff,sources:1,visualGain:1},
+    {id:'MUSIC', css:'#25dcff',hex:0x25dcff,sources:4,visualGain:1}
+  ]
+};
+const PARTNER_IDX=[1,4,3,2,0]; // VOICE↔CHOIR, CHOIR↔MUSIC, RHYTHM↔BASS, BASS↔RHYTHM, MUSIC↔VOICE
+const $=s=>document.querySelector(s);
+const START_AT=Math.max(0,Number(new URLSearchParams(location.search).get('start'))||0);
+// ?capture=1 — recording mode: transport stays hidden, pointer cannot spawn
+// supernovas or steal the well from autopilot; keyboard still works (H shows
+// controls if needed). Everything on screen is deterministic.
+const _qs=new URLSearchParams(location.search);
+const AUTO=_qs.get('auto')==='1';
+const CAPTURE=AUTO||_qs.get('capture')==='1'; // AUTO is capture-clean by definition
+const startEl=$('#start'),go=$('#go'),statusEl=$('#loadStatus'),progressEl=$('#progress i'),
+      transport=$('#transport'),seek=$('#seek'),speedSelect=$('#speed'),timeEl=$('#time'),pauseBtn=$('#pause'),
+      masterAudio=$('#masterAudio'),video=$('#centerVideo'),image=$('#centerImage'),
+      mediaShell=$('#mediaShell'),hero=$('#heroWord'),lyricsEl=$('#lyrics'),morphForm=$('#morphForm'),
+      timecodeEl=$('#timecode'),fx=$('#fx'),fctx=fx.getContext('2d'),hudEl=$('#sceneHud');
+const recBtn=document.getElementById('rec'),aboutPanel=document.getElementById('aboutPanel');
+const textMeasure=document.createElement('canvas').getContext('2d');
+const TARGET_FPS=40,LOOKAHEAD=.1,BEAT=60/CONFIG.bpm,FB_SCALE=.5,SCENE_BLEND=.7;
+
+/* ===== SECTION: STAGE — EXACT FRAME DIMENSIONS (edit these two numbers) =====
+   All layers render into a fixed STAGE_W×STAGE_H frame; the window merely scales
+   it (letterboxed). Captured fullscreen at these dimensions, scale is exactly 1. */
+const STAGE_W=1920,STAGE_H=1080;
+const SQ=STAGE_H,SQ_HALF=SQ/2; // PURE: the video takes the full 1080 height
+const sqCX=STAGE_W/2,sqCY=STAGE_H*.5;
+const stageEl=document.getElementById('stage');
+stageEl.style.width=STAGE_W+'px';stageEl.style.height=STAGE_H+'px';
+document.documentElement.style.setProperty('--sq',SQ+'px');
+let stageScale=1,stageRect=null;
+function fitStage(){
+  stageScale=Math.min(innerWidth/STAGE_W,innerHeight/STAGE_H);
+  stageEl.style.setProperty('--stage-scale',stageScale);
+  stageRect=stageEl.getBoundingClientRect();
+}
+let playbackRate=1;
+let fw=0,fh=0,running=false,paused=false,scrubbing=false,resumeAfterScrub=false,
+    lowStrobe=matchMedia('(prefers-reduced-motion:reduce)').matches,
+    pauseAt=0,duration=0,words=[],featureData=null,lastWord=-2,shock=0,wordPunch=0,playRequest=0,
+    globalEnergy=0,frameCount=0;
+const sceneState={rgbSpread:0,shapePulse:0,twist:0,turbulence:0,fusion:0,impact:0,air:0};
+const WAVE_N=96;
+const groupList=CONFIG.groups.map((g,i)=>({
+  ...g,index:i,energy:0,previous:0,raw:0,kick:0,interaction:0,low:0,mid:0,high:0,
+  bands:new Float32Array(8),wave:new Float32Array(WAVE_N),rows:null
+}));
+const [gsV,gsC,gsR,gsB,gsM]=groupList;
+
+/* Stable per-page-load field profile — bands well below the square's brightness. */
+const rand=(a,b)=>a+Math.random()*(b-a);
+const profile={
+  extent:rand(1.05,1.5),
+  opacities:[rand(.68,.8),rand(.48,.6),rand(.3,.42),rand(.14,.22),rand(.06,.11)],
+  cuts:[rand(.15,.23),rand(.35,.45),rand(.55,.65),rand(.75,.86)],
+  feather:rand(.05,.09),
+  angle:rand(-Math.PI,Math.PI),
+  drift:rand(.7,1.3),
+  gain:rand(.92,.98),
+  rotSign:Math.random()<.5?-1:1
+};
+
+/* ===== SECTION: LOADING ===== */
+function setStatus(text,n){statusEl.innerHTML=text;if(Number.isFinite(n))progressEl.style.width=(n*100).toFixed(1)+'%'}
+function speedLabel(){return playbackRate.toFixed(2)+'×'}
+async function loadMasterSource(src){
+  await new Promise((resolve,reject)=>{
+    let settled=false;const finish=fn=>event=>{if(settled)return;settled=true;clearTimeout(timer);fn(event)};
+    const timer=setTimeout(finish(()=>reject(new Error('audio timed out'))),12000);
+    masterAudio.addEventListener('loadedmetadata',finish(resolve),{once:true});
+    masterAudio.addEventListener('error',finish(()=>reject(new Error('master audio could not load'))),{once:true});
+    masterAudio.src=src;masterAudio.load();
+  });
+  duration=masterAudio.duration;
+}
+function setVideoSource(src){video.src=src;video.load()}
+async function preload(){
+  if(location.protocol==='file:'){
+    setStatus('<span id="error">Autoload needs localhost.<br>Run <b>python3 -m http.server 8888</b> in this folder, or pick files manually below.</span>',0);
+    go.textContent='Retry';go.disabled=recBtn.disabled=false;return;
+  }
+  const jobs=5;let done=0;
+  try{
+    setStatus('Loading final mix…',done/jobs);
+    // Fetch as a blob: object URLs are fully seekable even on static servers without HTTP Range support.
+    const mr=await fetch(encodeURI(CONFIG.master),{cache:'no-cache'});if(!mr.ok)throw new Error('master '+mr.status);
+    await loadMasterSource(URL.createObjectURL(await mr.blob()));done++;
+    setStatus('Loading exact word timing…',done/jobs);
+    // ?words=path overrides the lyrics file — test starred copies without touching the master.
+    const wordsSrc=new URLSearchParams(location.search).get('words')||CONFIG.words;
+    const wr=await fetch(encodeURI(wordsSrc),{cache:'no-cache'});if(!wr.ok)throw new Error('lyrics '+wr.status);
+    // STAR BOOM markup: a leading * on a word (e.g. "*IN") detonates it — centered
+    // mid-square instead of bottom (for moments where the video's own captions live
+    // at the bottom), exploding in with a field shockwave. Appends inherit the mode.
+    const rawWords=await wr.json();
+    // ACHIEVEMENTS LIVE IN THE LYRICS JSON: an entry whose text starts with "@"
+    // is not a word — it is a sudden unlock. "@🌗 Halfway · No Refunds" →
+    // icon = first token, label = the rest. No timer, no rails: just the toast.
+    pureAchvList=rawWords.filter(x=>typeof x.w==='string'&&x.w.trim().startsWith('@')).map(x=>{
+      const sTxt=x.w.trim().slice(1).trim(),sp=sTxt.indexOf(' ');
+      return {t:+x.t,icon:sp>0?sTxt.slice(0,sp):'\u{1F3C6}',label:sp>0?sTxt.slice(sp+1):sTxt,unlockedAt:null,el:null};
+    }).filter(a=>Number.isFinite(a.t)&&a.label).sort((a,b)=>a.t-b.t);
+    words=rawWords.filter(x=>!(typeof x.w==='string'&&x.w.trim().startsWith('@'))).map(x=>{
+      let w=String(x.w).trim();
+      const boom=w.startsWith('*')||w.startsWith('[*');
+      if(boom)w=w.startsWith('*')?w.slice(1):'['+w.slice(2);
+      return {t:+x.t,w,boom};
+    }).filter(x=>Number.isFinite(x.t)&&x.w).sort((a,b)=>a.t-b.t);done++;
+    setStatus('Loading precomputed stem intelligence…',done/jobs);
+    const fr=await fetch(encodeURI(CONFIG.features),{cache:'no-cache'});if(!fr.ok)throw new Error('features '+fr.status);
+    featureData=await fr.json();if(!featureData.groups||!featureData.fps)throw new Error('invalid feature data');
+    for(const gs of groupList)gs.rows=featureData.groups[gs.id];done++;
+    setStatus('Loading the real edit — scene cuts…',done/jobs);
+    const sr=await fetch(encodeURI(CONFIG.scenes),{cache:'no-cache'});if(!sr.ok)throw new Error('scenes '+sr.status);
+    const sceneJson=await sr.json();
+    sceneCuts=(Array.isArray(sceneJson.cuts)?sceneJson.cuts:[0]).map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+    // AUTHORED CHOREOGRAPHY (optional): "cast" = per-scene language name
+    // ("MIRROR"|"PORTAL"|"DROSTE", null = deterministic default) and
+    // "lyricPos" = per-scene lyric safe zone ("top"|"mid"|"bot", null = bottom).
+    sceneCastAuthored=Array.isArray(sceneJson.cast)?sceneJson.cast.map(v=>{
+      if(typeof v!=='string')return null;
+      const idx=LANG_NAMES.indexOf(v.trim().toUpperCase());
+      return idx>=0?idx:null;
+    }):null;
+    sceneLyricPos=Array.isArray(sceneJson.lyricPos)?sceneJson.lyricPos.map(v=>{
+      const p=typeof v==='string'?v.trim().toLowerCase():'';
+      return p==='top'||p==='mid'?p:null;
+    }):null;
+    if(!sceneCuts.length||sceneCuts[0]>0)sceneCuts.unshift(0);
+    done++;
+    setStatus('Loading square footage · casting the scene languages…',done/jobs);
+    let vr=await fetch(encodeURI(CONFIG.video),{cache:'no-cache'});
+    if(!vr.ok){ // full-res master not in the folder (moved into an edit?) — the 720 proxy keeps the artwork alive
+      console.warn('full-res video missing ('+vr.status+') — falling back to video-visualizer-720.mp4');
+      vr=await fetch(encodeURI('video-visualizer-720.mp4'),{cache:'no-cache'});
+    }
+    if(!vr.ok)throw new Error('video '+vr.status);
+    const videoUrl=URL.createObjectURL(await vr.blob());
+    image.src=encodeURI(CONFIG.fallbackImage);setVideoSource(videoUrl);
+    await new Promise(resolve=>{let settled=false;const finish=()=>{if(!settled){settled=true;resolve()}};
+      video.addEventListener('canplay',finish,{once:true});video.addEventListener('error',finish,{once:true});setTimeout(finish,3500)});
+    done++;
+    // VISUAL DYNAMISM (optional, non-fatal): precomputed per-frame picture metrics.
+    try{
+      const dr=await fetch(encodeURI(CONFIG.dynamism),{cache:'no-cache'});
+      if(dr.ok){
+        const dj=await dr.json();
+        visDyn={fps:dj.fps||30,ch:dj.channels||[],rows:dj.data||[],blend:dj.dynamism||[]};
+        console.info('visual dynamism: '+visDyn.rows.length+' frames, '+visDyn.ch.length+' channels');
+      }else console.warn('dynamism: HTTP '+dr.status+' — metric drive inert');
+    }catch(e){console.warn('dynamism: '+e.message+' — metric drive inert')}
+    buildSceneDirector();buildLegend();buildMetricSwitches();
+    seek.max=Math.max(.01,duration).toFixed(2);
+    setStatus('READY · '+speedLabel()+' CAPTURE · '+sceneCuts.length+' scenes cast · '+words.length+' words · '+featureData.groups.VOICE.length+' baked frames',1);
+    go.disabled=recBtn.disabled=false;go.textContent='Play · '+speedLabel()+' Capture';
+  }catch(err){
+    console.error(err);
+    setStatus('<span id="error">Could not preload: '+err.message+'<br>Use localhost from the song folder, or choose the master manually.</span>',done/jobs);
+    go.textContent='Retry';go.disabled=recBtn.disabled=false;
+  }
+}
+const meterEls=[];
+function buildLegend(){
+  $('#stemLegend').innerHTML=CONFIG.groups.map(g=>'<div class="stemMeter" style="--c:'+g.css+'"><div class="label"><span>'+g.id+'</span><span>'+g.sources+' SRC</span></div><div class="bar"><i id="meter-'+g.id+'"></i></div></div>').join('');
+  meterEls.length=0;
+  for(const g of CONFIG.groups)meterEls.push(document.getElementById('meter-'+g.id));
+}
+
+/* ===== SECTION: TRANSPORT & CLOCK ===== */
+const mediaVideos=[video];
+function syncVideos(t,force=false){
+  for(const item of mediaVideos){
+    if(!Number.isFinite(item.duration)||!item.duration)continue;
+    const target=t%item.duration;
+    if(force||Math.abs(item.currentTime-target)>.1)item.currentTime=target;
+  }
+}
+function setVideosPlaying(playing,t=clock()){
+  if(!playing){for(const item of mediaVideos)item.pause();return}
+  syncVideos(t,true);
+  for(const item of mediaVideos){item.playbackRate=playbackRate;item.play().catch(()=>{})}
+}
+function setPlaybackRate(value){
+  const next=Math.max(.05,Math.min(2,Number(value)||.1));
+  playbackRate=next;masterAudio.playbackRate=next;masterAudio.preservesPitch=true;
+  // slow-capture safety: wall-clock CSS animations stretch so they stay constant in SONG time
+  document.documentElement.style.setProperty('--slow',(1/next).toFixed(4));
+  for(const item of mediaVideos)item.playbackRate=next;
+  speedSelect.value=String(next);
+  if(!go.disabled)go.textContent='Play · '+speedLabel()+' Capture';
+  updateTimeline(clock());
+}
+function stepPlaybackRate(direction){
+  const rates=[...speedSelect.options].map(o=>Number(o.value));
+  let index=rates.reduce((best,rate,i)=>Math.abs(rate-playbackRate)<Math.abs(rates[best]-playbackRate)?i:best,0);
+  setPlaybackRate(rates[Math.max(0,Math.min(rates.length-1,index+direction))]);
+}
+function clock(){return paused||scrubbing?pauseAt:running?Math.min(duration||Infinity,Math.max(0,masterAudio.currentTime)):pauseAt}
+async function startPlayback(offset=0){
+  const request=++playRequest;
+  offset=Math.max(0,Math.min(duration||Infinity,offset));
+  masterAudio.pause();setVideosPlaying(false);running=true;paused=true;
+  masterAudio.playbackRate=playbackRate;masterAudio.preservesPitch=true;
+  previewSeek(offset);resetTransientState(offset);pauseBtn.textContent='PLAY';
+  try{
+    await masterAudio.play();if(request!==playRequest)return;
+    paused=false;setVideosPlaying(true,offset);pauseBtn.textContent='PAUSE';
+  }catch(error){
+    if(request!==playRequest)return;
+    pauseAt=offset;paused=true;running=true;masterAudio.pause();setVideosPlaying(false);
+    previewSeek(offset);pauseBtn.textContent='PLAY';console.warn('Audio playback needs a click',error);
+  }
+}
+masterAudio.addEventListener('ended',()=>{running=false;paused=true;pauseAt=duration;setVideosPlaying(false);pauseBtn.textContent='PLAY'});
+function togglePause(){
+  if(!running)return;
+  if(!paused){++playRequest;pauseAt=clock();masterAudio.pause();setVideosPlaying(false);paused=true;pauseBtn.textContent='PLAY'}
+  else startPlayback(pauseAt);
+}
+function previewSeek(value){
+  const target=Math.max(0,Math.min(duration||0,Number(value)||0));
+  pauseAt=target;if(masterAudio.readyState>0)masterAudio.currentTime=target;
+  syncVideos(target,true);
+  analysePrecomputed(Math.min(duration||target,target+LOOKAHEAD));
+  renderLyrics(target);updateTimeline(target);
+}
+function beginScrub(){
+  if(scrubbing)return;scrubbing=true;resumeAfterScrub=running&&!paused;
+  if(resumeAfterScrub){++playRequest;pauseAt=clock();masterAudio.pause();setVideosPlaying(false);paused=true}
+}
+function finishScrub(){
+  if(!scrubbing)return;const target=pauseAt;scrubbing=false;resetTransientState(target);
+  if(resumeAfterScrub)startPlayback(target);
+  else{paused=true;running=true;syncVideos(target,true);pauseBtn.textContent='PLAY'}
+}
+function jumpBy(seconds){
+  const target=Math.max(0,Math.min(duration,clock()+seconds)),resume=running&&!paused;
+  ++playRequest;masterAudio.pause();setVideosPlaying(false);running=true;paused=true;
+  previewSeek(target);resetTransientState(target);pauseBtn.textContent='PLAY';
+  if(resume)startPlayback(target);
+}
+function formatTime(t){t=Math.max(0,Number(t)||0);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(Math.floor(t%60)).padStart(2,'0')+'.'+String(Math.floor(t%1*1000)).padStart(3,'0')}
+function updateTimeline(t){
+  if(!scrubbing){seek.value=Math.min(duration||0,t).toFixed(2);seek.style.setProperty('--seek',(duration?t/duration*100:0)+'%')}
+  timeEl.textContent=speedLabel()+' · '+formatTime(t)+' / '+formatTime(duration);
+  const mm=String(Math.floor(t/60)).padStart(2,'0'),ss=String(Math.floor(t%60)).padStart(2,'0'),ttt=String(Math.floor((t%1)*1000)).padStart(3,'0');
+  timecodeEl.firstChild.nodeValue=mm+':'+ss+':'+ttt;
+}
+
+/* ===== SECTION: FEATURE INTERPOLATION (baked, no FFT) =====
+   Wave synthesis uses angle-addition against precomputed spatial tables:
+   sin(spatial + timePhase) = sinTab*cos(tp) + cosTab*sin(tp).
+   Inner loop is multiply-add only — zero trig per point. */
+const waveSinTab=new Float32Array(5*8*WAVE_N),waveCosTab=new Float32Array(5*8*WAVE_N);
+for(let gi=0;gi<5;gi++)for(let b=0;b<8;b++)for(let i=0;i<WAVE_N;i++){
+  const u=i/(WAVE_N-1),phase=u*Math.PI*2*(b+1)+gi*.93+b*.41,idx=(gi*8+b)*WAVE_N+i;
+  waveSinTab[idx]=Math.sin(phase);waveCosTab[idx]=Math.cos(phase);
+}
+const bandW=new Float32Array(8),sinT=new Float32Array(8),cosT=new Float32Array(8);
+function analysePrecomputed(t){
+  if(!featureData)return;
+  const scale=featureData.scale||255,rowsV=gsV.rows,frame=Math.max(0,t*featureData.fps),
+        i0=Math.min(rowsV.length-1,Math.floor(frame)),i1=Math.min(rowsV.length-1,i0+1),mix=frame-i0;
+  globalEnergy=0;
+  for(let gi=0;gi<5;gi++){
+    const gs=groupList[gi],rows=gs.rows,a=rows[i0]||rows[rows.length-1],b=rows[i1]||a,gain=gs.visualGain||1;
+    gs.previous=gs.energy;
+    const read=idx=>(a[idx]+(b[idx]-a[idx])*mix)/scale;
+    gs.raw=Math.min(1,read(0)*gain);
+    const onset=Math.min(1,read(1)*gain);
+    for(let band=0;band<8;band++)gs.bands[band]=Math.min(1,read(2+band)*gain);
+    gs.low=(gs.bands[0]+gs.bands[1])*.5;
+    gs.mid=(gs.bands[2]+gs.bands[3]+gs.bands[4]+gs.bands[5])*.25;
+    gs.high=(gs.bands[6]+gs.bands[7])*.5;
+    gs.energy=a.length>10?Math.min(1,read(10)*gain):gs.energy+(gs.raw-gs.energy)*.22;
+    if(gs.energy>globalEnergy)globalEnergy=gs.energy;
+    gs.kick=Math.max(onset,gs.kick*.72);
+    let weight=0;
+    for(let band=0;band<8;band++){bandW[band]=gs.bands[band]/(1+band*.14);weight+=bandW[band];
+      const tp=t*(.72+band*.11);sinT[band]=Math.sin(tp);cosT[band]=Math.cos(tp)}
+    const base=gi*8*WAVE_N,amp=weight>1e-5?(.55+gs.raw*.45)/weight:0;
+    for(let i=0;i<WAVE_N;i++){
+      let v=0;
+      for(let band=0;band<8;band++){const k=base+band*WAVE_N+i;v+=(waveSinTab[k]*cosT[band]+waveCosTab[k]*sinT[band])*bandW[band]}
+      gs.wave[i]=v*amp;
+    }
+  }
+  for(let gi=0;gi<5;gi++){
+    const gs=groupList[gi];
+    gs.energy=Math.max(gs.energy,globalEnergy*.08,.01);
+    gs.interaction=Math.sqrt(gs.energy*groupList[PARTNER_IDX[gi]].energy);
+  }
+  if(featureData.scene){
+    const a=featureData.scene[i0]||featureData.scene[featureData.scene.length-1],b=featureData.scene[i1]||a,
+          names=featureData.sceneLayout;
+    for(let n=0;n<names.length;n++)sceneState[names[n]]=(a[n]+(b[n]-a[n])*mix)/scale;
+  }
+}
+
+/* ===== SECTION: LYRICS (word-accurate, bracket-append) ===== */
+function activeWordAt(t){let lo=0,hi=words.length-1,ans=-1;while(lo<=hi){const m=(lo+hi)>>1;if(words[m].t<=t){ans=m;lo=m+1}else hi=m-1}return ans}
+function appendToken(word){const m=/^\[([\s\S]*)\]$/.exec(word);return m?m[1]:null}
+function subtitleAt(index){
+  let base=index;
+  while(base>0&&appendToken(words[base].w)!==null)base--;
+  let text=appendToken(words[base].w)??words[base].w;
+  for(let i=base+1;i<=index;i++){
+    const addition=appendToken(words[i].w);
+    text+=addition===null?' '+words[i].w:addition;
+  }
+  return text;
+}
+const HERO_MAX_LINES=3; // a starred climax may overflow onto this many lines at full size
+function fitHero(word,boom){
+  const maxWidth=mediaShell.clientWidth*(boom?.92:.78),
+        natural=Math.min(mediaShell.clientWidth*(boom?.32:.18),boom?150:82);
+  textMeasure.font='1000 '+natural+'px "Arial Black",Impact,sans-serif';
+  const measured=Math.max(1,textMeasure.measureText(word).width);
+  // A STARRED climax overflows instead of shrinking: it is allowed up to
+  // HERO_MAX_LINES, so "IN-IN-IN-IN…" stacks at full size rather than
+  // collapsing to a thin line. Only booms get this — an unstarred long word
+  // still fits itself to one line. (Want a word huge? Star it in the lyrics JSON.)
+  const lines=boom?Math.max(1,Math.min(HERO_MAX_LINES,Math.ceil(measured/maxWidth))):1;
+  const size=natural*Math.min(1,maxWidth*lines/measured);
+  hero.classList.toggle('multiline',lines>1);
+  hero.style.fontSize=Math.max(18,size)+'px';
+}
+let lyricBoomMode=false,lyricPosMode='bot',heroLetters=[];
+function setHeroLetters(str){
+  hero.classList.add('perletter');
+  hero.dataset.word='';hero.textContent='';heroLetters=[];
+  for(let i=0;i<str.length;i++){
+    const ch=str[i],sp=document.createElement('span');
+    if(ch===' '){sp.className='sp';sp.innerHTML='&nbsp;';}
+    else{
+      sp.className='gl';sp.textContent=ch;
+      sp._p1=hash01(i*1.7)*TAU;sp._p2=hash01(i*2.3+4)*TAU;sp._p3=hash01(i*3.1+9)*TAU;
+      sp._j=hash01(i*5.1);sp._k=hash01(i*7.3+2); // fixed per-letter jitter weights
+      heroLetters.push(sp);
+    }
+    hero.appendChild(sp);
+  }
+}
+function renderLyrics(t){
+  if(!words.length||!layers.lyrics)return;
+  const i=activeWordAt(t);
+  if(i<0){hero.textContent='';hero.dataset.word='';attnTarget=0;return}
+  const next=i+1<words.length?words[i+1].t:duration,life=Math.min(1.7,Math.max(.36,next-words[i].t+.2));
+  if(t-words[i].t>life){hero.textContent='';hero.dataset.word='';attnTarget=0;return}
+  // A starred base word puts its whole append-chain in BOOM mode: centered
+  // mid-square and detonated in. Otherwise the scene's authored lyric safe zone
+  // (lyricPos in visualizer-scenes.json: "top"|"mid"|null=bottom) places the word
+  // clear of any text baked into the footage.
+  let base=i;
+  while(base>0&&appendToken(words[base].w)!==null)base--;
+  const boomNow=!!words[base].boom;
+  const scenePos=(!boomNow&&sceneLyricPos)?(sceneLyricPos[sceneAt(t)]||'bot'):'bot';
+  const posNow=boomNow?'mid':scenePos;
+  if(posNow!==lyricPosMode){
+    lyricPosMode=posNow;
+    if(posNow==='mid'){lyricsEl.style.bottom='auto';lyricsEl.style.top='50%'}
+    else if(posNow==='top'){lyricsEl.style.bottom='auto';lyricsEl.style.top='7%'}
+    else{lyricsEl.style.top='auto';lyricsEl.style.bottom='4.5%'}
+  }
+  if(boomNow!==lyricBoomMode){
+    lyricBoomMode=boomNow;
+    lyricsEl.classList.toggle('boom',boomNow);
+  }
+  attnTarget=boomNow?1:.85; // words are speaking: the background bows
+  if(i!==lastWord){
+    const subtitle=subtitleAt(i);
+    lastWord=i;wordPunch=1;shock=Math.max(shock,boomNow?.55:.32);
+    // per-letter life for normal words; boom climaxes keep the unified slam+ghost
+    if(layers.lyricPerLetter&&!boomNow)setHeroLetters(subtitle);
+    else{hero.classList.remove('perletter');heroLetters=[];hero.textContent=subtitle;hero.dataset.word=subtitle}
+    fitHero(subtitle,boomNow);
+    hero.classList.remove('slam','boomslam');void hero.offsetWidth;
+    hero.classList.add(boomNow?'boomslam':'slam');
+    // the explosion is real: EVERY starred entry detonates on its own onset —
+    // star the appends too ("*[-IN]") and the chain fires a crescendo of blasts,
+    // each one hitting harder than the last.
+    if(words[i].boom&&running&&!paused&&!scrubbing){
+      spawnShock(sqCX,sqCY,Math.min(1,.72+(i-base)*.08));
+      shock=Math.max(shock,.45+(i-base)*.05);
+    }
+  }
+  wordPunch*=Math.pow(.82,playbackRate);
+  hero.classList.toggle('calm',lowStrobe);
+  // ── STEM-REACTIVE LYRICS ──────────────────────────────────────────────────
+  // Every stem gets one job on the word, so the type is playing the mix:
+  //   VOICE  swells it        (the word IS the voice — it breathes)
+  //   BASS   pulls it down    (weight you can feel under the letters)
+  //   RHYTHM tears its colour (drives the RGB ghosts apart on the kick)
+  //   CHOIR  spreads letters  (the word opens out under the harmony)
+  //   MUSIC  leans it         (a slow tilt riding the bed)
+  // Boom words get ~1.7x of everything. All of it is baked-feature driven, so
+  // it is identical on every playthrough.
+  const rx=layers.lyricReact?1:0, bm=lyricBoomMode?1.35:1;
+  // THE WORD HOLDS STILL — readable, no bobbing, no jitter, no per-letter dance.
+  // What plays the music is the CHROMATIC SHADOW: each letter's RGB-split ghost
+  // tears apart on the beat, on its OWN phase, so the colour shimmers while the
+  // type stays put. Word level keeps only the entrance settle (the slam), never
+  // continuous motion. All shadow motion is baked-feature driven → reproducible.
+  const tbase=lyricPosMode==='mid'?'translate(-50%,-50%)':'translateX(-50%)';
+  lyricsEl.style.transform=tbase+' scale('+(1+wordPunch*(lyricBoomMode?.09:.045)).toFixed(3)+')';
+  // whole-word ghost (BOOM words, or per-letter off): the ::before/::after split
+  // offset breathes on RHYTHM (tear) + BASS (vertical) — the shadow, not the word.
+  hero.style.setProperty('--gx',(2+gsR.kick*(6+rx*13)).toFixed(1)+'px');
+  hero.style.setProperty('--gy',(1+gsB.energy*(2+rx*5)*bm).toFixed(1)+'px');
+  // ── per-letter LIVING SHADOW: the glyphs are static; only their ghosts move,
+  //    each letter separating at its own phase and its own amount. ──
+  if(heroLetters.length){
+    const kick=gsR.kick, bass=gsB.energy, voice=gsV.energy;
+    for(let li=0,N=heroLetters.length;li<N;li++){
+      const el=heroLetters[li];
+      const osc=.5+.5*Math.sin(t*4.2+el._p1);          // per-letter horizontal waver
+      const sx=1.6+el._k*1.5                            // static per-letter baseline (varied)
+             + rx*( kick*(4+9*el._k)                    // RHYTHM tears the ghost apart on the beat
+                  + voice*3.2*osc );                    // VOICE gives it a per-letter shimmer
+      const sy=rx*bass*(2+2.4*el._j)*(.5+.5*Math.sin(t*3.1+el._p2)); // BASS drifts the ghost vertically
+      el.style.textShadow='-'+sx.toFixed(1)+'px '+(-sy).toFixed(1)+'px 0 #ff2bd6,'
+                          +    sx.toFixed(1)+'px '+   sy.toFixed(1)+'px 0 #25dcff,'
+                          +'0 0 22px rgba(255,255,255,.28)';
+    }
+  }
+}
+
+/* ============================================================================
+   ★★★ SECTION: THE SCENE DIRECTOR ★★★
+   Real cuts from visualizer-scenes.json. One language per scene, chosen by a
+   seeded hash of the scene index (deterministic — the edit is identical on
+   every load and every seek):
+     bias ≈ 40% MIRROR · 35% PORTAL · 25% PURE,
+     never the same language more than twice in a row (precomputed pass).
+   Each scene's ENERGY personality = mean baked envelope across the shot;
+   it scales that scene's field intensity so quiet shots stay sparse.
+   ==========================================================================*/
+const LANG_MIRROR=0,LANG_PORTAL=1,LANG_PURE=2;
+const LANG_NAMES=['MIRROR','PORTAL','DROSTE'];
+let sceneCuts=[0],sceneLang=null,sceneEnergy=null,lastScene=-1,hudScene=-1,
+    wMirrorNow=1,wPortalNow=0,wPureNow=0,intensityNow=.8,
+    sceneCastAuthored=null,sceneLyricPos=null,
+    attn=0,attnTarget=0; // attention budget: background bows while words speak
+function hash01(n){const s=Math.sin(n*127.1+311.7)*43758.5453;return s-Math.floor(s)}
+function buildSceneDirector(){
+  const n=sceneCuts.length;
+  sceneLang=new Uint8Array(n);
+  for(let i=0;i<n;i++){
+    const h=hash01(i*7.13+1.71);
+    let lang=h<.30?LANG_MIRROR:(h<.65?LANG_PORTAL:LANG_PURE); // 30/35/35 — mirror wrap / square tunnel / droste corridor
+    if(i>=2&&sceneLang[i-1]===lang&&sceneLang[i-2]===lang){
+      // deterministic replacement from a second hash among the other two languages
+      const h2=hash01(i*3.77+9.29);
+      lang=lang===LANG_MIRROR?(h2<.58?LANG_PORTAL:LANG_PURE)
+          :lang===LANG_PORTAL?(h2<.62?LANG_MIRROR:LANG_PURE)
+          :(h2<.62?LANG_MIRROR:LANG_PORTAL);
+    }
+    sceneLang[i]=lang;
+  }
+  // Authored choreography wins: explicit casts from the JSON override the hash
+  // (and are exempt from the no-repeat rule — intentional repetition is direction).
+  if(sceneCastAuthored)for(let i=0;i<n;i++){
+    const a=sceneCastAuthored[i];
+    if(a!=null&&i<sceneLang.length)sceneLang[i]=a;
+  }
+  // ENERGY personality: mean over the shot of the max-across-groups envelope
+  sceneEnergy=new Float32Array(n);
+  const fps=featureData.fps,scale=featureData.scale||255,rowsN=gsV.rows.length;
+  for(let s=0;s<n;s++){
+    const t0=sceneCuts[s],t1=s+1<n?sceneCuts[s+1]:(duration||t0+1);
+    const f0=Math.max(0,Math.min(rowsN-1,Math.floor(t0*fps))),
+          f1=Math.max(f0+1,Math.min(rowsN,Math.ceil(t1*fps)));
+    let sum=0,count=0;
+    for(let f=f0;f<f1;f++){
+      let m=0;
+      for(let gi=0;gi<5;gi++){
+        const row=groupList[gi].rows[f];if(!row)continue;
+        const e=row.length>10?row[10]:row[0];
+        if(e>m)m=e;
+      }
+      sum+=m/scale;count++;
+    }
+    sceneEnergy[s]=count?sum/count:.5;
+  }
+}
+function sceneAt(t){ // binary search: index of the last cut ≤ t
+  let lo=0,hi=sceneCuts.length-1,ans=0;
+  while(lo<=hi){const m=(lo+hi)>>1;if(sceneCuts[m]<=t){ans=m;lo=m+1}else hi=m-1}
+  return ans;
+}
+function updateDirector(t){
+  if(!sceneLang){wMirrorNow=.74;wPortalNow=0;wPureNow=.26;intensityNow=.8;return}
+  const s=sceneAt(t);
+  if(s!==lastScene){
+    if(sceneLang[s]===LANG_PORTAL)clearFeedback(); // each portal scene grows its own history
+    lastScene=s;
+  }
+  // 0.7s crossfade at each cut: both languages render blended — the hybrid moment
+  let k=1;
+  if(s>0){
+    k=Math.min(1,Math.max(0,(t-sceneCuts[s])/SCENE_BLEND));
+    k=k*k*(3-2*k);
+  }
+  const prev=s>0?sceneLang[s-1]:sceneLang[s],cur=sceneLang[s];
+  let m=0,p=0,u=0;
+  if(prev===LANG_MIRROR)m+=1-k;else if(prev===LANG_PORTAL)p+=1-k;else u+=1-k;
+  if(cur===LANG_MIRROR)m+=k;else if(cur===LANG_PORTAL)p+=k;else u+=k;
+  wMirrorNow=.74;wPortalNow=0;wPureNow=.26; // MINDFUCK: mirror mosaic speaks OVER the PURE echo — two tongues at once. The scene
+  // director still tracks cuts for energy/lyric zones, but the field never changes tongue.
+  const ePrev=s>0?sceneEnergy[s-1]:sceneEnergy[s],
+        eBlend=ePrev*(1-k)+sceneEnergy[s]*k;
+  intensityNow=.3+.78*Math.min(1,eBlend*1.5); // quiet shots stay sparse in any language
+  if(hudScene!==s){
+    hudScene=s;
+    hudEl.textContent='SC '+String(s+1).padStart(2,'0')+' - '+LANG_NAMES[cur];
+  }
+}
+
+/* ===== SECTION: RENDERER (exact stage buffer) ===== */
+const renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(1);
+renderer.setSize(STAGE_W,STAGE_H,false);
+renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';
+const VOID_COLOR=new THREE.Color(0x010207),BLACK=new THREE.Color(0x000000);
+renderer.setClearColor(VOID_COLOR,1);
+renderer.autoClear=false;
+$('#webgl').appendChild(renderer.domElement);
+
+/* Screen mapping for the physics scene: fixed camera, exact linear mapping. */
+const FOV=55,CAM_Z=13;
+const cam=new THREE.PerspectiveCamera(FOV,STAGE_W/STAGE_H,.1,60);cam.position.set(0,0,CAM_Z);
+const worldHalfH=Math.tan(FOV*Math.PI/360)*CAM_Z,
+      worldPerPx=2*worldHalfH/STAGE_H,
+      protectedHalf=SQ_HALF*worldPerPx*1.04+.28,
+      squareWorldCy=(STAGE_H*.5-sqCY)*worldPerPx;
+// Lanes evenly spaced in 11% steps, centered on the SQUARE's center (45.5%),
+// so the stack is proportional to the video, not to the frame.
+const laneFrac=[.235,.345,.455,.565,.675],laneWorldY=new Float32Array(5);
+for(let i=0;i<5;i++)laneWorldY[i]=(STAGE_H*.5-STAGE_H*laneFrac[i])*worldPerPx;
+
+/* ===== SECTION: VIDEO TEXTURE (shared by all three languages) ===== */
+const videoTexture=new THREE.VideoTexture(video);
+videoTexture.colorSpace=THREE.NoColorSpace; // pass-through: field matches the DOM video exactly
+videoTexture.minFilter=THREE.LinearFilter;videoTexture.magFilter=THREE.LinearFilter;
+let imageTexture=null;
+image.addEventListener('load',()=>{
+  if(imageTexture)return;
+  imageTexture=new THREE.Texture(image);imageTexture.colorSpace=THREE.NoColorSpace;
+  imageTexture.minFilter=THREE.LinearFilter;imageTexture.needsUpdate=true;
+  if(video.readyState<2){compU.map.value=imageTexture;fbU.mediaTex.value=imageTexture}
+},{once:true});
+video.addEventListener('canplay',()=>{compU.map.value=videoTexture;fbU.mediaTex.value=videoTexture},{once:true});
+
+const quadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const QUAD_VS='void main(){gl_Position=vec4(position.xy,0.0,1.0);}';
+
+/* ===== SECTION: PORTAL FEEDBACK PASS (ping-pong, half-res, portal scenes only) =====
+   Ported from the wild chrono-recursion, OPENED UP: calm decay floor ~0.87 so
+   the recursion is clearly visible at mid energy. Each frame: advect the
+   previous buffer outward with PER-CHANNEL zoom/rotation/decay — R recent past
+   (RHYTHM strobe-jumps), G present (7 Hz VOICE tremble), B deep past (BASS
+   sinks the world deeper) — through the pointer lens and pooled shockwaves,
+   then stamp the live frame at the square's exact footprint. All gains < 1 and
+   clamped: the loop can never white out. Cleared on every seek AND on portal
+   scene entry. */
+let rtRead=null,rtWrite=null,rtW=4,rtH=4,kx=1; // kx: stage px → feedback-buffer px
+function makeRT(){
+  const rt=new THREE.WebGLRenderTarget(rtW,rtH,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,depthBuffer:false,stencilBuffer:false,format:THREE.RGBAFormat,type:THREE.UnsignedByteType});
+  rt.texture.colorSpace=THREE.NoColorSpace;
+  return rt;
+}
+function clearFeedback(){
+  if(!rtRead)return;
+  renderer.setClearColor(BLACK,1);
+  renderer.setRenderTarget(rtRead);renderer.clear(true,false,false);
+  renderer.setRenderTarget(rtWrite);renderer.clear(true,false,false);
+  renderer.setRenderTarget(null);renderer.setClearColor(VOID_COLOR,1);
+}
+const SHOCK_N=4;
+const shockPool=[];for(let i=0;i<SHOCK_N;i++)shockPool.push({x:0,y:0,birth:-1e4,strength:0});
+const shockVecs=[new THREE.Vector4(0,0,-1e4,0),new THREE.Vector4(0,0,-1e4,0),new THREE.Vector4(0,0,-1e4,0),new THREE.Vector4(0,0,-1e4,0)];
+const fbU={
+  prevTex:{value:null},
+  mediaTex:{value:videoTexture},
+  uRes:{value:new THREE.Vector2(4,4)},
+  uCenter:{value:new THREE.Vector2(0,0)},   // feedback-buffer px, y-up
+  uHalf:{value:100},
+  uRot:{value:0},
+  uZoom:{value:new THREE.Vector3(1.005,1.004,1.007)},
+  uDecay:{value:new THREE.Vector3(.9,.87,.92)},
+  uJumpR:{value:new THREE.Vector2(0,0)},
+  uTrembleG:{value:new THREE.Vector2(0,0)},
+  uSinkB:{value:new THREE.Vector2(0,0)},
+  uLens:{value:[new THREE.Vector4(0,0,0,0),new THREE.Vector4(0,0,0,0),new THREE.Vector4(0,0,0,0),
+                new THREE.Vector4(0,0,0,0),new THREE.Vector4(0,0,0,0),new THREE.Vector4(0,0,0,0)]}, // 6 arms: x,y buffer px · z strength
+  uLensK:{value:1},
+  uLensSoft:{value:900},
+  uLensOrbit:{value:.55},
+  uShocks:{value:shockVecs},                // x,y buffer px · z birth mediaT · w strength
+  uTime:{value:0},
+  uShockSpeed:{value:300},
+  uShockWidth:{value:30},
+  uShockAmp:{value:16},
+  uStampFeather:{value:.10},
+  uEdgeGlow:{value:0},
+  uSeed:{value:0}
+};
+const fbScene=new THREE.Scene();
+fbScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
+  uniforms:fbU,
+  vertexShader:QUAD_VS,
+  fragmentShader:`
+precision highp float;
+uniform sampler2D prevTex,mediaTex;
+uniform vec2 uRes,uCenter,uJumpR,uTrembleG,uSinkB;
+uniform float uHalf,uRot,uLensK,uLensSoft,uLensOrbit,uTime,uShockSpeed,uShockWidth,uShockAmp,uStampFeather,uEdgeGlow,uSeed;
+uniform vec3 uZoom,uDecay;
+uniform vec4 uLens[6];
+uniform vec4 uShocks[4];
+float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+vec2 lensWarp(vec2 pos){
+  // THE OCTOPUS: six gravity arms, each pulling + orbiting from its own place.
+  vec2 acc=vec2(0.0);
+  for(int i=0;i<6;i++){
+    vec4 L=uLens[i];
+    vec2 d=pos-L.xy;
+    float f=min(L.z*uLensK/(dot(d,d)+uLensSoft),.35);
+    acc+=(d+vec2(-d.y,d.x)*uLensOrbit)*f;
+  }
+  return acc;
+}
+void main(){
+  vec2 pos=gl_FragCoord.xy;
+  vec2 p=pos-uCenter;
+  vec2 shockD=vec2(0.0);
+  for(int i=0;i<4;i++){
+    vec4 s=uShocks[i];
+    float age=uTime-s.z;
+    if(age>0.0&&age<2.6){
+      vec2 d=pos-s.xy;
+      float dist=length(d)+0.001;
+      float k=(dist-age*uShockSpeed)/uShockWidth; // pow(neg,2.0) is UB in GLSL — NaN on Metal/ANGLE
+      float ring=exp(-k*k);
+      shockD+=(d/dist)*ring*exp(-age*1.3)*s.w*uShockAmp;
+    }
+  }
+  vec2 lensD=lensWarp(pos);
+  float cr=cos(uRot),sr=sin(uRot);
+  mat2 rot=mat2(cr,-sr,sr,cr);
+  // Chronochromatic separation: each channel lives at its own temporal depth.
+  vec2 pr=rot*(p/uZoom.r)+uCenter+uJumpR   +lensD+shockD*1.16;
+  vec2 pg=rot*(p/uZoom.g)+uCenter+uTrembleG+lensD+shockD;
+  vec2 pb=rot*(p/uZoom.b)+uCenter+uSinkB   +lensD+shockD*0.84;
+  float r=texture2D(prevTex,pr/uRes).r*uDecay.r;
+  float g=texture2D(prevTex,pg/uRes).g*uDecay.g;
+  float b=texture2D(prevTex,pb/uRes).b*uDecay.b;
+  vec3 col=vec3(r,g,b);
+  // Live stamp: square footprint, slightly oversized, feathered alpha edge.
+  float box=max(abs(p.x),abs(p.y))/(uHalf*1.055);
+  float stamp=1.0-smoothstep(1.0-uStampFeather,1.0,box);
+  vec2 vuv=clamp(p/uHalf*0.5+0.5,0.0,1.0);
+  vec3 live=texture2D(mediaTex,vuv).rgb;
+  col=mix(col,live,stamp);
+  // SQUARE ECHO: on each beat a luminous square outline is stamped at the frame
+  // boundary; the advection then carries it outward, and the per-channel decays
+  // split every ring into R/G/B time-strata — a beat-tunnel of nested squares.
+  float ringBand=smoothstep(1.0,0.985,box)*smoothstep(0.955,0.985,box);
+  col+=uEdgeGlow*ringBand*vec3(1.0,0.96,0.92);
+  col+=(hash21(pos+uSeed)-0.5)*(1.5/255.0); // dither hides 8-bit feedback banding
+  gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);
+}`,
+  depthTest:false,depthWrite:false,blending:THREE.NoBlending
+})));
+
+/* ===== SECTION: THE COMPOSITE — ONE SHADER, THREE LANGUAGES =====
+   Full-res pass blending the three field languages by the director's mode
+   weights (wMirror/wPortal/wPure — they sum to 1; during the 0.7s cut blend
+   two are nonzero and the languages literally dissolve into each other):
+     MIRROR  seamless mirror-tile of the live frame, per-cell flip ops beyond
+             the first ring, per-stem RGB offsets;
+     PORTAL  the feedback recursion buffer, sampled straight;
+     PURE    one subdued RGB-split blow-up of the live frame — negative space.
+   Shared: five feathered opacity bands, transparent square interior (the DOM
+   video is the present), calm dimming, per-scene ENERGY intensity. */
+const compU={
+  map:{value:videoTexture},
+  fbTex:{value:null},
+  uRes:{value:new THREE.Vector2(STAGE_W,STAGE_H)},
+  uCenter:{value:new THREE.Vector2(STAGE_W*.5,STAGE_H*.5)}, // 45.5% from top → y-up
+  uHalf:{value:SQ_HALF},
+  wMirror:{value:1},
+  wPortal:{value:0},
+  wPure:{value:0},
+  droste:{value:0},
+  uTimeC:{value:0},
+  distort:{value:0},
+  uLensC:{value:[new THREE.Vector4(0,0,0,0),new THREE.Vector4(0,0,0,0),new THREE.Vector4(0,0,0,0),
+                 new THREE.Vector4(0,0,0,0),new THREE.Vector4(0,0,0,0),new THREE.Vector4(0,0,0,0)]},
+  offR:{value:new THREE.Vector2(.012,0)},
+  offG:{value:new THREE.Vector2(0,0)},
+  offB:{value:new THREE.Vector2(-.012,0)},
+  bassDepth:{value:0},
+  breath:{value:0},
+  extent:{value:profile.extent},
+  opacities:{value:profile.opacities},
+  cuts:{value:new THREE.Vector4(profile.cuts[0],profile.cuts[1],profile.cuts[2],profile.cuts[3])},
+  feather:{value:profile.feather},
+  generation:{value:0},
+  invert:{value:0},
+  gain:{value:profile.gain},
+  dim:{value:.5},
+  intensity:{value:.8},
+  fillCore:{value:0},
+  wild:{value:.35},
+  uHalf2:{value:new THREE.Vector2(864,216)}
+};
+const compScene=new THREE.Scene();
+compScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
+  uniforms:compU,
+  vertexShader:QUAD_VS,
+  fragmentShader:`
+precision highp float;
+uniform sampler2D map,fbTex;
+uniform vec2 uRes,uCenter,offR,offG,offB,uHalf2;
+uniform float uHalf,wMirror,wPortal,wPure,droste,uTimeC,distort,bassDepth,breath,extent,feather,generation,invert,gain,dim,intensity,fillCore,wild;
+uniform vec4 uLensC[6];
+uniform float opacities[5];
+uniform vec4 cuts;
+float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+void main(){
+  vec2 pos=gl_FragCoord.xy;
+  vec2 p=(pos-uCenter)/uHalf2;             // STRIP units: |p|<1 inside the diptych rectangle (864×216 half-extents)
+  float boxR=max(abs(p.x),abs(p.y));
+  // Liquid distortion: a two-octave warp that grows away from the square, so the
+  // seam near the video stays crisp while the outer field ripples with the music.
+  float dGrow=smoothstep(1.02,1.7,boxR);
+  p+=vec2(sin(p.y*3.1+uTimeC*1.9)+sin(p.y*7.3-uTimeC*.7)*.5,
+          sin(p.x*2.7-uTimeC*1.5)+sin(p.x*5.9+uTimeC*.9)*.5)*distort*dGrow;
+  // THE OCTOPUS: six gravity arms drag reality in every language — never the square.
+  vec2 lacc=vec2(0.0);
+  for(int i=0;i<6;i++){
+    vec4 L=uLensC[i];
+    vec2 ld=pos-L.xy;
+    float lf=min(L.z*26000.0/(dot(ld,ld)+900.0),.3);
+    lacc+=(ld+vec2(-ld.y,ld.x)*.55)*lf;
+  }
+  p+=lacc/uHalf*dGrow;
+  boxR=max(abs(p.x),abs(p.y));
+  float ext=extent*(1.0+breath*0.32);      // extension breathes with MUSIC×CHOIR
+  float bandT=clamp((boxR-1.0)/ext,0.0,1.0);
+  float op=opacities[0];
+  op=mix(op,opacities[1],smoothstep(cuts.x-feather,cuts.x+feather,bandT));
+  op=mix(op,opacities[2],smoothstep(cuts.y-feather,cuts.y+feather,bandT));
+  op=mix(op,opacities[3],smoothstep(cuts.z-feather,cuts.z+feather,bandT));
+  op=mix(op,opacities[4],smoothstep(cuts.w-feather,cuts.w+feather,bandT));
+  float ringIn=max(smoothstep(1.0,1.025,boxR),fillCore); // SACRED: zero inside the square — the field starts AT the edge, feathering OUTWARD
+  float splitAmt=smoothstep(1.0,1.0+ext*.5,boxR)*1.35; // reaches full sooner, overdriven
+  // shared per-cell hashes in mirror-tile space
+  vec2 xt=(p+1.0)*0.5;                     // tile space: interior = [0,1]
+  vec2 cell=floor(xt),local=fract(xt);
+  float h1=hash21(cell*1.7+generation*vec2(19.0,7.0));
+  float h2=hash21(cell*2.3+generation*vec2(5.0,13.0));
+  float h3=hash21(cell*3.1+generation*vec2(11.0,3.0));
+  float mosaicAmt=smoothstep(1.05,1.8,boxR); // first ring stays pure continuation
+  float hInv=hash21(cell+generation*vec2(3.0,17.0)+31.7);
+  float invAmt=step(.78,hInv)*invert*mosaicAmt;
+  vec3 col=vec3(0.0);
+  float alpha=0.0;
+  if(wMirror>0.001){                        // — LANGUAGE 1: MIRROR —
+    vec2 mirrored=mix(local,1.0-local,mod(cell,2.0));          // seamless by construction
+    vec2 rnd=mix(mirrored,vec2(1.0)-mirrored,vec2(step(.5,h1),step(.55,h2))); // h+v flips
+    rnd=mix(rnd,rnd.yx,step(.82,h3));                          // occasional transpose
+    // CODEX PRISM (from ultra_11_codex_04): each cell zooms by its own hash —
+    // the kaleidoscopic depth — plus a hash drift. All scaled by wild, which
+    // the METRIC ROULETTE drives from the picture's own busyness.
+    float prismZoom=mix(1.0,.74+.46*h2,mosaicAmt*wild);
+    rnd=clamp((rnd-.5)*prismZoom+.5+vec2((h1-.5)*rnd.y,(h2-.5)*rnd.x)*wild*.075*mosaicAmt,0.0,1.0);
+    vec2 uvT=mix(mirrored,rnd,mosaicAmt);
+    // radial per-cell RGB scatter (codex): the split fans outward, each cell differently
+    vec2 radial=normalize(p+vec2(.0001))*wild*.014*splitAmt;
+    vec2 uvR=clamp(uvT+offR*splitAmt+radial*(.45+h1*.5),0.0,1.0);
+    vec2 uvG=clamp(uvT+offG*splitAmt,0.0,1.0);
+    vec2 uvB=clamp(uvT+offB*splitAmt+p*bassDepth*0.028*splitAmt-radial*(.7+h3*.65),0.0,1.0);
+    vec3 cM=vec3(texture2D(map,uvR).r,texture2D(map,uvG).g,texture2D(map,uvB).b);
+    cM=mix(cM,1.0-cM,invAmt);
+    float lumaM=max(cM.r,max(cM.g,cM.b));
+    float cellOp=mix(1.0,.66+.34*h2,mosaicAmt);
+    float aM=op*cellOp*mix(1.0,smoothstep(.04,.55,lumaM),bandT*.85);
+    col+=cM*wMirror;alpha+=aM*wMirror;
+  }
+  if(wPortal>0.001){                        // — LANGUAGE 2: PORTAL —
+    vec3 cP=texture2D(fbTex,clamp(pos/uRes,0.0,1.0)).rgb;
+    cP=mix(cP,1.0-cP,invAmt*.6);
+    float lumaP=max(cP.r,max(cP.g,cP.b));
+    float aP=op*mix(1.0,smoothstep(.02,.5,lumaP),bandT*.75);
+    col+=cP*wPortal;alpha+=aP*wPortal;
+  }
+  if(wPure>0.001){                          // — PURE: one subdued RGB-split echo of the frame —
+    // Blow the frame up just enough to reach the stage corners (full-height
+    // square: |p.x| tops out around 1.78 square units), so the wings are the
+    // video itself, chromatically split, and nothing else.
+    vec2 uvP=clamp(p/2.6*0.5+0.5,0.0,1.0);
+    vec2 uvPR=clamp(uvP+offR*0.7*splitAmt,0.0,1.0);
+    vec2 uvPB=clamp(uvP+offB*0.7*splitAmt,0.0,1.0);
+    vec3 cU=vec3(texture2D(map,uvPR).r,texture2D(map,uvP).g,texture2D(map,uvPB).b);
+    float lumaU=max(cU.r,max(cU.g,cU.b));
+    float aU=op*0.85*mix(1.0,smoothstep(.02,.45,lumaU),.55);
+    col+=cU*wPure;alpha+=aU*wPure;
+  }
+  // WRAPPING UP: the strength lives at the FRAME EDGES and wraps inward.
+  // outer ~10% of the stage = full burn, ~20% in ≈ 20%, deeper = a ~5%
+  // whisper. The square keeps a tiny 6% ceiling (0.0 = hard sacred clip).
+  // Everything multiplies by intensity, so the wrap breathes on the stems.
+  // each edge measured against ITS OWN dimension — "10% of the frame" means
+  // 10% of the height from the top/bottom, 10% of the width from the sides.
+  // (v01 normalized both by width: the whisper zone squashed into a weird
+  // horizontal letterbox on a 16:9 stage. append-only lesson.)
+  float edgeD=min(min(pos.x,uRes.x-pos.x)/uRes.x,min(pos.y,uRes.y-pos.y)/uRes.y); // 0 at stage edge
+  float edgeFade=.05+.95*(1.0-smoothstep(.08,.22,edgeD));
+  gl_FragColor=vec4(col*gain,alpha*max(ringIn,.06)*edgeFade*dim*intensity);
+}`,
+  transparent:true,depthTest:false,depthWrite:false
+})));
+
+function allocTargets(){ // stage is fixed — targets are allocated exactly once
+  rtW=Math.max(4,Math.round(STAGE_W*FB_SCALE));
+  rtH=Math.max(4,Math.round(STAGE_H*FB_SCALE));
+  if(rtRead){rtRead.dispose();rtWrite.dispose()}
+  rtRead=makeRT();rtWrite=makeRT();
+  clearFeedback();
+  kx=rtW/STAGE_W;
+  fbU.uRes.value.set(rtW,rtH);
+  fbU.uCenter.value.set(rtW*.5,rtH*.5);
+  fbU.uHalf.value=SQ_HALF*kx;
+  fbU.uLensK.value=26000*kx*kx;
+  fbU.uLensSoft.value=900*kx*kx;
+  fbU.uShockSpeed.value=520*kx;
+  fbU.uShockWidth.value=46*kx;
+  fbU.uShockAmp.value=26*kx;
+}
+allocTargets();
+
+/* ===== SECTION: FIELD DYNAMICS — per-frame uniforms from baked features ===== */
+/* ===== SECTION: METRIC ROULETTE (video-derived drive) =====
+   visual-dynamism.json = per-frame 0..1 metrics computed FROM THE PIXELS
+   (see visual-metrics-strategy.json). At every baked audio energy PEAK the
+   active metric advances to the next channel (75th-pct crossings, 1.1s
+   cooldown, derived once from the stem envelopes — seek reproduces the
+   identical sequence). Audio picks WHEN the wheel turns; the picture picks
+   HOW MUCH it drives (field intensity + chromatic split depth). */
+let visDyn=null,metricSwitches=[],dynSmooth=0,lastMetricIdx=-1;
+const MET_SHORT=['BUSY','DIFF','PALETTE','COLOR','CONTRAST','MOTION'];
+function buildMetricSwitches(){
+  metricSwitches=[];
+  if(!featureData)return;
+  const rowsN=gsV.rows.length,fps=featureData.fps,scale=featureData.scale||255;
+  const env=new Float32Array(rowsN);
+  for(let f=0;f<rowsN;f++){
+    let m=0;
+    for(let gi=0;gi<5;gi++){const row=groupList[gi].rows[f];if(row){const e=row.length>10?row[10]:row[0];if(e>m)m=e}}
+    env[f]=m/scale;
+  }
+  const sorted=Array.from(env).sort((a,b)=>a-b),thr=sorted[Math.floor(rowsN*.75)];
+  let last=-1e9;
+  for(let f=1;f<rowsN;f++){
+    if(env[f]>=thr&&env[f-1]<thr&&f/fps-last>=1.1){last=f/fps;metricSwitches.push(last)}
+  }
+  console.info('metric roulette: '+metricSwitches.length+' switch moments (thr '+thr.toFixed(2)+')');
+}
+function metricIdxAt(t){
+  let lo=0,hi=metricSwitches.length-1,c=0;
+  while(lo<=hi){const m=(lo+hi)>>1;if(metricSwitches[m]<=t){c=m+1;lo=m+1}else hi=m-1}
+  return visDyn&&visDyn.ch.length?c%visDyn.ch.length:0;
+}
+function visMetricAt(t,idx){
+  if(!visDyn||!visDyn.rows.length)return 0;
+  const x=Math.max(0,Math.min(visDyn.rows.length-1.001,t*visDyn.fps)),
+        f=Math.floor(x),fr=x-f,a=visDyn.rows[f],b=visDyn.rows[f+1]||a;
+  if(layers.metricRotate===false)return (visDyn.blend[f]||0)*(1-fr)+(visDyn.blend[f+1]||visDyn.blend[f]||0)*fr;
+  return (a[idx]||0)*(1-fr)+(b[idx]||0)*fr;
+}
+const rgbTargetR=new THREE.Vector2(),rgbTargetG=new THREE.Vector2(),rgbTargetB=new THREE.Vector2();
+let envSmooth=0,dimSmooth=.5,generation=0,invertLevel=0,jumpX=0,jumpY=0,shellScale=1,edgePulse=0,lastEdgeBeat=-1,
+    lastFieldBeat=-1,lastGenImpact=-999,lastInvertAt=-999,lastAutoShock=-999,lastKickJump=-999,
+    prevImpact=0,autoShockSide=1;
+function spawnShock(sx,sy,strength){
+  let slot=0,oldest=Infinity;
+  for(let i=0;i<SHOCK_N;i++)if(shockPool[i].birth<oldest){oldest=shockPool[i].birth;slot=i}
+  const s=shockPool[slot];
+  s.x=sx;s.y=sy;s.birth=clock();s.strength=Math.min(1,strength);
+}
+function updateField(t,live){
+  // shell pulse — DOM square and both shader squares driven by one value, never desynced.
+  // BASS PULSE: the heartbeat of the house — the square (and every nested ring
+  // anchored to it) throbs up to ~9% on bass energy + bass onsets.
+  // STATIC SQUARE: the bass throb is opt-in — recording the bare square wants
+  // a frame that does not move a single pixel.
+  shellScale=layers.squarePulse?1+gsB.energy*.038+gsB.kick*.032+gsR.kick*.012+shock*.010:1;
+  mediaShell.style.transform='translate(-50%,-50%) translate('+shellBody.x.toFixed(2)+'px,'+shellBody.y.toFixed(2)+'px) scale('+shellScale.toFixed(4)+')';
+  // the shader squares follow the shoved DOM square so the seam never breaks
+  compU.uCenter.value.set(STAGE_W*.5+shellBody.x,STAGE_H*.5-shellBody.y);
+  fbU.uCenter.value.set((STAGE_W*.5+shellBody.x)*kx,(STAGE_H*.5-shellBody.y)*kx);
+  compU.uHalf.value=SQ_HALF*shellScale;
+  compU.uHalf2.value.set(864*shellScale,216*shellScale);
+  fbU.uHalf.value=SQ_HALF*shellScale*kx;
+  // director weights → composite mode uniforms
+  compU.wMirror.value=wMirrorNow;
+  compU.wPortal.value=wPortalNow;
+  compU.wPure.value=wPureNow;
+  // Droste slide: pure function of song time + bass — the corridor breathes with
+  // the low end and never stops falling inward. Deterministic under seeking.
+  compU.droste.value=t*.12+Math.sin(t*.31)*.35+gsB.energy*.30;
+  // Attention budget: while a lyric is on screen the whole field bows ~28%
+  // (a touch more for boom words), easing back up as the word fades.
+  attn+=(attnTarget-attn)*.07;
+  // METRIC ROULETTE drive: the active picture-metric scales field intensity and
+  // the chromatic split. Eased so wheel turns land as swells, not pops.
+  const mIdx=metricIdxAt(t),
+        dynRaw=layers.metricDrive!==false?visMetricAt(t,mIdx):0;
+  dynSmooth+=(dynRaw-dynSmooth)*.09;
+  const dynAmp=layers.metricDrive!==false&&visDyn? .55+dynSmooth*.9 : 1;
+  if(mIdx!==lastMetricIdx){lastMetricIdx=mIdx;
+    if(layers.hud)hudEl.textContent='SC '+String(sceneAt(t)+1).padStart(2,'0')+' · METRIC '+(MET_SHORT[mIdx]||mIdx);}
+  compU.intensity.value=intensityNow*(1-attn*.28)*dynAmp;
+  compU.wild.value=.2+dynSmooth*1.0; // the picture's craziness IS the prism depth
+  // RED displacement follows RHYTHM — split amplitudes ~1.7× vs ultima_05
+  const rAmt=(.016+gsR.energy*.042+gsR.kick*.070+shock*.016)*dynAmp;
+  const rAng=profile.angle+Math.sin(t*.7*profile.drift)*.6+Math.sin(t*2.3)*gsR.kick*1.1;
+  rgbTargetR.set(Math.cos(rAng)*rAmt,Math.sin(rAng)*rAmt*.6);
+  compU.offR.value.lerp(rgbTargetR,gsR.kick>.4?.5:.14);
+  // GREEN tremble follows VOICE
+  const gAmt=.004+gsV.energy*.022;
+  rgbTargetG.set(Math.sin(t*7.1)*gAmt,Math.cos(t*5.7)*gAmt*.7);
+  compU.offG.value.lerp(rgbTargetG,.25);
+  // BLUE depth follows BASS
+  const bAmt=(.014+gsB.energy*.055)*dynAmp;
+  const bAng=profile.angle+Math.PI+Math.sin(t*.31*profile.drift)*.5;
+  rgbTargetB.set(Math.cos(bAng)*bAmt,Math.sin(bAng)*bAmt-gsB.energy*.012);
+  compU.offB.value.lerp(rgbTargetB,.08);
+  compU.bassDepth.value=gsB.energy;
+  // extension breathing: MUSIC × CHOIR interaction
+  compU.breath.value+=(Math.sqrt(gsM.energy*gsC.energy)-compU.breath.value)*.06;
+  // liquid distortion: grows with baked turbulence + bass, zero near the square
+  compU.uTimeC.value=t;
+  compU.distort.value=lowStrobe?0:.015+sceneState.turbulence*.06+gsB.energy*.05;
+  // mosaic generations: 8-beat grid or baked-impact rising edges only — never from seeking
+  const beat=Math.floor(t/BEAT);
+  if(beat!==lastFieldBeat){lastFieldBeat=beat;if(live&&beat%8===0)generation++}
+  if(live&&sceneState.impact>.62&&prevImpact<=.62&&t-lastGenImpact>1.2){generation++;lastGenImpact=t}
+  compU.generation.value=generation;
+  // sparse per-cell luminance inversion on strong impacts
+  if(live&&sceneState.impact>.8&&prevImpact<=.8&&t-lastInvertAt>2.2){invertLevel=1;lastInvertAt=t}
+  invertLevel*=Math.pow(.86,playbackRate);
+  compU.invert.value=lowStrobe?0:invertLevel;
+  // calm passages go genuinely dark: gated by baked energy
+  const dimTarget=.40+.60*Math.min(1,globalEnergy*1.35+sceneState.fusion*.3+shock*.25);
+  dimSmooth+=(dimTarget-dimSmooth)*.07;
+  compU.dim.value=dimSmooth;
+  compU.fillCore.value=layers.video?0:1;
+  /* — PORTAL dynamics (feedback pass uniforms) — OPENED UP: calm floor ~0.87 — */
+  envSmooth+=(Math.min(1,globalEnergy*1.25+sceneState.fusion*.2)-envSmooth)*.06;
+  const baseDecay=.87+envSmooth*.08;            // calm ≈ .87, loud ≈ .95: visible at mid energy
+  const flick=Math.sin(t*43.0);
+  const decayR=Math.min(.965,Math.max(.6,baseDecay*(.995+flick*.02*gsR.kick))); // recent past, RHYTHM flicker
+  const decayG=Math.min(.945,Math.max(.6,baseDecay*.965));                      // present: tightest tail
+  const decayB=Math.min(.975,Math.max(.6,baseDecay*1.03));                      // deep past: strongest recursion
+  fbU.uDecay.value.set(decayR,decayG,decayB);
+  // Rotation reduced ~60% vs ultima_02: keeps the nested square echoes crisply
+  // axis-aligned (the geometry the artist loves) and calms the sideways drift.
+  fbU.uRot.value=profile.rotSign*(.0007+sceneState.twist*.005+gsM.high*.0008);
+  const zoomBase=1.0045+sceneState.shapePulse*.010+gsB.energy*.006;
+  fbU.uZoom.value.set(zoomBase*1.0012,zoomBase,zoomBase+.0016+gsB.energy*.009); // BASS sinks blue deeper
+  // SQUARE ECHO pulse: one bright square outline per beat, louder on impacts.
+  const echoBeat=Math.floor(t/BEAT);
+  if(live&&echoBeat!==lastEdgeBeat){lastEdgeBeat=echoBeat;edgePulse=Math.min(.55,.20+sceneState.impact*.28+gsR.kick*.16)}
+  edgePulse*=Math.pow(.5,playbackRate);
+  fbU.uEdgeGlow.value=lowStrobe?0:edgePulse;
+  if(live&&!lowStrobe&&gsR.kick>.5&&t-lastKickJump>.12){
+    lastKickJump=t;
+    jumpX=Math.sin(t*511.3)*9*gsR.kick;
+    jumpY=Math.cos(t*367.7)*5*gsR.kick;
+  }
+  jumpX*=.72;jumpY*=.72;
+  fbU.uJumpR.value.set(jumpX*kx,jumpY*kx);
+  const trembleAmp=gsV.energy*2.4,ph=t*43.98;   // 7 Hz × 2π in media time
+  fbU.uTrembleG.value.set(Math.sin(ph)*trembleAmp*kx,Math.cos(ph*.9)*trembleAmp*.6*kx);
+  fbU.uSinkB.value.set(0,gsB.energy*1.6*kx);
+  // (all six gravity-arm lens uniforms are written by updateArms each frame)
+  for(let i=0;i<SHOCK_N;i++){
+    const s=shockPool[i];
+    shockVecs[i].set(s.x*kx,(STAGE_H-s.y)*kx,s.birth,s.strength);
+  }
+  fbU.uTime.value=t;
+  fbU.uSeed.value=(frameCount%1024)*.37;
+  // beat-snapped shader shockwaves from strong baked impacts, portal scenes only
+  if(live&&wPortalNow>.05&&sceneState.impact>.85&&prevImpact<=.85&&t-lastAutoShock>1.25){
+    lastAutoShock=t;autoShockSide*=-1;
+    const wing=SQ_HALF+(STAGE_W*.5-SQ_HALF)*.5;
+    spawnShock(sqCX+autoShockSide*wing,STAGE_H*(.35+((beat*13)%7)/7*.4),.4+sceneState.impact*.5);
+  }
+  prevImpact=sceneState.impact;
+}
+
+/* ===== SECTION: POOLED PHYSICS — particles, gravity well, supernovas ===== */
+const physScene=new THREE.Scene();
+const POOL_N=240,pPos=new Float32Array(POOL_N*3),pVel=new Float32Array(POOL_N*3),pLife=new Float32Array(POOL_N),pCol=new Float32Array(POOL_N*3);
+pPos.fill(-999);
+const pGeo=new THREE.BufferGeometry();
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3).setUsage(THREE.DynamicDrawUsage));
+pGeo.setAttribute('color',new THREE.BufferAttribute(pCol,3).setUsage(THREE.DynamicDrawUsage));
+const spriteCanvas=document.createElement('canvas');spriteCanvas.width=spriteCanvas.height=64;
+{const c=spriteCanvas.getContext('2d'),g=c.createRadialGradient(32,32,0,32,32,32);
+ g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.2,'rgba(255,255,255,.9)');g.addColorStop(.55,'rgba(255,255,255,.25)');g.addColorStop(1,'rgba(255,255,255,0)');
+ c.fillStyle=g;c.fillRect(0,0,64,64)}
+const pointsMat=new THREE.PointsMaterial({size:.19,map:new THREE.CanvasTexture(spriteCanvas),vertexColors:true,transparent:true,opacity:.6,alphaTest:.01,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
+const points=new THREE.Points(pGeo,pointsMat);points.frustumCulled=false;physScene.add(points);
+let poolCursor=0;
+const palette=new Float32Array(5*3);
+{const c=new THREE.Color();CONFIG.groups.forEach((g,i)=>{c.setHex(g.hex);palette[i*3]=c.r;palette[i*3+1]=c.g;palette[i*3+2]=c.b})}
+const RING_N=3,rings=[];
+{const rg=new THREE.RingGeometry(.94,1,64);
+ for(let i=0;i<RING_N;i++){
+   const m=new THREE.Mesh(rg,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
+   m.visible=false;m.userData={born:-999,strength:0};physScene.add(m);rings.push(m);
+ }}
+let ringCursor=0;
+const well={active:false,strength:0,pulse:0,lastMove:0,x:6,y:0};
+const wellCss={x:-400,y:-400};                  // stage coordinates
+const wellHalo=new THREE.Mesh(new THREE.RingGeometry(.9,1,48),new THREE.MeshBasicMaterial({color:0x63ff9d,transparent:true,opacity:0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
+wellHalo.visible=false;physScene.add(wellHalo);
+function clampWellCss(){
+  const half=SQ_HALF*1.06+14;
+  const dx=wellCss.x-sqCX,dy=wellCss.y-sqCY;
+  if(Math.abs(dx)<half&&Math.abs(dy)<half){
+    if(half-Math.abs(dx)<half-Math.abs(dy))wellCss.x=sqCX+(dx<0?-1:1)*half;
+    else wellCss.y=sqCY+(dy<0?-1:1)*half;
+  }
+}
+/* ===== SECTION: THE OCTOPUS — five stem gravity arms + the ghost hand =====
+   Arm 0 is the classic well (manual / autopilot). Arms 1-5 belong to the five
+   stems: each orbits the square on its own deterministic path (speed, direction,
+   phase, squish all fixed per arm) and its pull strength IS that stem's energy —
+   the octopus dances the anatomy of the song. Everything is a pure function of
+   song time: captures reproduce exactly. */
+const ARM_N=6;
+const ARM_DEF=[ // stem arms 1-5: group index, angular speed, direction, phase, radius base, squish
+  {g:0,sp:.16,dir: 1,ph:0.4,r:1.30,sq:.82}, // VOICE
+  {g:1,sp:.12,dir:-1,ph:1.7,r:1.48,sq:.74}, // CHOIR
+  {g:2,sp:.21,dir: 1,ph:2.9,r:1.26,sq:.88}, // RHYTHM
+  {g:3,sp:.09,dir:-1,ph:4.2,r:1.55,sq:.70}, // BASS
+  {g:4,sp:.25,dir: 1,ph:5.4,r:1.38,sq:.80}, // MUSIC
+];
+const armCss=[];for(let i=0;i<ARM_N;i++)armCss.push({x:-400,y:-400,w:0,wx:0,wy:0});
+const armHalos=[];
+for(const def of ARM_DEF){
+  const m=new THREE.Mesh(new THREE.RingGeometry(.9,1,40),
+    new THREE.MeshBasicMaterial({color:CONFIG.groups[def.g].hex,transparent:true,opacity:0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
+  m.visible=false;physScene.add(m);armHalos.push(m);
+}
+function clampArm(a){
+  const half=SQ_HALF*1.06+14;
+  const dx=a.x-sqCX,dy=a.y-sqCY;
+  if(Math.abs(dx)<half&&Math.abs(dy)<half){
+    if(half-Math.abs(dx)<half-Math.abs(dy))a.x=sqCX+(dx<0?-1:1)*half;
+    else a.y=sqCY+(dy<0?-1:1)*half;
+  }
+}
+function updateArms(t){
+  // arm 0 mirrors the ghost hand / manual well
+  const a0=armCss[0];
+  a0.x=wellCss.x;a0.y=wellCss.y;
+  a0.w=Math.min(1.2,well.strength*(.5+well.pulse*.8+gsM.energy*.25));
+  a0.wx=well.x;a0.wy=well.y;
+  for(let i=1;i<ARM_N;i++){
+    const def=ARM_DEF[i-1],gs=groupList[def.g],a=armCss[i];
+    const ang=def.ph+t*def.sp*def.dir+Math.sin(t*.05+def.ph)*.8,
+          rad=SQ_HALF*(def.r+Math.sin(t*.11+def.ph*2.3)*.16)+gs.energy*SQ_HALF*.4;
+    a.x=sqCX+Math.cos(ang)*rad;
+    a.y=sqCY+Math.sin(ang)*rad*def.sq;
+    clampArm(a);
+    a.w=(.12+gs.energy*.85+gs.kick*.25)*.8;
+    a.wx=(a.x-STAGE_W*.5)*worldPerPx;
+    a.wy=(STAGE_H*.5-a.y)*worldPerPx;
+    const halo=armHalos[i-1];
+    halo.visible=a.w>.05&&layers.halos;
+    if(halo.visible){
+      halo.position.set(a.wx,a.wy,0);
+      halo.rotation.z=t*(.3+i*.07)*def.dir;
+      halo.scale.setScalar(.22+a.w*.5+gs.kick*.2);
+      halo.material.opacity=a.w*.07;
+    }
+  }
+  // both shader passes read the same six arms
+  for(let i=0;i<ARM_N;i++){
+    const a=armCss[i];
+    fbU.uLens.value[i].set(a.x*kx,(STAGE_H-a.y)*kx,a.w,0);
+    compU.uLensC.value[i].set(a.x,STAGE_H-a.y,a.w*.7,0);
+  }
+}
+function spawnSupernova(x,y,strength,groupIndex){
+  if(!layers.bursts)return; // menu: no particle explosions
+  const count=Math.min(POOL_N,18+Math.floor(strength*48)),ci=groupIndex*3;
+  for(let n=0;n<count;n++){
+    const idx=poolCursor++%POOL_N,p=idx*3;
+    const th=Math.random()*Math.PI*2,phv=Math.acos(2*Math.random()-1),sp=(1.1+Math.random()*2.6)*(.55+strength*1.5);
+    pPos[p]=x;pPos[p+1]=y;pPos[p+2]=(Math.random()-.5)*1.2;
+    pVel[p]=Math.sin(phv)*Math.cos(th)*sp;pVel[p+1]=Math.sin(phv)*Math.sin(th)*sp+.45;pVel[p+2]=Math.cos(phv)*sp*.5;
+    pCol[p]=palette[ci];pCol[p+1]=palette[ci+1];pCol[p+2]=palette[ci+2];
+    pLife[idx]=.8+Math.random()*.9+strength*.5;
+  }
+  const ring=rings[ringCursor++%RING_N];
+  ring.visible=true;ring.position.set(x,y,0);
+  ring.userData.born=clock();ring.userData.strength=strength;
+  ring.material.color.setHex(CONFIG.groups[groupIndex].hex);
+  shock=Math.max(shock,.22+strength*.35);
+}
+let lastPhysBeat=-1,lastAutoBurst=-999,autoBurstSide=-1,lastWellPulse=-999;
+
+/* ===== SECTION: RESET TRANSIENT STATE (every seek/scrub/jump/restart) =====
+   Seeking NEVER spawns bursts and the portal never inherits foreign history:
+   feedback is cleared here on every seek, and again on portal scene entry. */
+function resetTransientState(t){
+  lastWord=-2;shock=wordPunch=0;invertLevel=0;jumpX=jumpY=0;edgePulse=0;lastEdgeBeat=Math.floor(t/BEAT);
+  clearFeedback();
+  for(const s of shockPool){s.birth=-1e4;s.strength=0}
+  pLife.fill(0);pPos.fill(-999);pGeo.attributes.position.needsUpdate=true;
+  for(const ring of rings)ring.visible=false;
+  well.pulse=0;
+  lastPhysBeat=lastFieldBeat=Math.floor(t/BEAT);
+  lastAutoBurst=lastAutoShock=lastGenImpact=lastKickJump=lastWellPulse=t;lastInvertAt=t-1;
+  prevImpact=sceneState.impact;
+  lastScene=-1;hudScene=-1; // director re-evaluates (and re-clears if the target scene is PORTAL)
+}
+function updatePhysics(t,mdt){
+  // scheduled bursts: baked impact channel, quantized to the beat grid, alternating wings
+  const beat=Math.floor(t/BEAT);
+  if(beat!==lastPhysBeat){
+    lastPhysBeat=beat;
+    if(sceneState.impact>.62&&t-lastAutoBurst>1.05&&mdt>0){
+      lastAutoBurst=t;autoBurstSide*=-1;
+      let di=0,dk=-1;
+      for(let i=0;i<5;i++){if(groupList[i].kick>dk){dk=groupList[i].kick;di=i}}
+      const x=autoBurstSide*(protectedHalf+1.2+((beat*7)%13)/13*2.4),y=squareWorldCy+laneWorldY[di]*.6;
+      spawnSupernova(x,y,.3+sceneState.impact*.45,di);
+    }
+  }
+  // AUTO-PILOT GRAVITY: when the hand rests (~2.2s idle), the well plays itself —
+  // a deterministic ghost hand orbiting the square, driven purely by song time and
+  // the baked features, so hands-off captures still get gravity, lensing and halo,
+  // and every capture reproduces exactly. Touching the mouse takes over instantly.
+  const idle=(performance.now()-well.lastMove)*.001,manual=well.active&&idle<2.2;
+  if(manual){
+    well.strength+=(1-well.strength)*.08;
+  }else{
+    const orbA=t*.21+Math.sin(t*.043)*1.7+sceneState.twist*1.9,
+          orbR=SQ_HALF*(1.38+Math.sin(t*.11)*.14)+gsB.energy*SQ_HALF*.5,
+          squish=.72+sceneState.air*.2;
+    wellCss.x=sqCX+Math.cos(orbA)*orbR;
+    wellCss.y=sqCY+Math.sin(orbA)*orbR*squish;
+    clampWellCss();
+    well.x=(wellCss.x-STAGE_W*.5)*worldPerPx;
+    well.y=(STAGE_H*.5-wellCss.y)*worldPerPx;
+    const autoTarget=Math.min(1,.28+globalEnergy*.6+sceneState.fusion*.15);
+    well.strength+=(autoTarget-well.strength)*.05;
+    // baked impacts squeeze the ghost hand (same pulse a click gives, no burst spam)
+    if(mdt>0&&sceneState.impact>.8&&t-lastWellPulse>1.2){lastWellPulse=t;well.pulse=Math.max(well.pulse,.7)}
+  }
+  well.pulse*=.9;
+  wellHalo.visible=well.strength>.02&&layers.halos;
+  if(wellHalo.visible){
+    wellHalo.position.set(well.x,well.y,0);
+    wellHalo.rotation.z=t*.35;
+    wellHalo.scale.setScalar(.5+well.strength*(1+gsM.energy*.8)+well.pulse*1.6);
+    wellHalo.material.opacity=well.strength*(.06+gsM.high*.14+well.pulse*.22);
+  }
+  updateArms(t); // the octopus: positions, strengths, halos, and both lens arrays
+  const drag=Math.pow(.991,playbackRate),grav=(.5+sceneState.impact*.6),floorY=-worldHalfH*.94;
+  for(let i=0;i<POOL_N;i++){
+    if(pLife[i]<=0)continue;
+    const p=i*3,ox=pPos[p],oy=pPos[p+1];
+    pLife[i]-=mdt;
+    if(pLife[i]<=0){pPos[p]=pPos[p+1]=pPos[p+2]=-999;continue}
+    pVel[p]*=drag;pVel[p+1]*=drag;pVel[p+2]*=drag;
+    pVel[p+1]-=grav*mdt;
+    // every arm of the octopus tugs the motes (attraction + orbital torque)
+    for(let ai=0;ai<ARM_N;ai++){
+      const a=armCss[ai];
+      if(a.w<=.05)continue;
+      const dx=a.wx-ox,dy=a.wy-oy,d2=dx*dx+dy*dy+.6,f=a.w*(ai===0?2.6:1.5)*mdt/d2;
+      pVel[p]+=dx*f-dy*f*.75;
+      pVel[p+1]+=dy*f+dx*f*.75;
+    }
+    let nx=ox+pVel[p]*mdt,ny=oy+pVel[p+1]*mdt;
+    // deflection off the protected square (centred on the actual video square)
+    const ryO=oy-squareWorldCy,ryN=ny-squareWorldCy;
+    const wasOutside=Math.abs(ox)>=protectedHalf||Math.abs(ryO)>=protectedHalf;
+    if(wasOutside&&Math.abs(nx)<protectedHalf&&Math.abs(ryN)<protectedHalf){
+      if(Math.abs(ox)>Math.abs(ryO))pVel[p]*=-.8;else pVel[p+1]*=-.8;
+      nx=ox+pVel[p]*mdt;ny=oy+pVel[p+1]*mdt;
+      shock=Math.max(shock,.12);
+    }
+    if(ny<floorY){ny=floorY;pVel[p+1]=Math.abs(pVel[p+1])*.7}
+    pPos[p]=nx;pPos[p+1]=ny;pPos[p+2]+=pVel[p+2]*mdt;
+  }
+  pGeo.attributes.position.needsUpdate=true;
+  pGeo.attributes.color.needsUpdate=true;
+  pointsMat.opacity=layers.particles?(.1+envSmooth*.34+shock*.18+sceneState.impact*.1)*(.55+intensityNow*.45)*(1-attn*.3):0;
+  for(const ring of rings){
+    if(!ring.visible)continue;
+    const age=t-ring.userData.born,life=.7+ring.userData.strength*.5;
+    if(age<0||age>life){ring.visible=false;continue}
+    const k=age/life;
+    ring.scale.setScalar(.3+k*(3.2+ring.userData.strength*3.8));
+    ring.material.opacity=(1-k)*(layers.bursts?.3:0);
+  }
+}
+let timecodeDrag=null;
+function movePointerWell(event){
+  if(CAPTURE||timecodeDrag||!stageRect)return; // capture mode: autopilot owns the well
+  // Convert window coords to exact stage coords (the stage may be scaled/letterboxed).
+  const sx=(event.clientX-stageRect.left)/stageScale,sy=(event.clientY-stageRect.top)/stageScale;
+  wellCss.x=sx;wellCss.y=sy;
+  clampWellCss();
+  well.x=(wellCss.x-STAGE_W*.5)*worldPerPx;
+  well.y=(STAGE_H*.5-wellCss.y)*worldPerPx;
+  well.active=true;well.lastMove=performance.now();
+}
+addEventListener('pointermove',movePointerWell,{passive:true});
+addEventListener('pointerleave',()=>well.active=false);
+addEventListener('pointerdown',event=>{
+  if(CAPTURE)return; // no accidental supernovas while recording
+  if(event.target.closest?.('#transport,#start,#timecode,#layerMenu'))return;
+  movePointerWell(event);
+  well.pulse=1;well.strength=1;
+  spawnShock(wellCss.x,wellCss.y,.85);                       // shockwave through the recursion
+  spawnSupernova(well.x,well.y,.9,Math.floor(clock()*7)%5);  // stem-colored supernova
+  shock=Math.max(shock,.3);
+});
+
+/* ===== SECTION: SUDDEN ACHIEVEMENTS (authored inside the lyrics JSON) =====
+   Two rules only: they appear out of nowhere, and they are honest — unlocks
+   fire when playback crosses their time live; seeking past or back never fakes
+   one. All animation runs in song time, so captures reproduce exactly. */
+let pureAchvList=[];
+const PT_IN=.30,PT_HOLD=1.80,PT_OUT=.40,PT_LIFE=PT_IN+PT_HOLD+PT_OUT; // 2.5s total on screen
+const pureEaseBack=q=>{const c=1.70158;return 1+(c+1)*Math.pow(q-1,3)+c*Math.pow(q-1,2)};
+const pureToastsEl=$('#pureToasts');
+function renderPureAchv(t){
+  if(!pureToastsEl)return;
+  if(!layers.achievements){for(const a of pureAchvList)if(a.el){a.el.remove();a.el=null}return}
+  const live=running&&!paused&&!scrubbing;
+  for(const a of pureAchvList){
+    if(t>=a.t){
+      if(a.unlockedAt==null){
+        a.unlockedAt=live&&t-a.t<1.5?a.t:-1e9;   // only a LIVE crossing celebrates
+        if(a.unlockedAt===a.t){shock=Math.max(shock,.45);wordPunch=Math.max(wordPunch,.5)}
+      }
+    }else if(a.unlockedAt!=null){a.unlockedAt=null;if(a.el){a.el.remove();a.el=null}}
+    const age=a.unlockedAt==null?1e9:t-a.unlockedAt;
+    if(age>PT_LIFE){if(a.el){a.el.remove();a.el=null}continue}
+    if(!a.el){
+      a.el=document.createElement('div');a.el.className='pureToast';
+      a.el.innerHTML='<em>Achievement unlocked</em><strong></strong>';
+      const strongEl=a.el.querySelector('strong');
+      strongEl.textContent=a.icon+' '+a.label;
+      // fit like a lyric: shrink to the stage, never overflow it
+      const natural=56,maxW=SQ*.78; // leave room for the translucent frame's padding
+      textMeasure.font='1000 '+natural+'px "Arial Black",Impact,sans-serif';
+      const mw=Math.max(1,textMeasure.measureText(strongEl.textContent).width);
+      strongEl.style.fontSize=Math.max(20,natural*Math.min(1,maxW/mw)).toFixed(1)+'px';
+      pureToastsEl.appendChild(a.el);
+    }
+    let opacity=1,transform='none',blur=0;
+    if(age<PT_IN){const q=pureEaseBack(Math.min(1,age/PT_IN));opacity=Math.min(1,age/PT_IN*2);transform='scale('+((.55+q*.45)).toFixed(3)+')'}
+    else if(age>PT_IN+PT_HOLD){const q=(age-PT_IN-PT_HOLD)/PT_OUT;opacity=1-q;transform='translateY('+((-q*45)).toFixed(2)+'%) scale('+((1-q*.06)).toFixed(3)+')';blur=q*6}
+    a.el.style.opacity=Math.max(0,opacity).toFixed(3);a.el.style.transform=transform;a.el.style.filter=blur?'blur('+blur.toFixed(2)+'px)':'';
+  }
+}
+
+/* ===== SECTION: THE AMOEBA FIELD =====
+   Organic blobs built from summed harmonics in polar space:
+     r(theta) = R * (1 + SUM a_k * sin(m_k*theta + phase_k + t*w_k))
+   Each amoeba belongs to a stem, so its lobes swell with that stem's energy and
+   punch on its kicks — the shape IS the data. Every blob carries TWO harmonic
+   sets and continuously morphs between them (the shapeshift), so no structure
+   ever repeats exactly while staying perfectly deterministic in song time.
+   Opacity falls off toward the square: blobs near the footage go nearly
+   invisible, blobs out in the wings sit at full strength. The square is clipped
+   out of the layer entirely, so a blob can never cover the video even if it
+   drifts across it. Seeded PRNG (not Math.random) so captures reproduce. */
+const TAU=Math.PI*2, AMOEBA_SEED=0x81BEEF, AMOEBA_MAX=20, AMOEBA_PTS=112;
+const mulberry32=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+let amoebas=[];
+function buildAmoebas(){
+  const rnd=mulberry32(AMOEBA_SEED);
+  amoebas=[];
+  for(let i=0;i<AMOEBA_MAX;i++){
+    const harm=k=>Array.from({length:4},()=>{
+      const m=2+Math.floor(rnd()*4);  // lobe count 2..5 — the "structure"
+      return{m,
+      // 1/m falloff is what makes a blob read as ROUND rather than as a star:
+      // low modes give the big soft lobes, high modes only ripple the edge.
+      a:(.11+rnd()*.15)/m,
+      p:rnd()*TAU,                    // phase
+      w:.12+rnd()*.42};               // how fast this lobe breathes
+    });
+    amoebas.push({
+      g:groupList[i%groupList.length],
+      A:harm(),B:harm(),              // two structures to morph between
+      R:STAGE_H*(.075+rnd()*.095),
+      ox:rnd()*TAU,oy:rnd()*TAU,
+      orx:STAGE_W*(.17+rnd()*.27),ory:STAGE_H*(.13+rnd()*.25),
+      osx:.028+rnd()*.055,osy:.022+rnd()*.048,
+      spin:(rnd()<.5?-1:1)*(.04+rnd()*.11),
+      mph:rnd()                       // morph phase offset
+    });
+  }
+}
+function drawAmoebas(t){
+  const n=Math.min(AMOEBA_MAX,+layers.amoebaCount||9);
+  if(!amoebas.length)buildAmoebas();
+  fctx.save();
+  // THE SQUARE IS SACRED: clip it out of this layer completely (even-odd), so no
+  // blob can ever paint over the footage regardless of where it drifts.
+  const hs=SQ_HALF*shellScale;
+  fctx.beginPath();
+  fctx.rect(0,0,fw,fh);
+  fctx.rect(sqCX-hs,sqCY-hs,hs*2,hs*2);
+  fctx.clip('evenodd');
+  const aDim=1-attn*.35, mode=layers.amoebaDepth||'far';
+  for(let i=0;i<n;i++){
+    const M=amoebas[i],g=M.g;
+    const cx=sqCX+Math.cos(t*M.osx+M.ox)*M.orx,
+          cy=sqCY+Math.sin(t*M.osy+M.oy)*M.ory;
+    // opacity by distance from the centre of the square
+    const d=Math.hypot(cx-sqCX,cy-sqCY),
+          dn=Math.max(0,Math.min(1,(d-SQ_HALF)/(SQ_HALF*2)));
+    const depth=mode==='near'?1-dn*.85:mode==='flat'?.6:dn;
+    if(depth<=.004)continue;
+    const drive=1+g.energy*.5+g.kick*.32,   // gentle: energy swells lobes, never spikes them
+          R=M.R*(1+g.energy*.26+g.kick*.14),
+          rot=t*M.spin,
+          // eased ping-pong between structure A and structure B
+          mm=layers.amoebaMorph?.5-.5*Math.cos(TAU*(t*.055+M.mph)):0,
+          shells=layers.amoebaShells?3:1;
+    for(let sIdx=0;sIdx<shells;sIdx++){
+      const sc=1-sIdx*.22;
+      fctx.beginPath();
+      for(let j=0;j<=AMOEBA_PTS;j++){
+        const th=j/AMOEBA_PTS*TAU;
+        let rr=1;
+        for(let k=0;k<4;k++){
+          const a=M.A[k],b=M.B[k];
+          rr+=(1-mm)*a.a*drive*Math.sin(a.m*(th+rot)+a.p+t*a.w)
+             +    mm *b.a*drive*Math.sin(b.m*(th+rot)+b.p+t*b.w);
+        }
+        const rad=R*sc*rr,x=cx+Math.cos(th)*rad,y=cy+Math.sin(th)*rad;
+        j?fctx.lineTo(x,y):fctx.moveTo(x,y);
+      }
+      fctx.closePath();
+      const al=(.11+g.energy*.17)*depth*aDim*(1-sIdx*.27);
+      if(layers.amoebaFill){fctx.globalAlpha=al;fctx.fillStyle=g.css;fctx.fill()}
+      else{fctx.globalAlpha=Math.min(1,al*1.8);fctx.strokeStyle=g.css;fctx.lineWidth=1.6;fctx.stroke()}
+    }
+  }
+  fctx.restore();
+}
+
+/* ===== SECTION: ANATOMY CANVAS (five lanes + real mirrored 8-band histograms
+   centered per lane in the wings; no shadowBlur, stride 8) ===== */
+function resizeFX(){
+  // Exact-dimension buffer: the canvas IS the frame, pixel for pixel.
+  fw=fx.width=STAGE_W;fh=fx.height=STAGE_H;
+  fx.style.width=STAGE_W+'px';fx.style.height=STAGE_H+'px';
+}
+/* ===== SECTION: THE DIPTYCH =====
+   The square is cut exactly in half — TOP half becomes the LEFT panel, BOTTOM
+   half the RIGHT — and the two are laid side by side as one 1728×432 strip
+   across the middle of the stage. Field above, below, and beside: the frame
+   wraps all four edges. The centre seam is melted with a narrow self-blur so
+   the two halves read as one continuous band. One video element, one decode,
+   both panels perfectly in sync by construction. */
+const dipCanvas=document.getElementById('diptych'),dipCtx=dipCanvas.getContext('2d');
+const DIP={pad:96,w:864,h:432,y:324,seam:36}; // strip 1728×432 centred; 96px side padding
+function drawDiptych(){
+  dipCtx.clearRect(0,0,STAGE_W,STAGE_H);
+  if(!layers.video)return;
+  const src=(video.readyState>=2&&video.videoWidth)?video:(image.naturalWidth?image:null);
+  if(!src)return;
+  const sw=src.videoWidth||src.naturalWidth,sh=src.videoHeight||src.naturalHeight,hh=sh/2;
+  dipCtx.drawImage(src,0,0,sw,hh,DIP.pad,DIP.y,DIP.w,DIP.h);               // top half → left panel
+  dipCtx.drawImage(src,0,hh,sw,hh,DIP.pad+DIP.w,DIP.y,DIP.w,DIP.h);       // bottom half → right panel
+  // melt the seam: a narrow strip re-drawn through a blur — subtle, integrated
+  const sx=DIP.pad+DIP.w-DIP.seam/2;
+  dipCtx.save();
+  dipCtx.filter='blur(6px)';
+  dipCtx.drawImage(dipCanvas,sx,DIP.y,DIP.seam,DIP.h,sx,DIP.y,DIP.seam,DIP.h);
+  dipCtx.restore();
+}
+function drawFX(t){
+  fctx.clearRect(0,0,fw,fh);
+  if(layers.amoeba&&featureData)drawAmoebas(t);   // blobs sit under the anatomy
+  if(!featureData||(!layers.waves&&!layers.histograms))return;
+  fctx.save();
+  const aDim=1-attn*.3; // attention budget: waveforms bow while words speak
+  const w=STAGE_W,h=STAGE_H,
+        histPitch=w/32,histBarW=Math.max(2,histPitch*.5),histHalfStep=w*.5/8;
+  // The anatomy lives in the WINGS: everything fades out across the middle layers
+  // (the square and its first ring) and sits at full strength over the outer field.
+  // wingAt: 1 in the wings, ~0.08 across the centre, smooth ramp under ring one.
+  const wingIn=SQ_HALF*1.2,wingOut=SQ_HALF*1.8;
+  const wingAt=x=>{
+    const d=Math.abs(x-sqCX);
+    return d>=wingOut?1:d<=wingIn?.08:.08+.92*(d-wingIn)/(wingOut-wingIn);
+  };
+  for(let gi=0;gi<5;gi++){
+    const gs=groupList[gi],other=groupList[PARTNER_IDX[gi]],cross=gs.interaction,
+          y=h*laneFrac[gi],amp=6+gs.energy*30+cross*12;
+    // baseline only in the wings — never across the middle. It is the zero line
+    // of the waveform, so it lives with the waveform toggle.
+    if(layers.waves){
+      fctx.strokeStyle=gs.css;fctx.globalAlpha=(.05+gs.energy*.05)*aDim;fctx.lineWidth=1;
+      fctx.beginPath();fctx.moveTo(0,y);fctx.lineTo(sqCX-wingIn,y);
+      fctx.moveTo(sqCX+wingIn,y);fctx.lineTo(w,y);fctx.stroke();
+    }
+    fctx.fillStyle=gs.css;
+    const histAmp=7+gs.energy*22;
+    // Full-width mirrored spectrum: 32 bars, low bands innermost, highs at the
+    // frame edges — bars bow out across the middle with the same wing envelope.
+    if(layers.histograms)for(let s=0;s<32;s++){
+      const x=(s+.5)*histPitch,
+            band=Math.min(7,Math.floor(Math.abs(x-w*.5)/histHalfStep)),
+            v=gs.bands[band],hh=1.5+v*histAmp;
+      fctx.globalAlpha=(.08+v*.36)*aDim*wingAt(x);
+      fctx.fillRect(x-histBarW*.5,y-hh,histBarW,hh*2);
+    }
+    if(!layers.waves)continue;
+    fctx.beginPath();
+    for(let x=0;x<=w;x+=8){
+      const u=x/w,j=Math.min(WAVE_N-1,Math.floor(u*(WAVE_N-1))),
+            pj=(WAVE_N-1-j+gi*11)%WAVE_N,
+            v=(gs.wave[j]+other.wave[pj]*cross*.4)*wingAt(x),
+            yy=y+v*amp;
+      x===0?fctx.moveTo(x,yy):fctx.lineTo(x,yy);
+    }
+    fctx.globalAlpha=(.3+gs.energy*.35)*aDim;fctx.lineWidth=1.3;fctx.stroke();
+  }
+  fctx.restore();
+}
+
+/* ===== SECTION: MORPH FORM (hexagon→square→triangle→sphere→cube, media-time synced) ===== */
+const MORPH_SHAPES=[
+  [[50,0],[75,7],[93,25],[100,50],[93,75],[75,93],[50,100],[25,93],[7,75],[0,50],[7,25],[25,7]],
+  [[0,0],[33,0],[67,0],[100,0],[100,50],[100,100],[67,100],[33,100],[0,100],[0,67],[0,33],[0,0]],
+  [[50,0],[60,20],[70,40],[80,60],[90,80],[100,100],[67,100],[33,100],[0,100],[10,80],[20,60],[30,40]],
+  [[50,0],[75,7],[93,25],[100,50],[93,75],[75,93],[50,100],[25,93],[7,75],[0,50],[7,25],[25,7]],
+  [[0,0],[33,0],[67,0],[100,0],[100,50],[100,100],[67,100],[33,100],[0,100],[0,67],[0,33],[0,0]]
+];
+const morphPoints=new Array(12);
+function updateMorphForm(t){
+  const journey=(t/3.6)%MORPH_SHAPES.length,index=Math.floor(journey),next=(index+1)%MORPH_SHAPES.length,
+        raw=journey-index,u=raw*raw*(3-2*raw),A=MORPH_SHAPES[index],B=MORPH_SHAPES[next];
+  for(let i=0;i<12;i++){
+    morphPoints[i]=(A[i][0]+(B[i][0]-A[i][0])*u).toFixed(1)+'% '+(A[i][1]+(B[i][1]-A[i][1])*u).toFixed(1)+'%';
+  }
+  const energy=Math.min(1,.1+gsM.mid*.4+gsB.energy*.26+gsV.energy*.16),
+        sphere=Math.max(0,1-Math.abs(journey-3)*1.35),
+        cube=Math.max(0,1-Math.min(Math.abs(journey-4),Math.abs(journey+1))*1.5);
+  morphForm.style.clipPath='polygon('+morphPoints.join(',')+')';
+  morphForm.style.borderRadius=(sphere*50).toFixed(1)+'%';
+  morphForm.style.setProperty('--shape-energy',energy.toFixed(3));
+  morphForm.style.transform='translate(-50%,-50%) perspective(260px) rotateX('+(cube*30+Math.sin(t*.31)*7).toFixed(2)+'deg) rotateY('+(cube*t*24+Math.sin(t*.23)*10).toFixed(2)+'deg) rotateZ('+(t*7+gsM.high*22).toFixed(2)+'deg) scale('+(.74+energy*.38).toFixed(3)+')';
+}
+
+/* ===== SECTION: TIMECODE DRAG (persisted) ===== */
+const TIMECODE_KEY='binface-timecode-position-ultima-v1';
+function placeTimecode(left,top){
+  const rect=timecodeEl.getBoundingClientRect(),
+        x=Math.max(8,Math.min(innerWidth-rect.width-8,left)),
+        y=Math.max(8,Math.min(innerHeight-rect.height-8,top));
+  timecodeEl.style.left=x+'px';timecodeEl.style.top=y+'px';timecodeEl.style.right='auto';
+}
+function saveTimecodePosition(){
+  const rect=timecodeEl.getBoundingClientRect(),maxX=Math.max(1,innerWidth-rect.width),maxY=Math.max(1,innerHeight-rect.height);
+  try{localStorage.setItem(TIMECODE_KEY,JSON.stringify({x:rect.left/maxX,y:rect.top/maxY}))}catch{}
+}
+function restoreTimecodePosition(){
+  try{const saved=JSON.parse(localStorage.getItem(TIMECODE_KEY)||'null');
+    if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){
+      const rect=timecodeEl.getBoundingClientRect();
+      placeTimecode(saved.x*Math.max(1,innerWidth-rect.width),saved.y*Math.max(1,innerHeight-rect.height));
+    }}catch{}
+}
+timecodeEl.addEventListener('pointerdown',event=>{
+  if(event.button!==0)return;event.preventDefault();event.stopPropagation();
+  const rect=timecodeEl.getBoundingClientRect();
+  timecodeDrag={id:event.pointerId,dx:event.clientX-rect.left,dy:event.clientY-rect.top};
+  placeTimecode(rect.left,rect.top);timecodeEl.classList.add('dragging');
+  try{timecodeEl.setPointerCapture(event.pointerId)}catch{}
+});
+addEventListener('pointermove',event=>{
+  if(!timecodeDrag||event.pointerId!==timecodeDrag.id)return;
+  event.preventDefault();event.stopPropagation();
+  placeTimecode(event.clientX-timecodeDrag.dx,event.clientY-timecodeDrag.dy);
+},true);
+function finishTimecodeDrag(event){
+  if(!timecodeDrag||event.pointerId!==timecodeDrag.id)return;
+  event.preventDefault();event.stopPropagation();
+  timecodeDrag=null;timecodeEl.classList.remove('dragging');saveTimecodePosition();
+}
+addEventListener('pointerup',finishTimecodeDrag,true);
+addEventListener('pointercancel',finishTimecodeDrag,true);
+timecodeEl.addEventListener('dblclick',event=>{
+  event.preventDefault();event.stopPropagation();
+  timecodeEl.style.left='auto';timecodeEl.style.top='14px';timecodeEl.style.right='18px';
+  try{localStorage.removeItem(TIMECODE_KEY)}catch{}
+});
+
+/* ===== SECTION: UI LAYER PHYSICS =====
+   The HTML layers are spring-mounted bodies: drum onsets thump the title and the
+   pulsing square shoves it out of the way. Integrated in song time so capture
+   speed-up stays correct. (The achievement dock + toast bodies moved out with the
+   achievements engine — see achievements_engine_ULTIMA.html to restore them.) */
+let physicsOn=true;
+const shellBody={m:6,x:0,y:0,vx:0,vy:0};
+const layerBodies=[
+  {el:$('#titleBug'),base:'translateX(-50%)',m:1,x:0,y:0,vx:0,vy:0,rot:0,vrot:0,thump:-120} // direct lookup: titleBugEl is declared later
+];
+function resetLayerBodies(){
+  for(const b of layerBodies){b.x=b.y=b.vx=b.vy=b.rot=b.vrot=0;b.el.style.transform=b.base}
+  shellBody.x=shellBody.y=shellBody.vx=shellBody.vy=0;
+}
+function pushApart(rect,body,bodyRect,dt){
+  if(!rect||!bodyRect||!rect.width||!bodyRect.width)return;
+  const ox=Math.min(rect.right,bodyRect.right)-Math.max(rect.left,bodyRect.left);
+  const oy=Math.min(rect.bottom,bodyRect.bottom)-Math.max(rect.top,bodyRect.top);
+  if(ox<=0||oy<=0)return;
+  const cx=(bodyRect.left+bodyRect.right-rect.left-rect.right)/2,cy=(bodyRect.top+bodyRect.bottom-rect.top-rect.bottom)/2;
+  const strength=Math.min(46,Math.min(ox,oy))*22/body.m;
+  if(oy<=ox)body.vy+=Math.sign(cy||1)*strength*dt;else body.vx+=Math.sign(cx||1)*strength*dt;
+  body.vrot+=Math.min(ox,oy)*(cx>0?-1:1)*.5*dt;
+}
+function updateLayerPhysics(t,dt){
+  if(dt<=0||!physicsOn)return;
+  const shellRect=layers.video?mediaShell.getBoundingClientRect():null;
+  const kick=gsR.kick,bassE=gsB.energy;
+  const rects=layerBodies.map(body=>body.el.classList.contains('hidden')?null:body.el.getBoundingClientRect());
+  layerBodies.forEach((body,i)=>{
+    if(!rects[i])return;
+    pushApart(shellRect,body,rects[i],dt);
+    rects.forEach((otherRect,j)=>{if(j!==i)pushApart(otherRect,body,rects[i],dt)});
+    if(body.thump)body.vy+=body.thump*kick*dt;
+    body.vrot+=Math.sin(t*2.1+i*1.9)*bassE*3*dt;
+    const k=34,c=7.5,kr=46,cr=9;
+    body.vx+=(-k*body.x-c*body.vx)*dt;body.vy+=(-k*body.y-c*body.vy)*dt;body.vrot+=(-kr*body.rot-cr*body.vrot)*dt;
+    body.x=Math.max(-90,Math.min(90,body.x+body.vx*dt));body.y=Math.max(-90,Math.min(90,body.y+body.vy*dt));body.rot=Math.max(-9,Math.min(9,body.rot+body.vrot*dt));
+    body.el.style.transform=body.base+' translate('+body.x.toFixed(2)+'px,'+body.y.toFixed(2)+'px) rotate('+body.rot.toFixed(3)+'deg)';
+  });
+  const ks=60,cs=10;
+  shellBody.vx+=(-ks*shellBody.x-cs*shellBody.vx)*dt;shellBody.vy+=(-ks*shellBody.y-cs*shellBody.vy)*dt;
+  shellBody.x=Math.max(-40,Math.min(40,shellBody.x+shellBody.vx*dt));
+  shellBody.y=Math.max(-40,Math.min(40,shellBody.y+shellBody.vy*dt));
+}
+
+/* ===== SECTION: LAYER MENU — every feature independently on/off, persisted.
+   "Lyrics only" preset = clean square + words for lyric-focused capture. ===== */
+const LAYERS_KEY='binface-doublewide-v1';
+const layers={video:true,lyrics:true,lyricReact:true,lyricPerLetter:true,field:true,metricDrive:true,metricRotate:true,squarePulse:false,waves:false,histograms:false,particles:false,morph:false,legend:false,title:false,frame:false,hud:false,halos:false,bursts:false,uiPhysics:false,achievements:true,
+  amoeba:false,amoebaShells:true,amoebaFill:true,amoebaMorph:true,amoebaDepth:'far',amoebaCount:9};
+const layerMenu=$('#layerMenu'),legendEl=$('#stemLegend'),titleBugEl=$('#titleBug');
+function applyLayers(){
+  mediaShell.style.opacity=0; // the diptych carries the picture; the shell stays laid out for fitHero metrics
+  dipCanvas.style.opacity=layers.video?1:0;
+  lyricsEl.style.display=layers.lyrics?'':'none';
+  if(!layers.lyrics){hero.textContent='';hero.dataset.word=''}
+  morphForm.style.display=layers.morph?'':'none';
+  legendEl.style.display=layers.legend?'':'none';
+  titleBugEl.style.display=layers.title?'':'none';
+  hudEl.classList.toggle('hidden',!layers.hud);
+  stageEl.classList.toggle('noframe',!layers.frame);
+  physicsOn=!!layers.uiPhysics;
+  if(!physicsOn)resetLayerBodies();
+  if(!layers.waves&&!layers.histograms&&!layers.amoeba)fctx.clearRect(0,0,fw,fh);
+  for(const input of layerMenu.querySelectorAll('input[data-layer]'))input.checked=!!layers[input.dataset.layer];
+  for(const sel of layerMenu.querySelectorAll('select[data-opt]'))sel.value=String(layers[sel.dataset.opt]);
+  try{localStorage.setItem(LAYERS_KEY,JSON.stringify(layers))}catch{}
+}
+function setLayers(patch){Object.assign(layers,patch);applyLayers()}
+try{
+  // AUTO is the recording entry point: ignore saved menu state so a take is always
+  // the known-good config (square + reactive per-letter lyrics + achievements).
+  const saved=AUTO?null:JSON.parse(localStorage.getItem(LAYERS_KEY)||'null');
+  if(saved)for(const key in layers)if(typeof saved[key]===typeof layers[key])layers[key]=saved[key];
+}catch{}
+layerMenu.addEventListener('change',e=>{
+  const d=e.target.dataset||{};
+  if(d.layer){layers[d.layer]=e.target.checked;applyLayers()}
+  else if(d.opt){const v=e.target.value;layers[d.opt]=isNaN(+v)?v:+v;applyLayers()}
+});
+$('#presetLyrics').onclick=()=>setLayers({video:true,lyrics:true,field:false,waves:false,histograms:false,particles:false,morph:false,legend:false,title:false,frame:false,hud:false,halos:false,bursts:false,uiPhysics:false,amoeba:false,lyricReact:true,lyricPerLetter:true});
+$('#presetAll').onclick=()=>setLayers({video:true,lyrics:true,field:true,waves:true,histograms:true,particles:true,morph:true,legend:true,title:true,frame:true,hud:true,halos:true,bursts:true,uiPhysics:true,amoeba:true});
+$('#menuBtn').onclick=()=>layerMenu.classList.toggle('hidden');
+/* ===== SECTION: RECORD MODE =====
+   One button: 0.25x speed (capture at 60fps, conform 4x in the editor for a
+   flawless 60fps master — the machine only needs 15fps sustained), the whole
+   stage hidden and frozen on the first frame. SPACE begins, so the mouse never
+   enters the recording. All wall-clock animations stretch with the rate. */
+function armRecordMode(){
+  setPlaybackRate(.25);
+  startEl.classList.add('hidden');hideAllUI();uiMin=true;
+  previewSeek(START_AT);
+  let begun=false;
+  const begin=()=>{if(begun)return;begun=true;removeEventListener('keydown',onKey);hideAllUI();startPlayback(START_AT)};
+  const onKey=e=>{if(e.key===' '||e.key==='Spacebar'||e.key==='Enter'){e.preventDefault();begin()}};
+  addEventListener('keydown',onKey);
+}
+recBtn.addEventListener('click',async()=>{
+  if(!masterAudio.src||masterAudio.readyState<1){
+    recBtn.disabled=true;recBtn.textContent='Loading';await preload();
+    if(masterAudio.readyState<1){recBtn.disabled=false;return}
+  }
+  armRecordMode();
+});
+$('#shortcutsBtn').onclick=()=>{aboutPanel.classList.add('hidden');helpPanel.classList.toggle('hidden')};
+$('#aboutBtn').onclick=()=>{helpPanel.classList.add('hidden');aboutPanel.classList.toggle('hidden')};
+addEventListener('keydown',e=>{
+  const tag=e.target&&e.target.tagName;if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA')return;
+  if(e.key==='Escape'){helpPanel.classList.add('hidden');aboutPanel.classList.add('hidden')}
+  // while the splash is visible the main handler is gated — handle H here so
+  // the SHORTCUTS panel opened from the home screen also closes on H
+  else if((e.key==='h'||e.key==='H')&&!startEl.classList.contains('hidden')){
+    aboutPanel.classList.add('hidden');helpPanel.classList.toggle('hidden');
+  }
+});
+/* ===== SECTION: HELP + MINIMIZE-ALL ===== */
+const helpPanel=$('#helpPanel');
+function toggleHelp(){helpPanel.classList.toggle('hidden')}
+function hideAllUI(){
+  transport.classList.add('hidden');
+  layerMenu.classList.add('hidden');
+  helpPanel.classList.add('hidden');
+  timecodeEl.style.display='none';
+  hudEl.classList.add('hidden');
+}
+let uiMin=false;
+function toggleUiMin(){
+  // one key to clean the stage for recording: hides transport, layer menu,
+  // help and the timecode; press again to restore transport + timecode.
+  uiMin=!uiMin;
+  if(uiMin){
+    transport.classList.add('hidden');
+    layerMenu.classList.add('hidden');
+    helpPanel.classList.add('hidden');
+    timecodeEl.style.display='none';
+  }else{
+    transport.classList.remove('hidden');
+    timecodeEl.style.display='';
+  }
+}
+
+/* ===== SECTION: INPUT, RESIZE, MAIN LOOP ===== */
+addEventListener('resize',()=>{
+  fitStage();
+  if(timecodeEl.style.left){const rect=timecodeEl.getBoundingClientRect();placeTimecode(rect.left,rect.top)}
+});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)lastFrameTime=performance.now()*.001});
+go.addEventListener('click',async()=>{
+  if(!masterAudio.src||masterAudio.readyState<1){
+    go.disabled=true;go.textContent='Loading';await preload();
+    if(masterAudio.readyState<1){go.disabled=recBtn.disabled=false;return}
+  }
+  startEl.classList.add('hidden');
+  if(!CAPTURE)transport.classList.remove('hidden'); // capture mode: clean frame from the first sample
+  setPlaybackRate(1);                               // PLAY is always real time
+  startPlayback(START_AT);
+});
+pauseBtn.onclick=togglePause;
+$('#restart').onclick=()=>startPlayback(0);
+$('#full').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+$('#hide').onclick=()=>transport.classList.add('hidden');
+$('#back5').onclick=()=>jumpBy(-5);
+$('#forward5').onclick=()=>jumpBy(5);
+speedSelect.addEventListener('change',()=>setPlaybackRate(speedSelect.value));
+seek.addEventListener('pointerdown',beginScrub);
+seek.addEventListener('input',()=>{beginScrub();previewSeek(seek.value);seek.style.setProperty('--seek',(duration?Number(seek.value)/duration*100:0)+'%')});
+seek.addEventListener('change',finishScrub);
+seek.addEventListener('pointerup',finishScrub);
+seek.addEventListener('pointercancel',finishScrub);
+$('#masterPick').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  await loadMasterSource(URL.createObjectURL(f));
+  seek.max=Math.max(.01,duration).toFixed(2);
+  if(featureData&&sceneCuts.length)buildSceneDirector();
+  setStatus('Manual master ready · '+f.name,1);go.disabled=recBtn.disabled=false;go.textContent='Play · '+speedLabel()+' Capture';
+});
+$('#videoPick').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const u=URL.createObjectURL(f);
+  if(f.type.startsWith('image/')){
+    image.src=u;
+    for(const item of mediaVideos){item.pause();item.removeAttribute('src');item.load()}
+    if(imageTexture){compU.map.value=imageTexture;fbU.mediaTex.value=imageTexture}
+  }else setVideoSource(u);
+});
+addEventListener('keydown',e=>{
+  if(!startEl.classList.contains('hidden'))return;
+  const tag=e.target.tagName;if(tag==='SELECT'||tag==='INPUT'||tag==='TEXTAREA')return;
+  const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();togglePause()}
+  if(k==='arrowleft'){e.preventDefault();jumpBy(-5)}
+  if(k==='arrowright'){e.preventDefault();jumpBy(5)}
+  if(k==='[')stepPlaybackRate(-1);
+  if(k===']')stepPlaybackRate(1);
+  if(k==='r')startPlayback(0);
+  if(k==='l')lowStrobe=!lowStrobe;
+  if(k==='w')setLayers({waves:!layers.waves});        // waveform traces only
+  if(k==='g')setLayers({histograms:!layers.histograms}); // the 8-band bars
+  if(k==='a')setLayers({hud:!layers.hud});
+  if(k==='v')setLayers({video:!layers.video});
+  if(k==='b')setLayers({amoeba:!layers.amoeba});
+  if(k==='m')toggleUiMin();
+  if(k==='h')toggleHelp();
+  if(k==='f')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+});
+
+/* ===== SECTION: MAIN LOOP — gated to ~40 unique visual samples/sec =====
+   GPU frame: [feedback ping-pong at half res — ONLY while wPortal>0] →
+   composite pass (full res, three languages, mode-weight blend) → physics
+   scene. 1 fullscreen pass when portal inactive, 2 during portal scenes. */
+let lastFrameTime=performance.now()*.001,lastRenderMs=0;
+function tick(renderMs){
+  requestAnimationFrame(tick);
+  if(renderMs-lastRenderMs<1000/TARGET_FPS-1)return;
+  lastRenderMs=renderMs;
+  const now=renderMs*.001,dt=Math.min(.05,Math.max(0,now-lastFrameTime));
+  lastFrameTime=now;
+  const t=clock(),visualT=Math.min(duration||t+LOOKAHEAD,t+LOOKAHEAD);
+  const live=running&&!paused&&!scrubbing;
+  if(live){analysePrecomputed(visualT);syncVideos(t)}
+  const mdt=live?dt*playbackRate:0;
+  shock*=Math.pow(.92,playbackRate);
+  updateDirector(visualT);
+  updateField(visualT,live);
+  updatePhysics(visualT,mdt);
+  drawDiptych();
+  drawFX(visualT);
+  frameCount++;
+  if(layers.morph&&(frameCount&1)===0)updateMorphForm(visualT);
+  for(let i=0;i<meterEls.length;i++)meterEls[i].style.transform='scaleX('+Math.max(.04,groupList[i].energy).toFixed(3)+')';
+  renderLyrics(t);
+  renderPureAchv(t);
+  updateLayerPhysics(t,live?dt*playbackRate:0);
+  updateTimeline(t);
+  // GPU — the portal keeps swallowing frames even while paused (the recursion
+  // never sleeps mid-scene), but before the first Play the field stays black.
+  const portalActive=running&&layers.field&&wPortalNow>.001;
+  if(portalActive){
+    fbU.prevTex.value=rtRead.texture;
+    renderer.setRenderTarget(rtWrite);
+    renderer.render(fbScene,quadCam);
+    const tmp=rtRead;rtRead=rtWrite;rtWrite=tmp;
+  }
+  compU.fbTex.value=rtRead.texture;
+  renderer.setRenderTarget(null);
+  renderer.clear();
+  if(layers.field)renderer.render(compScene,quadCam);
+  renderer.clearDepth();
+  renderer.render(physScene,cam);
+}
+resizeFX();
+fitStage();
+requestAnimationFrame(restoreTimecodePosition);
+if(AUTO){
+  // RECORDING START: prepare a clean, hidden, frozen first frame — then WAIT.
+  // Press SPACE (or Enter) to begin. A keyboard start means the mouse pointer
+  // never moves into frame, and nothing plays until you say so (silent on load,
+  // and you control the exact start moment for the capture).
+  (async()=>{
+    timecodeEl.style.display='none';hudEl.classList.add('hidden');
+    if(masterAudio.readyState<1)await preload();
+    if(masterAudio.readyState<1)return;                 // load failed → leave splash
+    armRecordMode();                                    // ?auto=1 IS record mode
+  })();
+}
+setPlaybackRate(1);
+applyLayers();
+preload();
+requestAnimationFrame(tick);
+</script>
+</body></html>

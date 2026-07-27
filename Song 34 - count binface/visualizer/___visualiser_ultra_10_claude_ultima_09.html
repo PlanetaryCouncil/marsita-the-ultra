@@ -317,12 +317,12 @@ async function preload(){
   try{
     setStatus('Loading final mix…',done/jobs);
     // Fetch as a blob: object URLs are fully seekable even on static servers without HTTP Range support.
-    const mr=await fetch(encodeURI(CONFIG.master));if(!mr.ok)throw new Error('master '+mr.status);
+    const mr=await fetch(encodeURI(CONFIG.master),{cache:'no-cache'});if(!mr.ok)throw new Error('master '+mr.status);
     await loadMasterSource(URL.createObjectURL(await mr.blob()));done++;
     setStatus('Loading exact word timing…',done/jobs);
     // ?words=path overrides the lyrics file — test starred copies without touching the master.
     const wordsSrc=new URLSearchParams(location.search).get('words')||CONFIG.words;
-    const wr=await fetch(encodeURI(wordsSrc));if(!wr.ok)throw new Error('lyrics '+wr.status);
+    const wr=await fetch(encodeURI(wordsSrc),{cache:'no-cache'});if(!wr.ok)throw new Error('lyrics '+wr.status);
     // STAR BOOM markup: a leading * on a word (e.g. "*IN") detonates it — centered
     // mid-square instead of bottom (for moments where the video's own captions live
     // at the bottom), exploding in with a field shockwave. Appends inherit the mode.
@@ -333,17 +333,17 @@ async function preload(){
       return {t:+x.t,w,boom};
     }).filter(x=>Number.isFinite(x.t)&&x.w).sort((a,b)=>a.t-b.t);done++;
     setStatus('Loading precomputed stem intelligence…',done/jobs);
-    const fr=await fetch(encodeURI(CONFIG.features));if(!fr.ok)throw new Error('features '+fr.status);
+    const fr=await fetch(encodeURI(CONFIG.features),{cache:'no-cache'});if(!fr.ok)throw new Error('features '+fr.status);
     featureData=await fr.json();if(!featureData.groups||!featureData.fps)throw new Error('invalid feature data');
     for(const gs of groupList)gs.rows=featureData.groups[gs.id];done++;
     setStatus('Loading the real edit — scene cuts…',done/jobs);
-    const sr=await fetch(encodeURI(CONFIG.scenes));if(!sr.ok)throw new Error('scenes '+sr.status);
+    const sr=await fetch(encodeURI(CONFIG.scenes),{cache:'no-cache'});if(!sr.ok)throw new Error('scenes '+sr.status);
     const sceneJson=await sr.json();
     sceneCuts=(Array.isArray(sceneJson.cuts)?sceneJson.cuts:[0]).map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
     if(!sceneCuts.length||sceneCuts[0]>0)sceneCuts.unshift(0);
     done++;
     setStatus('Loading square footage · casting the scene languages…',done/jobs);
-    const vr=await fetch(encodeURI(CONFIG.video));if(!vr.ok)throw new Error('video '+vr.status);
+    const vr=await fetch(encodeURI(CONFIG.video),{cache:'no-cache'});if(!vr.ok)throw new Error('video '+vr.status);
     const videoUrl=URL.createObjectURL(await vr.blob());
     image.src=encodeURI(CONFIG.fallbackImage);setVideoSource(videoUrl);
     await new Promise(resolve=>{let settled=false;const finish=()=>{if(!settled){settled=true;resolve()}};
