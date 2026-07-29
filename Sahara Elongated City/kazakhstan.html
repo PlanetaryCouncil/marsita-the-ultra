@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Kazakhstan Deal — Baikonur &amp; BayesX — Sahara Elongated City</title>
+<style>
+  :root {
+    --night: #0d0a14;
+    --steppe-sky: #5bc6e8;
+    --steppe-deep: #2a8ab0;
+    --gold: #fec50c;
+    --gold-deep: #b8890a;
+    --ink: #f2f2ea;
+    --muted: #a5adb3;
+    --danger: #ff5d5d;
+    --dusk: #ff7a3c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--night); color: var(--ink); font-family: Georgia, 'Times New Roman', serif; line-height: 1.6; overflow-x: hidden; }
+  .mono { font-family: 'Courier New', monospace; letter-spacing: 0.08em; }
+
+  .topnav { padding: 1rem 1.5rem; border-bottom: 1px solid #1a2026; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.2em; }
+  .topnav a { color: var(--muted); text-decoration: none; }
+  .topnav a:hover { color: var(--gold); }
+
+  .hero {
+    min-height: 82vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; position: relative; padding: 5rem 1.5rem 9rem;
+    background:
+      radial-gradient(ellipse 110% 70% at 50% 120%, var(--steppe-deep) 0%, transparent 55%),
+      linear-gradient(180deg, var(--night) 0%, #0e1a20 60%, #091218 100%);
+  }
+  .hero .kicker { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.45em; color: var(--gold); margin-bottom: 1.4rem; }
+  .hero h1 {
+    font-size: clamp(2.2rem, 7.5vw, 5.5rem); font-weight: 900; line-height: 0.98; text-transform: uppercase; letter-spacing: -0.02em;
+    background: linear-gradient(180deg, var(--ink) 30%, var(--steppe-sky) 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline { margin-top: 2rem; font-size: clamp(1rem, 2.5vw, 1.35rem); font-style: italic; color: var(--muted); max-width: 42rem; }
+  .hero .depth { margin-top: 2.5rem; font-family: 'Courier New', monospace; color: var(--steppe-sky); font-size: 0.85rem; letter-spacing: 0.12em; }
+
+  .launch-vis { position: absolute; bottom: 0; left: 0; right: 0; height: 9rem; pointer-events: none; }
+  .launch-vis svg { display: block; width: 100%; height: 100%; }
+
+  section { padding: 5.5rem 1.5rem; position: relative; }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  .section-num { font-size: 0.75rem; color: var(--gold-deep); text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 1rem; }
+  h2 { font-size: clamp(1.7rem, 5vw, 3rem); font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 1.8rem; line-height: 1.05; }
+  .lede { font-size: 1.18rem; color: var(--ink); max-width: 44rem; margin-bottom: 1.2rem; }
+  p.body-text { color: var(--muted); max-width: 44rem; margin-bottom: 1.2rem; }
+  em.sky { color: var(--steppe-sky); font-style: italic; }
+  em.gold { color: var(--gold); font-style: italic; }
+  em.warn { color: var(--danger); font-style: italic; }
+  strong { color: var(--ink); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1px; background: #1c242b; border: 1px solid #1c242b; margin: 3rem 0; }
+  .stat { background: var(--night); padding: 1.7rem 1.4rem; }
+  .stat .n { font-size: 2rem; font-weight: 900; color: var(--gold); display: block; line-height: 1.1; }
+  .stat .l { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-top: 0.4rem; display: block; }
+  .stat .fine { font-size: 0.68rem; color: #5d6670; display: block; margin-top: 0.5rem; font-style: italic; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.4rem; margin-top: 3rem; }
+  .card { border: 1px solid #223038; padding: 2rem 1.6rem; background: linear-gradient(160deg, #0f1c23, var(--night)); }
+  .card h3 { font-size: 1.02rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--steppe-sky); margin-bottom: 0.9rem; }
+  .card p { font-size: 0.92rem; color: var(--muted); }
+  .card .icon { font-size: 1.8rem; display: block; margin-bottom: 1rem; }
+
+  .alt { background: linear-gradient(180deg, var(--night), #0c161c, var(--night)); }
+  .real-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--night); background: var(--steppe-sky); padding: 0.2rem 0.6rem; margin-bottom: 1.2rem; }
+  .real-tag.red { background: var(--danger); }
+  .real-tag.gold { background: var(--gold); }
+
+  .deal-box { border: 2px solid var(--gold-deep); padding: 2.5rem 2rem; margin: 3rem 0; }
+  .deal-box h3 { color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-size: 1.1rem; margin-bottom: 1.5rem; text-align: center; }
+  .deal-route { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.4rem; font-family: 'Courier New', monospace; font-size: 0.8rem; }
+  .deal-route .node { border: 1px solid #34424c; padding: 0.5rem 0.9rem; color: var(--ink); background: #0e1a20; }
+  .deal-route .arrow { color: var(--gold-deep); font-size: 1.1rem; }
+  .deal-note { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 1.5rem; font-style: italic; }
+
+  /* BayesX */
+  .bayesx {
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(254,197,12,0.08) 0%, transparent 60%),
+      var(--night);
+    border-top: 1px solid rgba(254,197,12,0.2);
+  }
+  .bayesx h2 { color: var(--gold); }
+  .bayesx-logo { text-align: center; margin: 2.5rem 0; }
+  .bayesx-logo .word { font-size: clamp(2.8rem, 9vw, 6rem); font-weight: 900; letter-spacing: 0.02em; color: var(--ink); }
+  .bayesx-logo .word .x { color: var(--gold); font-style: italic; }
+  .bayesx-logo .slogan { margin-top: 0.8rem; font-style: italic; color: var(--muted); font-size: 1.05rem; }
+  .formula { text-align: center; font-family: 'Courier New', monospace; color: var(--steppe-sky); font-size: clamp(0.9rem, 2.5vw, 1.2rem); margin: 2rem auto; letter-spacing: 0.05em; }
+
+  footer { padding: 3rem 1.5rem; text-align: center; font-size: 0.75rem; color: #525c64; border-top: 1px solid #1a2026; }
+  footer a { color: var(--steppe-deep); text-decoration: none; }
+  .disclaimer { max-width: 42rem; margin: 1rem auto 0; font-style: italic; }
+  .backlink { display: inline-block; margin-top: 2.5rem; padding: 0.9rem 2.2rem; border: 2px solid var(--gold-deep); color: var(--ink); text-decoration: none; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; transition: all 0.25s; }
+  .backlink:hover { background: var(--gold-deep); color: var(--night); }
+  .siblinks { margin-top: 1.2rem; font-size: 0.8rem; }
+  .siblinks a { color: var(--steppe-sky); text-decoration: none; display: inline-block; margin: 0 0.6rem; }
+</style>
+</head>
+<body>
+
+<nav class="topnav mono">
+  <a href="index.html">&larr; Sahara Elongated City</a> &nbsp;/&nbsp; <span style="color:var(--gold)">The Kazakhstan Deal</span>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="kicker mono">Sister project &middot; the steppe expansion</div>
+  <h1>The Kazakhstan Deal<br>Baikonur &amp; BayesX</h1>
+  <p class="tagline">The Sahara has the sand. Kazakhstan has the land, the launch pads, and the good sense to sit between two superpowers and charge both of them rent. We'd like a word.</p>
+  <div class="depth mono">9th LARGEST COUNTRY &nbsp;·&nbsp; WORLD'S FIRST COSMODROME &nbsp;·&nbsp; FULL THRUST · PER HYPER · BEYOND IMAGINABLE</div>
+
+  <div class="launch-vis">
+    <svg viewBox="0 0 1440 150" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,130 L1440,130 L1440,150 L0,150 Z" fill="#1c3a2a" opacity="0.6"/>
+      <path d="M0,135 Q360,115 720,132 T1440,128 L1440,150 L0,150 Z" fill="#2a5a3a" opacity="0.4"/>
+      <line x1="720" y1="130" x2="720" y2="30" stroke="#fec50c" stroke-width="2" opacity="0.7" stroke-dasharray="2 8"/>
+      <polygon points="720,10 714,32 726,32" fill="#f2f2ea"/>
+      <circle cx="720" cy="128" r="5" fill="#ff7a3c" opacity="0.8"/>
+    </svg>
+  </div>
+</header>
+
+<!-- THE LAND -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">01 / The Land</div>
+    <span class="real-tag">Real geography</span>
+    <h2>Loads of land. That's the technical term.</h2>
+    <p class="lede">Kazakhstan is the <strong>ninth-largest country on Earth</strong> — 2.7 million km² of steppe with fewer people per square kilometre than almost anywhere. It sits precisely between <strong>Russia and China</strong>, and has spent thirty years mastering the art of being friends with both while belonging to neither.</p>
+    <p class="body-text">Diplomats call this "multi-vector foreign policy." We call it the best-located empty space on the planet. The Sahara taught us that emptiness is inventory; Kazakhstan is the sequel, with better rail links and a pre-installed space program.</p>
+
+    <div class="stats">
+      <div class="stat"><span class="n">2.7M</span><span class="l">km&sup2; of steppe</span><span class="fine">9th largest country. larger than all of Western Europe</span></div>
+      <div class="stat"><span class="n">~7</span><span class="l">people per km&sup2;</span><span class="fine">the Elongated City's dream density, achieved naturally</span></div>
+      <div class="stat"><span class="n">2</span><span class="l">superpower neighbours</span><span class="fine">both kept at exactly arm's length. an art form</span></div>
+      <div class="stat"><span class="n">1</span><span class="l">cosmodrome, gently used</span><span class="fine">see below. one careful owner, one long-term tenant</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- BAIKONUR -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">02 / The Cosmodrome</div>
+    <span class="real-tag">Real history &middot; real lease</span>
+    <h2>Baikonur: the original launchpad, currently sublet</h2>
+    <p class="lede">Baikonur is the <strong>first and largest cosmodrome in human history</strong>. Sputnik left Earth from here. Gagarin left Earth from here. Every crewed Soyuz still does. And here's the part most people don't know: <em class="sky">it belongs to Kazakhstan.</em> Russia just rents it — roughly <strong>$115 million a year, on a lease running to 2050.</strong></p>
+    <p class="body-text">Humanity's front door to space is a rental property. The tenant's usage is declining, the landlord is open to business, and there is pad capacity going spare on the exact patch of ground where the Space Age began. You see where this is going.</p>
+
+    <div class="deal-box">
+      <h3>The deal, in one line</h3>
+      <div class="deal-route">
+        <span class="node">Kazakhstan has pads</span>
+        <span class="arrow">→</span>
+        <span class="node">Russia underuses them</span>
+        <span class="arrow">→</span>
+        <span class="node">we negotiate with the landlord</span>
+        <span class="arrow">→</span>
+        <span class="node">BayesX launches from Baikonur</span>
+      </div>
+      <p class="deal-note">Rent paid in the usual instruments: hard currency, launch capacity, culture, and vibes. The Ministry has approved the term sheet.</p>
+    </div>
+
+    <div class="cards">
+      <div class="card"><span class="icon">🛰️</span><h3>Heritage Pads</h3><p>Gagarin's Start is a museum piece, but the working complexes still throw hardware into orbit on schedule. Sixty-nine years of launch infrastructure, pre-depreciated.</p></div>
+      <div class="card"><span class="icon">📜</span><h3>The Landlord's Option</h3><p>The lease runs to 2050, but Kazakhstan has been steadily reclaiming unused facilities. Every pad the tenant hands back is a pad the steppe can re-let. We're first in the queue with a casserole.</p></div>
+      <div class="card"><span class="icon">🚄</span><h3>The Sahara Connection</h3><p>Our foundries print the ships from sand; Baikonur supplies the departure lounge. Sand to silicon to starship to steppe. The whole supply chain rhymes, which our engineers assure us is structurally significant.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE PROBLEM -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">03 / The Problem</div>
+    <span class="real-tag red">Real regulation</span>
+    <h2>SpaceX can't hire Earth.</h2>
+    <p class="lede">Here is a genuinely strange fact: the company whose mission is <em>making life multiplanetary</em> is legally barred from hiring most of the planet. US export-control law (ITAR) treats rocket technology as weapons tech, so SpaceX can effectively employ only US citizens and permanent residents.</p>
+    <p class="body-text">Eight billion people. One species-level project. And roughly 95% of the species can't apply. The brightest propulsion mind in Lagos, Warsaw, Almaty, or São Paulo gets a form letter. This isn't a criticism of any company — it's the law they operate under. But it leaves a gap the size of, well, everyone else.</p>
+    <p class="body-text"><em class="gold">Somebody should build the space company for the rest of Earth. On a launch pad the rest of Earth already owns.</em></p>
+  </div>
+</section>
+
+<!-- BAYESX -->
+<section class="bayesx">
+  <div class="wrap">
+    <div class="section-num mono">04 / The Answer</div>
+    <span class="real-tag gold">The idea</span>
+
+    <div class="bayesx-logo">
+      <div class="word">BAYES<span class="x">X</span></div>
+      <div class="slogan">Making life multiply — starting from Earth.</div>
+    </div>
+
+    <p class="lede">SpaceX makes life multiplanetary. <strong>BayesX makes life multi-probable.</strong> Named for the Reverend Thomas Bayes, patron saint of changing your mind when the evidence changes — because a species that updates its beliefs is more likely to survive than one that merely updates its rockets.</p>
+
+    <div class="formula mono">P(thriving&nbsp;|&nbsp;evidence) &gt; P(thriving) &nbsp;—&nbsp; launch when the posterior clears the pad</div>
+
+    <p class="body-text">BayesX hires from all of Earth, launches from Baikonur, and builds <em class="gold">cultural technologies</em> alongside the metal ones — the calendars, languages, vibes ministries, and festivals a civilisation needs so that when it finally goes somewhere, it arrives as something worth multiplying. Life doesn't just need more planets. It needs better priors.</p>
+
+    <div class="cards">
+      <div class="card"><span class="icon">🌍</span><h3>Hire The Species</h3><p>No citizenship gate. The recruitment pool is everyone the other guys can't touch — which is nearly everyone. Interviews conducted in Esperanto, obviously. Relocation package: the steppe, a home (one per day), and Vibex® on arrival.</p></div>
+      <div class="card"><span class="icon">🧠</span><h3>Update, Then Thrust</h3><p>Every launch is a hypothesis; every landing is data. Full thrust, per hyper — but the throttle answers to the posterior. We are the only launch provider whose mission control includes a Chief Prior Officer.</p></div>
+      <div class="card"><span class="icon">🎪</span><h3>Cultural Payloads</h3><p>Alongside satellites: the 13-month calendar, the common language, the vibes economy, the mangrove manuals. Multiplying life means packing the culture, not just the crew. The manifest has a poetry section.</p></div>
+    </div>
+
+    <p class="body-text" style="margin-top:2.5rem;">This will be a completely new version of the reality. <em class="gold">Full thrust. Per hyper. Beyond imaginable.</em> Those are the official engineering tolerances, and the Ministry of Vibes has certified all three.</p>
+  </div>
+</section>
+
+<!-- CONNECT BACK -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">05 / One Steppe Beyond</div>
+    <span class="real-tag">Ties it together</span>
+    <h2>Sand builds the ships. The steppe launches them.</h2>
+    <p class="lede">The Elongated City now spans two great emptinesses: the Sahara makes water, homes, and starships; Kazakhstan provides the pads, the geopolitical judo, and the workforce of everyone Earth's other space programs turned away.</p>
+    <p class="body-text">Desert to desert, enclave to enclave, one calendar, one language, taxes in vibes on both continents. The gate remains singular. It's just very, very far from the launch pad now — which the residents describe as "the point."</p>
+    <a class="backlink mono" href="index.html">&larr; Back to the Elongated City</a>
+    <div class="siblinks mono">
+      <a href="qattara.html">The Qattara Depression Project &rarr;</a>
+      <a href="lake-chad.html">The Lake Chad Refill &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="mono">THE KAZAKHSTAN DEAL — a sub-initiative of Sahara Elongated City &middot; Marsita the Ultra</div>
+  <div class="disclaimer">Kazakhstan's size, its multi-vector diplomacy, Baikonur's history (Sputnik, Gagarin, the ongoing Soyuz program), Kazakhstan's ownership and Russia's ~$115M/year lease to 2050, and the ITAR hiring restrictions on US rocket companies are all real. BayesX is satire — there is no such company, no term sheet, and no Chief Prior Officer, yet. Not affiliated with SpaceX, Roscosmos, KazCosmos, the Reverend Thomas Bayes, or any billionaire on any continent.</div>
+</footer>
+
+</body>
+</html>
