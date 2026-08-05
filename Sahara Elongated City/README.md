@@ -45,6 +45,8 @@ Or serve it anywhere static files go (GitHub Pages works out of the box).
 | `index.html` | The main brochure — 12 sections, from The Vision to The Credo |
 | `qattara.html` | The Qattara Depression Project — hydro, the nukes question, demining |
 | `lake-chad.html` | The Lake Chad Refill — 30M people, Transaqua |
+| `salton-sea.html` | The Salton Sea Revival — America's Qattara: the smell, the dust, the lithium. With 10 references |
+| `kazakhstan.html` | The Kazakhstan Deal — Baikonur & BaseX, the soft problems, culture included |
 
 ---
 

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Salton Sea Revival — Sahara Elongated City</title>
+<style>
+  :root {
+    --night: #0d0a14;
+    --salt: #f4ede4;
+    --pink: #ff8fa3;
+    --pink-deep: #c94f68;
+    --haze: #7fb8c9;
+    --haze-deep: #3d7d94;
+    --ink: #f4f0e8;
+    --muted: #b0a49e;
+    --danger: #ff5d5d;
+    --gold: #fec50c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--night); color: var(--ink); font-family: Georgia, 'Times New Roman', serif; line-height: 1.6; overflow-x: hidden; }
+  .mono { font-family: 'Courier New', monospace; letter-spacing: 0.08em; }
+
+  .topnav { padding: 1rem 1.5rem; border-bottom: 1px solid #241a20; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.2em; }
+  .topnav a { color: var(--muted); text-decoration: none; }
+  .topnav a:hover { color: var(--pink); }
+
+  .hero {
+    min-height: 82vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; position: relative; padding: 5rem 1.5rem 9rem;
+    background:
+      radial-gradient(ellipse 110% 70% at 50% 120%, var(--pink-deep) 0%, transparent 55%),
+      linear-gradient(180deg, var(--night) 0%, #1d1218 60%, #120b10 100%);
+  }
+  .hero .kicker { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.45em; color: var(--pink); margin-bottom: 1.4rem; }
+  .hero h1 {
+    font-size: clamp(2.4rem, 8vw, 6rem); font-weight: 900; line-height: 0.95; text-transform: uppercase; letter-spacing: -0.02em;
+    background: linear-gradient(180deg, var(--ink) 30%, var(--pink) 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline { margin-top: 2rem; font-size: clamp(1rem, 2.5vw, 1.35rem); font-style: italic; color: var(--muted); max-width: 42rem; }
+  .hero .depth { margin-top: 2.5rem; font-family: 'Courier New', monospace; color: var(--pink); font-size: 0.85rem; letter-spacing: 0.12em; }
+
+  .shore-vis { position: absolute; bottom: 0; left: 0; right: 0; height: 8rem; pointer-events: none; }
+  .shore-vis svg { display: block; width: 100%; height: 100%; }
+
+  section { padding: 5.5rem 1.5rem; position: relative; }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  .section-num { font-size: 0.75rem; color: var(--pink-deep); text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 1rem; }
+  h2 { font-size: clamp(1.7rem, 5vw, 3rem); font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 1.8rem; line-height: 1.05; }
+  .lede { font-size: 1.18rem; color: var(--ink); max-width: 44rem; margin-bottom: 1.2rem; }
+  p.body-text { color: var(--muted); max-width: 44rem; margin-bottom: 1.2rem; }
+  em.rose { color: var(--pink); font-style: italic; }
+  em.cool { color: var(--haze); font-style: italic; }
+  em.warn { color: var(--danger); font-style: italic; }
+  strong { color: var(--ink); }
+  a { color: var(--haze); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1px; background: #291d24; border: 1px solid #291d24; margin: 3rem 0; }
+  .stat { background: var(--night); padding: 1.7rem 1.4rem; }
+  .stat .n { font-size: 2rem; font-weight: 900; color: var(--pink); display: block; line-height: 1.1; }
+  .stat .l { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-top: 0.4rem; display: block; }
+  .stat .fine { font-size: 0.68rem; color: #6e6058; display: block; margin-top: 0.5rem; font-style: italic; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.4rem; margin-top: 3rem; }
+  .card { border: 1px solid #322229; padding: 2rem 1.6rem; background: linear-gradient(160deg, #1c1218, var(--night)); }
+  .card h3 { font-size: 1.02rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--pink); margin-bottom: 0.9rem; }
+  .card p { font-size: 0.92rem; color: var(--muted); }
+  .card .icon { font-size: 1.8rem; display: block; margin-bottom: 1rem; }
+
+  .alt { background: linear-gradient(180deg, var(--night), #180f14, var(--night)); }
+  .real-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--night); background: var(--pink); padding: 0.2rem 0.6rem; margin-bottom: 1.2rem; }
+  .real-tag.red { background: var(--danger); }
+  .real-tag.gold { background: var(--gold); }
+  .real-tag.haze { background: var(--haze); }
+
+  .plan-box { border: 1px dashed var(--haze-deep); padding: 2rem; margin: 2.5rem 0; max-width: 46rem; }
+  .plan-box .strike { text-decoration: line-through; color: #5e5470; }
+  .plan-box .plan-final { color: var(--haze); font-size: 1.2rem; font-style: italic; margin-top: 1rem; display: block; }
+
+  .serious { background: linear-gradient(180deg, var(--night), #1a0f0f 55%, var(--night)); border-top: 1px solid rgba(255,93,93,0.2); border-bottom: 1px solid rgba(255,93,93,0.2); }
+  .serious h2 { color: var(--danger); }
+  .serious .section-num { color: var(--danger); }
+
+  .press { border-left: 3px solid var(--danger); padding: 1rem 1.4rem; margin: 1.5rem 0; max-width: 44rem; background: rgba(255,93,93,0.04); }
+  .press .q { color: var(--ink); font-style: italic; font-size: 1rem; }
+  .press .src { display: block; margin-top: 0.6rem; font-family: 'Courier New', monospace; font-size: 0.7rem; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
+
+  .refs { list-style: none; counter-reset: r; max-width: 46rem; margin-top: 2rem; }
+  .refs li { counter-increment: r; padding: 0.9rem 0 0.9rem 3rem; position: relative; border-bottom: 1px solid #241a20; color: var(--muted); font-size: 0.9rem; }
+  .refs li::before { content: "[" counter(r) "]"; position: absolute; left: 0; top: 0.9rem; font-family: 'Courier New', monospace; color: var(--pink-deep); font-size: 0.85rem; }
+  .refs a { color: var(--haze); text-decoration: none; }
+  .refs a:hover { text-decoration: underline; }
+
+  footer { padding: 3rem 1.5rem; text-align: center; font-size: 0.75rem; color: #5e5258; border-top: 1px solid #241a20; }
+  footer a { color: var(--pink-deep); text-decoration: none; }
+  .disclaimer { max-width: 42rem; margin: 1rem auto 0; font-style: italic; }
+  .backlink { display: inline-block; margin-top: 2.5rem; padding: 0.9rem 2.2rem; border: 2px solid var(--pink-deep); color: var(--ink); text-decoration: none; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; transition: all 0.25s; }
+  .backlink:hover { background: var(--pink-deep); color: var(--night); }
+  .siblinks { margin-top: 1.2rem; font-size: 0.8rem; }
+  .siblinks a { color: var(--haze); text-decoration: none; display: inline-block; margin: 0 0.6rem; }
+</style>
+</head>
+<body>
+
+<nav class="topnav mono">
+  <a href="index.html">&larr; Sahara Elongated City</a> &nbsp;/&nbsp; <span style="color:var(--pink)">The Salton Sea Revival</span>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="kicker mono">Sister project &middot; America's Qattara</div>
+  <h1>The Salton Sea<br>Revival</h1>
+  <p class="tagline">California has a below-sea-level lake that was created by accident, boomed like a Riviera, and is now shrinking into toxic dust so pungent that Los Angeles — 150 miles away — has smelled it. We've seen this movie. We know how it ends: refill, baby, refill.</p>
+  <div class="depth mono">&minus;70m BELOW SEA LEVEL &nbsp;·&nbsp; BORN 1905, BY MISTAKE &nbsp;·&nbsp; SMELLED IN LA, 2012 &nbsp;·&nbsp; LITHIUM UNDERNEATH</div>
+
+  <div class="shore-vis">
+    <svg viewBox="0 0 1440 130" preserveAspectRatio="none" aria-hidden="true">
+      <ellipse cx="720" cy="125" rx="680" ry="70" fill="#c94f68" opacity="0.15"/>
+      <ellipse cx="720" cy="127" rx="450" ry="45" fill="#ff8fa3" opacity="0.25"/>
+      <ellipse cx="720" cy="129" rx="230" ry="24" fill="#ff8fa3" opacity="0.45"/>
+    </svg>
+  </div>
+</header>
+
+<!-- THE ACCIDENT -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">01 / The Accident</div>
+    <span class="real-tag">Real history</span>
+    <h2>The lake America built by mistake</h2>
+    <p class="lede">In 1905, engineers cut an irrigation canal from the Colorado River — and lost control of it. For <strong>two years</strong> the river poured into the Salton Sink, a desert basin some 70 metres below sea level, until it had created <strong>California's largest lake</strong> by accident.</p>
+    <p class="body-text">Sound familiar? A deep, dry, below-sea-level depression; water arrives via one channel; a lake appears and the desert changes. The Salton Sea is the <a href="qattara.html">Qattara Depression Project</a> that <em class="rose">already happened</em> — unplanned, unbudgeted, and running as an uncontrolled natural experiment for 120 years. It is the best evidence on Earth that flooding a desert basin creates something people flock to. And the best warning about what happens when you stop maintaining it.</p>
+
+    <div class="stats">
+      <div class="stat"><span class="n">1905</span><span class="l">born, by accident</span><span class="fine">two years of the entire Colorado River, delivered to the wrong address</span></div>
+      <div class="stat"><span class="n">&minus;70m</span><span class="l">below sea level</span><span class="fine">same trick as Qattara. gravity works in California too</span></div>
+      <div class="stat"><span class="n">#1</span><span class="l">largest lake in California</span><span class="fine">still, even while shrinking</span></div>
+      <div class="stat"><span class="n">120 yrs</span><span class="l">of accidental data</span><span class="fine">the control group for every desert-flooding dream on this site</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE RIVIERA -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">02 / The Riviera</div>
+    <span class="real-tag">Real history &middot; the boom</span>
+    <h2>Prosperity. A booming town. It actually happened.</h2>
+    <p class="lede">In the 1950s and 60s the accident became the <em class="rose">"Salton Riviera"</em> — marinas, yacht clubs, waterskiing, resort towns rising out of the desert. At its peak the sea drew <strong>more visitors than Yosemite</strong>. Sinatra played. The Beach Boys raced boats. Lots sold like the future.</p>
+    <p class="body-text">Hold onto that, because it's the load-bearing fact of this whole page: <strong>water arrived in a desert sink, and a boom followed within a generation.</strong> Nobody had to be persuaded to move to the water. They came on their own, towing boats. The Elongated City's entire pitch — flood the basin, life shows up — isn't speculation here. It's archival footage.</p>
+    <div class="cards">
+      <div class="card"><span class="icon">🛥️</span><h3>The Proof of Concept</h3><p>Bombay Beach, North Shore, Salton City — real towns, real marinas, real property booms, all conjured by accidental water. The desert didn't resist. The desert threw a party.</p></div>
+      <div class="card"><span class="icon">🎬</span><h3>The Cautionary Tale</h3><p>Then the water turned and the crowds left, leaving half-buried towns that photographers now call "post-apocalyptic." Wrong. They're pre-revival. There's a difference, and it's this page.</p></div>
+      <div class="card"><span class="icon">🔁</span><h3>The Sequel Logic</h3><p>A boom that happened once by accident can happen again on purpose. This time with plumbing, governance, and a Ministry that audits the vibes annually.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE DECLINE - serious -->
+<section class="serious">
+  <div class="wrap">
+    <div class="section-num mono">03 / The Decline</div>
+    <span class="real-tag red">Real, recent, and you can smell it</span>
+    <h2>So bad that Los Angeles can smell it.</h2>
+    <p class="lede">The sea is fed almost entirely by <strong>agricultural runoff</strong> — fertiliser, nutrients, decades of it — and since the water transfers of 2003 cut its inflows, it has been shrinking fast. What's left is saltier than the ocean, starved of oxygen, prone to mass fish die-offs — and in September 2012, a windstorm stirred the rotting bottom water and sent a hydrogen-sulfide stench <em class="warn">150 miles northwest into Los Angeles</em>. Air-quality officials traced it, confirmed it, and put it on the record.</p>
+
+    <div class="press">
+      <p class="q">"We now have solid evidence that points to the Salton Sea as the source of a very large and unusual odor event."</p>
+      <span class="src">— Barry Wallerstein, South Coast AQMD, September 2012 [1][2]</span>
+    </div>
+
+    <p class="body-text">The smell is the headline. The dust is the emergency. As the shoreline retreats it exposes dried lakebed — playa — laced with a century of agricultural residue, and the wind takes it straight into the lungs of the communities around the sea. This is not historical: the studies below are from <strong>2024 and 2025</strong>.</p>
+
+    <div class="press">
+      <p class="q">Nearly 1 in 4 children in the northern Imperial Valley has asthma — roughly triple the national rate — and new research directly links dust events from the receding sea to measurably reduced lung growth in children.</p>
+      <span class="src">— USC / UC Irvine cohort studies, 2024–2025 [3][4][5]</span>
+    </div>
+
+    <p class="body-text">The burden lands hardest on the low-income, largely Latino farm communities that ring the sea — the people least responsible for the water deals that drained it. Like the minefields of Qattara and the shores of Lake Chad, this is the part with no punchline: <em class="warn">fixing the Salton Sea is worth doing regardless of everything else on this website.</em></p>
+  </div>
+</section>
+
+<!-- THE REFILL -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">04 / The Refill</div>
+    <span class="real-tag haze">Real proposals &middot; really studied</span>
+    <h2>Sea-to-sea: the pipeline next door</h2>
+    <p class="lede">The refill plan writes itself, because California already wrote it: bring ocean water from the <em class="cool">Sea of Cortez</em> — the Gulf of California, roughly 200 km south — over a modest rise at the border, then downhill all the way into a basin 70 metres below sea level. Gravity finishes what the pump starts. Where have you heard that before?</p>
+
+    <div class="plan-box">
+      <p class="strike">Plan A: Pipe it from the Gulf of Mexico. (Majestic. Also ~2,000 km away, on the wrong side of the continent. The founder liked the branding; the geographers staged an intervention.)</p>
+      <span class="plan-final">Plan B: The Sea of Cortez — the gulf next door. Short haul, big drop, seawater at scale. That's the plan. It has feasibility studies.</span>
+    </div>
+
+    <p class="body-text">And here's where we keep our own rule about honesty: in 2022, California convened an <strong>Independent Review Panel</strong> on water importation. It examined the Sea of Cortez concepts seriously — and recommended <em>against</em> them for now, favouring desalination plus local water instead [6][7]. That's not a defeat; that's what a real megaproject pipeline looks like mid-argument. Qattara has been mid-argument since 1912. The important thing is the state studied "refill the sea from the ocean" as a real option, in public, with engineers. The Overton window is already wet.</p>
+
+    <div class="cards">
+      <div class="card"><span class="icon">🌊</span><h3>Import + Desalinate</h3><p>The panel's own preferred mix: desalt the brine, recycle local flows, stabilise the level. Less romantic than a canal; measured in the same unit — acre-feet of "we chose not to let it die."</p></div>
+      <div class="card"><span class="icon">🌿</span><h3>The Lagoon Treatment</h3><p>Whatever water arrives, the new shoreline gets what our other shores get: engineered wetlands and habitat edges — the state's Species Conservation Habitat wetlands are already being built — dust capped, birds returning, the Pacific Flyway resupplied.</p></div>
+      <div class="card"><span class="icon">🏜️</span><h3>The Qattara Rhyme</h3><p>Below-sea-level basin + nearby ocean + gravity = power, habitat, and a town. Egypt's version is still a blueprint. California's ran once by accident. Between them: the entire argument of this website.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE PROSPERITY -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">05 / The Prosperity</div>
+    <span class="real-tag gold">Real lithium &middot; really underneath</span>
+    <h2>The booming town, part two: Lithium Valley</h2>
+    <p class="lede">The revival doesn't need to import its economy, because it's already dissolved in the ground. The geothermal brines under the sea's southern shore hold an estimated <strong>3,400 kilotons of lithium</strong> — enough for <em class="rose">375 million EV batteries</em>, per a Berkeley Lab analysis. America imports nearly all its lithium; the largest domestic source is under the smelliest lake in the country [8][9].</p>
+    <p class="body-text">Eleven geothermal plants already hum on that shore. Extract the lithium from the brine, inject the brine back down, sell the batteries, and spend the royalties on the water and the wetlands and the clinics. Do it with <a href="kazakhstan.html">BaseX accounting</a> — People, Planet, Prosperity, externalities on the books — and the same communities that breathed the dust get first claim on the boom. That's the whole model of this city, running on one lake: <em class="rose">the mess pays for the fix.</em></p>
+    <div class="stats">
+      <div class="stat"><span class="n">3,400 kt</span><span class="l">of lithium in the brine</span><span class="fine">Berkeley Lab estimate. under the lake the whole time</span></div>
+      <div class="stat"><span class="n">375M</span><span class="l">EV batteries' worth</span><span class="fine">decades of US demand, domestic, from one shore</span></div>
+      <div class="stat"><span class="n">11</span><span class="l">geothermal plants running</span><span class="fine">the boomtown's power company predates the boomtown</span></div>
+      <div class="stat"><span class="n">2&times;</span><span class="l">boom, this lake</span><span class="fine">1950s by accident. 2030s on purpose</span></div>
+    </div>
+    <a class="backlink mono" href="index.html">&larr; Back to the Elongated City</a>
+    <div class="siblinks mono">
+      <a href="qattara.html">The Qattara Depression Project &rarr;</a>
+      <a href="lake-chad.html">The Lake Chad Refill &rarr;</a>
+      <a href="kazakhstan.html">The Kazakhstan Deal &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- REFERENCES -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">06 / References</div>
+    <span class="real-tag">All real. That's the point.</span>
+    <h2>Receipts</h2>
+    <ol class="refs">
+      <li>NBC News (2012), <a href="https://www.nbcnews.com/news/us-news/southern-calif-smell-solid-evidence-it-came-salton-sea-flna994441">"Southern Calif. smell? 'Solid evidence' it came from Salton Sea"</a> — the AQMD investigation of the odor that reached Los Angeles.</li>
+      <li>Christian Science Monitor (2012), <a href="https://www.csmonitor.com/Science/2012/0912/Rotten-egg-smell-traced-to-California-s-Salton-Sea">"Rotten egg smell traced to California's Salton Sea"</a>.</li>
+      <li>The Conversation (2025), <a href="https://theconversation.com/toxic-dust-from-californias-shrinking-salton-sea-is-harming-childrens-lung-growth-our-study-tracked-the-impact-in-700-kids-279211">"Toxic dust from California's shrinking Salton Sea is harming children's lung growth — our study tracked the impact in 700 kids"</a>.</li>
+      <li>UC Irvine News (Oct 2025), <a href="https://news.uci.edu/2025/10/14/study-links-wind-blown-dust-from-receding-salton-sea-to-reduced-lung-function-in-area-children">"Study links wind-blown dust from receding Salton Sea to reduced lung function in area children"</a> — published in the American Journal of Respiratory and Critical Care Medicine.</li>
+      <li>USC Keck School of Medicine, <a href="https://keck.usc.edu/news/children-living-near-the-salton-sea-in-southern-california-show-slower-lung-function-growth/">"Children living near the Salton Sea show slower lung function growth"</a>.</li>
+      <li>Salton Sea Independent Review Panel (2022), <a href="https://transform.ucsc.edu/wp-content/uploads/2022/07/Salton-Sea-Independent-Review-Panel-Fatal-Flaw-Report.pdf">Fatal Flaw Analysis of water importation concepts (PDF)</a> — the serious engineering review of Sea of Cortez import.</li>
+      <li>California Salton Sea Management Program, <a href="https://saltonsea.ca.gov/planning/water-importation-independent-review-panel/">Water Importation Independent Review Panel</a> — the state's own page on studying the refill.</li>
+      <li>Lawrence Berkeley National Laboratory (2023), <a href="https://newscenter.lbl.gov/2023/12/12/berkeley-lab-led-analysis-salton-sea-region-domestic-lithium-resource/">"Analysis confirms California's Salton Sea region to be a rich domestic lithium resource"</a> — the 3,400 kt / 375M battery estimate.</li>
+      <li>California Energy Commission, <a href="https://www.energy.ca.gov/programs-and-topics/programs/lithium-valley-vision">Lithium Valley Vision</a> — the state program around Salton Sea lithium.</li>
+      <li>LA Times via Yahoo News, <a href="https://www.yahoo.com/news/salton-sea-emitting-foul-smelling-100000393.html">"Salton Sea is emitting foul-smelling hydrogen sulfide gas, triggering health concerns"</a> — the smell, still ongoing.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <div class="mono">THE SALTON SEA REVIVAL — a sub-initiative of Sahara Elongated City &middot; Marsita the Ultra</div>
+  <div class="disclaimer">The 1905 accident, the Salton Riviera boom, the 2012 odor event that reached Los Angeles, the agricultural-runoff inflows, the child-asthma and lung-growth studies, the Sea of Cortez import proposals and their independent review, the state wetlands program, and the Lithium Valley estimates are all real — see the references above. The Elongated City wrapping is satire. The kids breathing the dust are not. Not affiliated with the State of California, the Imperial Irrigation District, or any billionaire on any shore.</div>
+</footer>
+
+</body>
+</html>
