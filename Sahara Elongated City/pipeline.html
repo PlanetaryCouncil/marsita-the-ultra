@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Arctic Pipeline — Sahara Elongated City</title>
+<style>
+  :root {
+    --night: #0d0a14;
+    --ice: #d9f4ff;
+    --arctic: #6fd6f2;
+    --arctic-deep: #2694b8;
+    --abyss: #0e2a3a;
+    --ink: #eef6f8;
+    --muted: #9fb3bc;
+    --danger: #ff5d5d;
+    --dusk: #ff7a3c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--night); color: var(--ink); font-family: Georgia, 'Times New Roman', serif; line-height: 1.6; overflow-x: hidden; }
+  .mono { font-family: 'Courier New', monospace; letter-spacing: 0.08em; }
+
+  .topnav { padding: 1rem 1.5rem; border-bottom: 1px solid #16222b; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.2em; }
+  .topnav a { color: var(--muted); text-decoration: none; }
+  .topnav a:hover { color: var(--arctic); }
+
+  .hero {
+    min-height: 82vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; position: relative; padding: 5rem 1.5rem 10rem;
+    background:
+      radial-gradient(ellipse 110% 70% at 50% 120%, var(--abyss) 0%, transparent 60%),
+      linear-gradient(180deg, var(--night) 0%, #0d1c26 60%, #081520 100%);
+  }
+  .hero .kicker { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.45em; color: var(--arctic); margin-bottom: 1.4rem; }
+  .hero h1 {
+    font-size: clamp(2.4rem, 8vw, 6rem); font-weight: 900; line-height: 0.95; text-transform: uppercase; letter-spacing: -0.02em;
+    background: linear-gradient(180deg, var(--ink) 30%, var(--arctic) 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline { margin-top: 2rem; font-size: clamp(1rem, 2.5vw, 1.35rem); font-style: italic; color: var(--muted); max-width: 42rem; }
+  .hero .depth { margin-top: 2.5rem; font-family: 'Courier New', monospace; color: var(--arctic); font-size: 0.85rem; letter-spacing: 0.12em; }
+
+  .sea-vis { position: absolute; bottom: 0; left: 0; right: 0; height: 10rem; pointer-events: none; }
+  .sea-vis svg { display: block; width: 100%; height: 100%; }
+
+  section { padding: 5.5rem 1.5rem; position: relative; }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  .section-num { font-size: 0.75rem; color: var(--arctic-deep); text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 1rem; }
+  h2 { font-size: clamp(1.7rem, 5vw, 3rem); font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 1.8rem; line-height: 1.05; }
+  .lede { font-size: 1.18rem; color: var(--ink); max-width: 44rem; margin-bottom: 1.2rem; }
+  p.body-text { color: var(--muted); max-width: 44rem; margin-bottom: 1.2rem; }
+  em.cold { color: var(--arctic); font-style: italic; }
+  em.warn { color: var(--danger); font-style: italic; }
+  em.hot { color: var(--dusk); font-style: italic; }
+  strong { color: var(--ink); }
+  a { color: var(--arctic); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1px; background: #16242e; border: 1px solid #16242e; margin: 3rem 0; }
+  .stat { background: var(--night); padding: 1.7rem 1.4rem; }
+  .stat .n { font-size: 2rem; font-weight: 900; color: var(--arctic); display: block; line-height: 1.1; }
+  .stat .l { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-top: 0.4rem; display: block; }
+  .stat .fine { font-size: 0.68rem; color: #59707c; display: block; margin-top: 0.5rem; font-style: italic; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.4rem; margin-top: 3rem; }
+  .card { border: 1px solid #1d3240; padding: 2rem 1.6rem; background: linear-gradient(160deg, #0d1e29, var(--night)); }
+  .card h3 { font-size: 1.02rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--arctic); margin-bottom: 0.9rem; }
+  .card p { font-size: 0.92rem; color: var(--muted); }
+  .card .icon { font-size: 1.8rem; display: block; margin-bottom: 1rem; }
+
+  .alt { background: linear-gradient(180deg, var(--night), #0a1822, var(--night)); }
+  .real-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--night); background: var(--arctic); padding: 0.2rem 0.6rem; margin-bottom: 1.2rem; }
+  .real-tag.red { background: var(--danger); }
+
+  /* trade study table */
+  .trade { width: 100%; border-collapse: collapse; margin: 2.5rem 0; font-size: 0.9rem; }
+  .trade th { font-family: 'Courier New', monospace; font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--arctic); text-align: left; padding: 0.8rem 1rem; border-bottom: 2px solid var(--arctic-deep); }
+  .trade td { padding: 0.9rem 1rem; border-bottom: 1px solid #16242e; color: var(--muted); vertical-align: top; }
+  .trade td:first-child { color: var(--ink); font-weight: bold; white-space: nowrap; }
+  .trade-scroll { overflow-x: auto; }
+
+  .leak-banner {
+    margin: 3rem 0; padding: 2.5rem 2rem; text-align: center;
+    border: 2px solid var(--arctic-deep);
+    background: radial-gradient(ellipse 80% 120% at 50% 0%, rgba(111,214,242,0.12) 0%, transparent 70%);
+  }
+  .leak-banner .big { font-size: clamp(1.6rem, 5vw, 3rem); font-weight: 900; text-transform: uppercase; color: var(--arctic); line-height: 1.1; }
+  .leak-banner .sub { margin-top: 1.2rem; font-style: italic; color: var(--muted); max-width: 38rem; margin-left: auto; margin-right: auto; }
+
+  .refs { list-style: none; counter-reset: r; max-width: 46rem; margin-top: 2rem; }
+  .refs li { counter-increment: r; padding: 0.9rem 0 0.9rem 3rem; position: relative; border-bottom: 1px solid #16222b; color: var(--muted); font-size: 0.9rem; }
+  .refs li::before { content: "[" counter(r) "]"; position: absolute; left: 0; top: 0.9rem; font-family: 'Courier New', monospace; color: var(--arctic-deep); font-size: 0.85rem; }
+  .refs a { text-decoration: none; }
+  .refs a:hover { text-decoration: underline; }
+
+  footer { padding: 3rem 1.5rem; text-align: center; font-size: 0.75rem; color: #50626d; border-top: 1px solid #16222b; }
+  footer a { color: var(--arctic-deep); text-decoration: none; }
+  .disclaimer { max-width: 42rem; margin: 1rem auto 0; font-style: italic; }
+  .backlink { display: inline-block; margin-top: 2.5rem; padding: 0.9rem 2.2rem; border: 2px solid var(--arctic-deep); color: var(--ink); text-decoration: none; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; transition: all 0.25s; }
+  .backlink:hover { background: var(--arctic-deep); color: var(--night); }
+  .siblinks { margin-top: 1.2rem; font-size: 0.8rem; }
+  .siblinks a { text-decoration: none; display: inline-block; margin: 0 0.6rem; }
+</style>
+</head>
+<body>
+
+<nav class="topnav mono">
+  <a href="index.html">&larr; Sahara Elongated City</a> &nbsp;/&nbsp; <span style="color:var(--arctic)">The Arctic Pipeline</span>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="kicker mono">Infrastructure &middot; how the water actually gets here</div>
+  <h1>The Arctic<br>Pipeline</h1>
+  <p class="tagline">The glaciers are melting into the sea for free. We intercept the meltwater at the source and send it south — through a pipeline whose worst-case failure mode is drinking water arriving slightly early.</p>
+  <div class="depth mono">SOURCE: THE MELTING ARCTIC &nbsp;·&nbsp; ROUTE: LAND vs &minus;30m SUBSEA &nbsp;·&nbsp; LEAK CONTENTS: WATER</div>
+
+  <div class="sea-vis">
+    <svg viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,40 Q360,25 720,38 T1440,35 L1440,160 L0,160 Z" fill="#0e2a3a" opacity="0.7"/>
+      <line x1="0" y1="95" x2="1440" y2="95" stroke="#6fd6f2" stroke-width="3" opacity="0.8"/>
+      <line x1="0" y1="95" x2="1440" y2="95" stroke="#6fd6f2" stroke-width="9" opacity="0.15"/>
+      <line x1="0" y1="38" x2="1440" y2="38" stroke="#d9f4ff" stroke-dasharray="5 7" stroke-width="1" opacity="0.4"/>
+      <circle cx="400" cy="95" r="4" fill="#d9f4ff"/>
+      <circle cx="900" cy="95" r="4" fill="#d9f4ff"/>
+      <circle cx="1200" cy="95" r="4" fill="#d9f4ff"/>
+    </svg>
+  </div>
+</header>
+
+<!-- THE SOURCE -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">01 / The Source</div>
+    <span class="real-tag">Real meltwater, tragically abundant</span>
+    <h2>The Arctic is already shipping. Nobody signed for the package.</h2>
+    <p class="lede">Greenland's ice sheet is losing on the order of <strong>270 billion tonnes of ice a year</strong> [1]. That freshwater currently has exactly one destination: the ocean, where it raises sea levels and drowns the coastlines of nations we're already reselling desert plots to. The supply chain exists. It's just pointed at the problem instead of the solution.</p>
+    <p class="body-text">The pipeline intercepts meltwater at the glacial outflows — after the ice has melted, before it turns salty — and routes it south: to the aquifers, to the oases, to the taps. We are not melting anything. The melting is, regrettably, handled. We're just adding <em class="cold">plumbing to a burst pipe the size of a continent.</em></p>
+
+    <div class="stats">
+      <div class="stat"><span class="n">~270 Gt</span><span class="l">Greenland ice loss / year</span><span class="fine">the delivery is already in transit. we're installing a mailbox</span></div>
+      <div class="stat"><span class="n">0%</span><span class="l">salt at the source</span><span class="fine">pre-desalinated by the sky. catch it before it hits the sea</span></div>
+      <div class="stat"><span class="n">1,166 km</span><span class="l">longest subsea pipeline today</span><span class="fine">Langeled, Norway→UK [2]. it moves gas. imagine it moving something good</span></div>
+      <div class="stat"><span class="n">2</span><span class="l">candidate routes</span><span class="fine">land vs. seabed. we're test-driving both. see the trade study</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE TEST DRIVE -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">02 / The Test Drive</div>
+    <span class="real-tag">Real engineering trade-offs</span>
+    <h2>Land or sea? We drive both and keep the winner.</h2>
+    <p class="lede">Phase one is a <em class="cold">test drive</em>: two pilot segments, one overland, one submerged on the seabed at around <strong>30 metres</strong> — because roughly below that depth, the ocean stops caring about the weather. Storm waves are a surface phenomenon; wave energy fades fast with depth [3]. Down there, a hurricane is a rumour.</p>
+
+    <div class="trade-scroll">
+      <table class="trade">
+        <tr><th>Criterion</th><th>Overland route</th><th>Subsea route (&minus;30 m)</th></tr>
+        <tr><td>Weather</td><td>Sandstorms, heat, freeze-thaw at the Arctic end</td><td>Effectively none. The surface can rage; the pipe doesn't get the memo</td></tr>
+        <tr><td>Access for repair</td><td>Drive a truck to it</td><td>Send the drones (see below — they live down there)</td></tr>
+        <tr><td>Land negotiations</td><td>Every border, every farm, every ministry</td><td>One corridor filing and the fish, who have historically been reasonable</td></tr>
+        <tr><td>Main threat</td><td>Heat and time</td><td>Ships' anchors — hence the Corridor</td></tr>
+        <tr><td>Worst-case spill</td><td>An oasis appears in an unplanned location</td><td>Fresh water enters the sea, which is where it was going anyway</td></tr>
+      </table>
+    </div>
+
+    <p class="body-text">Both pilots run for one full year — thirteen months, obviously — instrumented end to end. Whichever segment delivers more acre-feet per drama wins the build-out. Engineering by bake-off: the only methodology the Ministry of Vibes and the actual engineers have ever agreed on.</p>
+  </div>
+</section>
+
+<!-- THE CORRIDOR -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">03 / The Corridor</div>
+    <span class="real-tag red">Real threat model</span>
+    <h2>A strict no-anchor corridor. We've seen what anchors do.</h2>
+    <p class="lede">The subsea route runs inside a <strong>strict exclusion corridor</strong>: no anchoring, no trawling, no dragging anything across it, enforced by geofencing on every ship's transponder. Vessels cross freely above — they just don't get to <em>touch</em>.</p>
+    <p class="body-text">This is the part of the design we refuse to be relaxed about, because the case study is recent: subsea pipelines are damaged by exactly two things — anchors and sabotage — and the Baltic has demonstrated both [4]. Our corridor is monitored continuously, patrolled autonomously, and — unlike the competition's — contains nothing anyone would want to sabotage. Blowing up a freshwater pipe achieves a rinse.</p>
+    <div class="cards">
+      <div class="card"><span class="icon">🚢</span><h3>Sail Over, Not Through</h3><p>The corridor is a rule, not a wall. Shipping lanes cross it; anchors don't drop in it. The one gate this city has at sea is a line on a chart that every autopilot respects.</p></div>
+      <div class="card"><span class="icon">📡</span><h3>Watched, Always</h3><p>Acoustic sensors along the pipe hear an anchor chain from kilometres away. A ship slowing over the corridor gets a polite hail, then a firm one, then a visit from something with thrusters.</p></div>
+      <div class="card"><span class="icon">🕊️</span><h3>Nothing To Steal</h3><p>No oil to siphon, no gas to weaponise, no leverage to seize. The cargo is drinking water headed to a desert. It is the first strategic pipeline in history that is strategically boring. That's the security model.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE DRONES -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">04 / The Drones</div>
+    <span class="real-tag">The fleet</span>
+    <h2>It heals itself. We just watch.</h2>
+    <p class="lede">Along the pipe lives a permanent <em class="cold">autonomous self-repair fleet</em>: drones that dock on the pipeline, draw power from the flow, and treat the whole line like a body treats skin. Inspect, detect, patch, move on. No surface ship, no dive crew, no waiting for a weather window — at &minus;30 m there is no weather to wait for.</p>
+    <div class="cards">
+      <div class="card"><span class="icon">🤖</span><h3>Crawlers</h3><p>Ride the pipe exterior on rollers, scanning welds ultrasonically, metre by metre, forever. They finish the full length and start again, like painting the Forth Bridge, if the bridge were 2,000 km long and the painters never slept.</p></div>
+      <div class="card"><span class="icon">🩹</span><h3>Patchers</h3><p>Carry sleeve clamps and marine-cure resin. A pinhole gets sleeved within hours of detection — the acoustic signature of escaping water is unmistakable, because it's the sound of our product volunteering.</p></div>
+      <div class="card"><span class="icon">🐋</span><h3>Wardens</h3><p>Range the corridor, shepherd curious trawlers, photograph whales for the annual report. The Ocean Cleanup taught the world that autonomous fleets can tend the sea at scale [5]; ours just has a narrower beat and better job security.</p></div>
+    </div>
+    <p class="body-text">Fleet doctrine is BaseX doctrine: the drones file their own maintenance ledger — People, Planet, Prosperity — and every patch is a public log entry. A pipeline you can audit is a pipeline you can trust. A pipeline that fixes itself before you finish reading the alert is one you can forget about, which is the highest compliment infrastructure can receive.</p>
+  </div>
+</section>
+
+<!-- THE LEAK -->
+<section>
+  <div class="wrap">
+    <div class="section-num mono">05 / The Leak</div>
+    <span class="real-tag">The actual point</span>
+    <h2>And if it leaks anyway?</h2>
+
+    <div class="leak-banner">
+      <div class="big">It's clean glacial water.<br>No big deal.</div>
+      <p class="sub">Read every pipeline disaster headline of the last century, then read our worst-case scenario: fresh drinking water enters the ocean — the exact place it was going before we intercepted it. The catastrophe is indistinguishable from the baseline. Our emergency response plan is a shrug, filed in triplicate.</p>
+    </div>
+
+    <p class="body-text">This is the quiet argument of the whole page. Oil infrastructure made "pipeline" a frightening word, because its failure mode is poison. Swap the cargo for water and the same engineering becomes almost embarrassingly safe: the spill is the product, the product is the rain. <em class="cold">Refill, baby, refill</em> — even our accidents are on message.</p>
+    <a class="backlink mono" href="index.html">&larr; Back to the Elongated City</a>
+    <div class="siblinks mono">
+      <a href="qattara.html">Qattara &rarr;</a>
+      <a href="lake-chad.html">Lake Chad &rarr;</a>
+      <a href="salton-sea.html">Salton Sea &rarr;</a>
+      <a href="kazakhstan.html">Kazakhstan &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- REFERENCES -->
+<section class="alt">
+  <div class="wrap">
+    <div class="section-num mono">06 / References</div>
+    <span class="real-tag">Receipts</span>
+    <h2>The load-bearing facts</h2>
+    <ol class="refs">
+      <li>NASA Climate — <a href="https://climate.nasa.gov/vital-signs/ice-sheets/">Ice sheet mass loss (vital signs)</a>: Greenland has been losing roughly 270 gigatonnes of ice per year.</li>
+      <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Langeled_pipeline">Langeled pipeline</a>: 1,166 km of working subsea pipeline between Norway and the UK. Long subsea lines are solved engineering.</li>
+      <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Wave_base">Wave base</a>: wave energy attenuates rapidly with depth; below storm wave base, the seabed is effectively insulated from surface weather.</li>
+      <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Nord_Stream">Nord Stream</a>: the modern case study in what anchors, and worse, do to subsea pipelines — and why exclusion corridors are not optional.</li>
+      <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/The_Ocean_Cleanup">The Ocean Cleanup</a>: autonomous systems tending open-ocean infrastructure at scale already exist.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <div class="mono">THE ARCTIC PIPELINE — a sub-initiative of Sahara Elongated City &middot; Marsita the Ultra</div>
+  <div class="disclaimer">Greenland's ice loss, the Langeled pipeline, wave-base physics, the Nord Stream lesson, and autonomous marine fleets are real — see references. The intercontinental meltwater pipeline, its bake-off methodology, and its philosophical shrug of an emergency plan are the brochure talking. Moving water this far is energetically heroic and is presented as vision, not feasibility study. The drones' whale photography program, however, would obviously be worth it.</div>
+</footer>
+
+</body>
+</html>

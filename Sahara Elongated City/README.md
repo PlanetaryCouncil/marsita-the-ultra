@@ -47,6 +47,7 @@ Or serve it anywhere static files go (GitHub Pages works out of the box).
 | `lake-chad.html` | The Lake Chad Refill — 30M people, Transaqua |
 | `salton-sea.html` | The Salton Sea Revival — America's Qattara: the smell, the dust, the lithium. With 10 references |
 | `kazakhstan.html` | The Kazakhstan Deal — Baikonur & BaseX, the soft problems, culture included |
+| `pipeline.html` | The Arctic Pipeline — meltwater logistics: land vs −30m subsea, no-anchor corridor, self-repairing drones |
 
 ---
 
