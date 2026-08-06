@@ -29,6 +29,59 @@
   }
   .mono { font-family: 'Courier New', monospace; letter-spacing: 0.08em; }
 
+  /* ---------- BUILD BAR ---------- */
+  .buildbar {
+    display: block;
+    text-align: center;
+    padding: 0.65rem 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--sand);
+    background: linear-gradient(90deg, rgba(255,122,60,0.12), rgba(232,201,138,0.08), rgba(255,122,60,0.12));
+    border-bottom: 1px solid #2a2138;
+    text-decoration: none;
+  }
+  .buildbar:hover { color: var(--dusk); }
+  .buildbar .dot { color: var(--dusk); }
+
+  /* ---------- PILLS ---------- */
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    margin-top: 2.4rem;
+    max-width: 46rem;
+  }
+  .pill {
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 0.5em 1.1em;
+    border-radius: 999px;
+    border: 1px solid var(--dune-shadow);
+    color: var(--ink);
+    transition: all 0.2s;
+    background: rgba(13,10,20,0.5);
+  }
+  .pill:hover { transform: translateY(-2px); }
+  .pill.p-city { border-color: var(--dusk); }
+  .pill.p-city:hover { background: var(--dusk); color: var(--night); }
+  .pill.p-qattara { border-color: var(--glacier-deep); }
+  .pill.p-qattara:hover { background: var(--glacier-deep); color: var(--night); }
+  .pill.p-chad { border-color: #2f9e5f; }
+  .pill.p-chad:hover { background: #2f9e5f; color: var(--night); }
+  .pill.p-salton { border-color: #c94f68; }
+  .pill.p-salton:hover { background: #c94f68; color: var(--night); }
+  .pill.p-kazakh { border-color: #b8890a; }
+  .pill.p-kazakh:hover { background: #fec50c; color: var(--night); }
+  .pill.p-pipe { border-color: #2694b8; }
+  .pill.p-pipe:hover { background: #6fd6f2; color: var(--night); }
+
   /* ---------- HERO ---------- */
   .hero {
     min-height: 100vh;
@@ -352,6 +405,10 @@
 </head>
 <body>
 
+<a class="buildbar" href="https://github.com/PlanetaryCouncil/sahara-elongated-city">
+  🚧 Building in public <span class="dot">&middot;</span> prototype <span class="dot">&middot;</span> fast-moving, iterating daily <span class="dot">&middot;</span> watch it happen on GitHub &rarr;
+</a>
+
 <!-- ============ HERO ============ -->
 <header class="hero">
   <div class="kicker mono">Now pre-selling &middot; Phase 0 of &infin;</div>
@@ -362,6 +419,16 @@
   </h1>
   <p class="tagline">One city. The entire desert. From the northern edge of the Sahara to the southern edge of the Sahara — and every grain of sand in between.</p>
   <p class="subtag mono">It's gated. It's by Elon. It's an Elon-gated community.</p>
+
+  <nav class="pills" aria-label="Project map">
+    <a class="pill p-city" href="#water">🏜️ The City &amp; The Water</a>
+    <a class="pill p-qattara" href="qattara.html">🕳️ Qattara Depression</a>
+    <a class="pill p-chad" href="lake-chad.html">💧 Lake Chad Refill</a>
+    <a class="pill p-salton" href="salton-sea.html">🦩 Salton Sea Revival</a>
+    <a class="pill p-kazakh" href="kazakhstan.html">🚀 Kazakhstan &amp; BaseX</a>
+    <a class="pill p-pipe" href="pipeline.html">🧊 Arctic Pipeline</a>
+    <a class="pill p-city" href="#ask">💸 The YC Ask</a>
+  </nav>
 
   <div class="dunes">
     <svg viewBox="0 0 1440 190" preserveAspectRatio="none" aria-hidden="true">
@@ -528,7 +595,7 @@
 </section>
 
 <!-- ============ THE WATER PLAN ============ -->
-<section class="water-section">
+<section class="water-section" id="water">
   <div class="wrap">
     <div class="section-num mono">05 / The Water</div>
     <h2>We will restore the aquifers.</h2>
@@ -804,7 +871,7 @@
 </section>
 
 <!-- ============ THE ASK ============ -->
-<section class="water-section">
+<section class="water-section" id="ask">
   <div class="wrap">
     <div class="section-num mono">10 / The Ask</div>
     <span style="display:inline-block; font-family:'Courier New',monospace; font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--night); background:var(--glacier); padding:0.2rem 0.6rem; margin-bottom:1.2rem;">Real &middot; Y Combinator asked for this</span>
