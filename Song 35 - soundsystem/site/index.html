@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ==========================================================================
+     TRUTH NOT HATE (the only good system is the sound system) — Marsita the Ultra
+     Single-file promo page. No build step, no dependencies. Just edit + upload.
+
+     WHERE TO EDIT THINGS
+       1. SHARE PREVIEW ....... the <meta> block just below (og: / twitter:)
+          SITE_URL appears there — change it if the domain differs.
+       2. COLOURS ............. :root in the <style> block
+       3. HEADLINE + HOOK ..... "HERO" section in the <body>
+       4. DOWNLOAD LINKS ...... "DOWNLOADS" list. WAV + STEMS are marked
+          "soon" — when the files land in the repo, swap the hrefs for the
+          raw.githubusercontent.com URLs (pattern shown in the MP3 tile).
+       5. SOCIAL LINKS ........ "FOLLOW" list. CHECK THE TELEGRAM HANDLE.
+       6. ARTWORK CANDIDATES .. the ART array in the <script> at the bottom.
+          Thumbs live in ./art/, full-size PNGs are pulled from GitHub raw.
+     ========================================================================== -->
+
+<title>Marsita the Ultra — Truth Not Hate (Sound System)</title>
+
+<!-- ---- SHARE PREVIEW ------------------------------------------------------
+     og:image must be an absolute URL to a real 1200x630 image, or shares on
+     X / WhatsApp / Discord render as a bare grey link.
+     ------------------------------------------------------------------------ -->
+<meta property="og:title" content="TRUTH NOT HATE — Marsita the Ultra">
+<meta property="og:description" content="The only good system is the sound system. Free MP3, WAV + stems for DJs. Work in progress — released rough on purpose. Come vote on the cover.">
+<meta property="og:image" content="https://soundsystem.planetarycouncil.org/preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://soundsystem.planetarycouncil.org/">
+<meta property="og:type" content="music.song">
+<meta property="og:site_name" content="Planetary Council">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TRUTH NOT HATE — Marsita the Ultra">
+<meta name="twitter:description" content="The only good system is the sound system. Free MP3, WAV + stems for DJs. Vote on the cover artwork.">
+<meta name="twitter:image" content="https://soundsystem.planetarycouncil.org/preview.jpg">
+
+<style>
+/* ==========================================================================
+   1. DESIGN TOKENS  — change these to restyle the whole page
+   ========================================================================== */
+:root {
+  /* backgrounds */
+  --night:    #0a0616;   /* page background */
+  --panel:    #1a1038;   /* cards + social tiles */
+  --panel-2:  #120b2b;   /* download tiles */
+  --line:     #372a6b;   /* all borders */
+
+  /* accents */
+  --magenta:  #ff2fb3;   /* pink    — title gradient, drop quote */
+  --violet:   #8b7bff;   /* purple  — download icons */
+  --cyan:     #2fe6ff;   /* blue    — labels, links */
+  --gold:     #ffd23f;   /* yellow  — highlights + vote CTA */
+  --fire:     #ff5a1f;   /* orange  — title gradient */
+
+  /* text */
+  --text:     #f2effc;
+  --dim:      #9a94c8;
+
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--text);
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* drifting laser particles (drawn by the script at the bottom) */
+canvas#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; }
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2.75rem 1.25rem 3.5rem;
+}
+
+
+/* ==========================================================================
+   2. HERO
+   ========================================================================== */
+.kicker {
+  font-family: var(--mono);
+  font-size: .7rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  text-align: center;
+  margin: 0 0 .9rem;
+}
+
+h1 {
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: clamp(2.7rem, 11.5vw, 5.4rem);
+  line-height: .94;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+
+  /* the gradient text effect */
+  background: linear-gradient(175deg, var(--cyan) 0%, var(--violet) 45%, var(--magenta) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px rgba(255, 47, 179, .38));
+}
+
+.artist {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: .85rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: .9rem 0 0;
+}
+
+.hook {
+  text-align: center;
+  font-size: 1.12rem;
+  max-width: 34ch;
+  margin: 1.2rem auto 0;
+}
+.hook b { color: var(--gold); }
+
+
+/* ==========================================================================
+   3. PLAYER + DROP QUOTE
+   ========================================================================== */
+.player {
+  margin: 2.1rem 0 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+}
+.player audio { width: 100%; display: block; }
+.player .note {
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-align: center;
+  margin: .6rem 0 0;
+}
+
+.drop {
+  text-align: center;
+  margin: 1.6rem auto 0;
+  max-width: 30ch;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--magenta);
+  text-shadow: 0 0 22px rgba(255, 47, 179, .45);
+}
+.drop small {
+  display: block;
+  margin-top: .35rem;
+  font-family: var(--mono);
+  font-size: .62rem;
+  font-weight: 400;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-shadow: none;
+}
+
+
+/* ==========================================================================
+   4. ROW LABELS  (the little uppercase captions above each row)
+   ========================================================================== */
+.rowlabel {
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-align: center;
+  margin: 2.1rem 0 .7rem;
+}
+
+
+/* ==========================================================================
+   5. DOWNLOAD TILES
+   ========================================================================== */
+.files {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: .5rem;
+}
+@media (max-width: 380px) { .files { grid-template-columns: 1fr; } }
+
+.files a {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  text-decoration: none;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .65rem .7rem;
+  transition: border-color .16s ease, transform .16s ease;
+}
+.files a:hover { border-color: var(--violet); transform: translateY(-2px); }
+.files a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.files svg  { width: 18px; height: 18px; flex: none; }
+.files .meta { min-width: 0; }
+.files .fmt {
+  display: block;
+  font-family: var(--mono);
+  font-size: .74rem;
+  color: var(--text);
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.files .sz {
+  display: block;
+  font-family: var(--mono);
+  font-size: .55rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: .1rem;
+  white-space: nowrap;
+}
+/* the GitHub tiles get a subtle purple tint so they read as "different" */
+.files .src { border-color: rgba(139,123,255,.5); background: rgba(139,123,255,.09); }
+
+.openline {
+  text-align: center;
+  font-size: .86rem;
+  color: var(--dim);
+  max-width: 52ch;
+  margin: .85rem auto 0;
+}
+
+
+/* ==========================================================================
+   6. TEXT SECTIONS
+   ========================================================================== */
+h2 {
+  font-family: var(--mono);
+  font-size: .7rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-align: center;
+  margin: 3rem 0 1rem;
+  font-weight: 400;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem 1.4rem;
+}
+.card p              { margin: .6rem 0; color: #d9d5ec; }
+.card p:first-child  { margin-top: 0; }
+.card p:last-child   { margin-bottom: 0; }
+.card b              { color: var(--cyan); font-weight: 600; }
+
+/* the little 4-up facts table */
+.specs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.specs div  { background: var(--panel-2); padding: .7rem .85rem; }
+.specs b {
+  display: block;
+  font-family: var(--mono);
+  font-size: .58rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 400;
+  margin-bottom: .15rem;
+}
+.specs span { font-size: .95rem; }
+
+
+/* ==========================================================================
+   7. ARTWORK VOTE
+   ========================================================================== */
+.gallery {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: .6rem;
+}
+@media (max-width: 380px) { .gallery { grid-template-columns: repeat(2, 1fr); } }
+
+.gallery li {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform .16s ease, border-color .16s ease;
+}
+.gallery li:hover { transform: translateY(-3px); }
+.gallery li.picked { border-color: var(--gold); box-shadow: 0 0 18px rgba(255,210,63,.25); }
+
+.gallery button.shot {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  line-height: 0;
+}
+.gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+
+.gallery .strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .4rem;
+  padding: .45rem .55rem;
+}
+.gallery .num {
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gallery button.vote {
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: none;
+  border: 1px solid rgba(255,210,63,.45);
+  border-radius: 5px;
+  padding: .28rem .5rem;
+  cursor: pointer;
+  flex: none;
+}
+.gallery button.vote:hover { background: rgba(255,210,63,.12); }
+.gallery li.picked button.vote { background: var(--gold); color: #171a3a; font-weight: 700; }
+
+/* the share-your-vote bar that appears once something is picked */
+.votebar {
+  display: none;
+  margin: 1rem 0 0;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: .9rem 1rem;
+  text-align: center;
+}
+.votebar.show { display: block; }
+.votebar p { margin: 0 0 .6rem; font-size: .9rem; }
+.votebar p b { color: var(--gold); }
+.votebar .ways { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
+.votebar .ways a {
+  font-family: var(--mono);
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: .45rem .8rem;
+}
+.votebar .ways a:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* lightbox */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 3, 14, .92);
+  padding: 1.2rem;
+  cursor: zoom-out;
+}
+.lightbox.show { display: flex; }
+.lightbox img {
+  max-width: min(92vw, 900px);
+  max-height: 86vh;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+.lightbox .cap {
+  position: fixed;
+  left: 0; right: 0; bottom: 1rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: .68rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+
+/* ==========================================================================
+   8. SOCIAL TILES
+   ========================================================================== */
+.plat {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  justify-content: center;
+}
+.plat a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  width: 74px;
+  height: 74px;
+  border-radius: 14px;
+  text-decoration: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  transition: transform .16s ease, border-color .16s ease;
+}
+.plat a:hover { transform: translateY(-3px); }
+.plat a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.plat svg   { width: 26px; height: 26px; display: block; }
+.plat small {
+  font-family: var(--mono);
+  font-size: .55rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* brand colour on hover, one per platform */
+.tg:hover { border-color: #2aabee; }
+.xx:hover { border-color: #ffffff; }
+.ig:hover { border-color: #e1306c; }
+.tt:hover { border-color: #25f4ee; }
+.sp:hover { border-color: #1db954; }
+.gh:hover { border-color: #8b7bff; }
+
+
+/* ==========================================================================
+   9. THE YELLOW CALL TO ACTION + FOOTER
+   ========================================================================== */
+.ballot {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  background: var(--gold);
+  color: #171a3a;
+  font-weight: 800;
+  font-size: 1.02rem;
+  padding: 1rem;
+  border-radius: 7px;
+}
+.ballot:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+.foot {
+  margin-top: 2.8rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1.1rem;
+  font-family: var(--mono);
+  font-size: .68rem;
+  line-height: 1.8;
+  color: var(--dim);
+  text-align: center;
+}
+.foot a { color: #bab6d6; }
+
+/* respect users who asked their OS for less animation */
+@media (prefers-reduced-motion: reduce) {
+  canvas#bg { display: none; }
+  .plat a, .files a, .gallery li { transition: none; }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <p class="kicker">Marsita the Ultra &middot; New drop &middot; Work in progress</p>
+
+  <h1>Truth<br>Not Hate</h1>
+
+  <p class="artist">The sound system song &middot; 7:23</p>
+
+  <p class="hook">The only good system is <b>the sound system</b>.</p>
+
+
+  <!-- ============ PLAYER ============
+       Streams the MP3 straight from the GitHub repo. -->
+  <div class="player">
+    <audio controls preload="none"
+      src="https://raw.githubusercontent.com/PlanetaryCouncil/marsita-the-ultra/main/Song%2035%20-%20soundsystem/Marsita%20the%20Ultra%20%E2%80%94%20TRUTH%20NOT%20HATE%20(the%20only%20good%20system%20is%20the%20sound%20system).mp3"></audio>
+    <p class="note">Full track &middot; free &middot; no sign-up</p>
+  </div>
+
+  <p class="drop">&ldquo;We party till we win &mdash; we occupy with love&rdquo;
+    <small>the drop, mid-song &middot; built to be looped</small>
+  </p>
+
+
+  <!-- ============ DOWNLOADS ============
+       MP3 is live now. When the WAV + stems land in the repo, replace the
+       two GitHub-folder links below with direct raw.githubusercontent.com
+       file URLs (same pattern as the MP3 tile above). -->
+  <p class="rowlabel">Download &amp; remix &mdash; everything is open</p>
+  <ul class="files">
+
+    <li><a href="https://raw.githubusercontent.com/PlanetaryCouncil/marsita-the-ultra/main/Song%2035%20-%20soundsystem/Marsita%20the%20Ultra%20%E2%80%94%20TRUTH%20NOT%20HATE%20(the%20only%20good%20system%20is%20the%20sound%20system).mp3" download>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#8b7bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 3v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M4.5 19.5h15"/></g></svg>
+      <span class="meta"><b class="fmt">MP3</b><span class="sz">Audio &middot; 11 MB</span></span>
+    </a></li>
+
+    <li><a href="https://github.com/PlanetaryCouncil/marsita-the-ultra/tree/main/Song%2035%20-%20soundsystem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#8b7bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 3v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M4.5 19.5h15"/></g></svg>
+      <span class="meta"><b class="fmt">WAV</b><span class="sz">Lossless &middot; soon</span></span>
+    </a></li>
+
+    <li><a class="src" href="https://github.com/PlanetaryCouncil/marsita-the-ultra/tree/main/Song%2035%20-%20soundsystem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#8b7bff" stroke-width="1.9" stroke-linecap="round" fill="none"><path d="M4 15V9M8 18V6M12 20V4M16 17V7M20 14v-4"/></g></svg>
+      <span class="meta"><b class="fmt">Stems</b><span class="sz">Dropping soon</span></span>
+    </a></li>
+
+    <li><a class="src" href="https://github.com/PlanetaryCouncil/marsita-the-ultra/tree/main/Song%2035%20-%20soundsystem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#8b7bff" d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2z"/></svg>
+      <span class="meta"><b class="fmt">Source</b><span class="sz">GitHub &middot; all files</span></span>
+    </a></li>
+
+  </ul>
+
+  <p class="openline">Everything lands in the open GitHub repo &mdash; audio, artwork, eventually the stems and project files. Remix it, cut it, sample it, play it out.</p>
+
+
+  <!-- ============ WHY IT'S ROUGH ============ -->
+  <h2>Released rough, on purpose</h2>
+  <div class="card">
+    <p>Honesty first: the <b>intro is a little rough</b> and the <b>ending is a little rough</b>. The middle 90% &mdash; the build, the drop, <i>we party till we win, we occupy with love</i> &mdash; is exactly where it should be.</p>
+    <p>If you're a DJ, you were never going to play my intro anyway. You're going to <b>mix in, loop your favourite moment, and mix out</b>. So instead of sitting on the track for another month polishing thirty seconds nobody hears in the club, it's out now. Perfecting an intro that gets blended away is a bad trade against a dance floor tonight.</p>
+    <p>When the final master lands, it lands here first. Same page, same links.</p>
+  </div>
+
+
+  <!-- ============ FACTS TABLE ============ -->
+  <h2>The details</h2>
+  <div class="specs">
+    <div><b>Runtime</b><span>7:23</span></div>
+    <div><b>Status</b><span>Work in progress</span></div>
+    <div><b>Best bit</b><span>The middle 90%</span></div>
+    <div><b>Licence</b><span>Open &middot; remix it</span></div>
+  </div>
+
+
+  <!-- ============ ARTWORK VOTE ============
+       Grid + lightbox rendered by the script at the bottom (ART array).
+       Voting is client-side: pick locally, then share the pick via
+       Telegram / X / email. No backend, nothing stored on a server. -->
+  <h2>Vote for the cover</h2>
+  <div class="card" style="margin-bottom:.7rem">
+    <p><b>13 candidates.</b> One becomes the cover. Tap to zoom, hit <b>vote</b> on your favourite, then fire it at me on Telegram, X or email. Got a better idea entirely? Even better &mdash; send that.</p>
+  </div>
+
+  <ul class="gallery" id="gallery"></ul>
+
+  <div class="votebar" id="votebar">
+    <p>Your pick: <b id="pickname">&mdash;</b>. Now make it count:</p>
+    <div class="ways">
+      <a id="voteTg" href="#" target="_blank" rel="noopener">Telegram</a>
+      <a id="voteX"  href="#" target="_blank" rel="noopener">Post on X</a>
+      <a id="voteEm" href="#">Email it</a>
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox">
+    <img id="lightimg" src="" alt="">
+    <p class="cap" id="lightcap"></p>
+  </div>
+
+
+  <!-- ============ OPEN FOR BUSINESS ============ -->
+  <h2>Open for business</h2>
+  <div class="card">
+    <p>This page is a <b>sound system</b>, not a billboard. Suggest ideas, send edits, claim a remix, book the track, put it in a mix, put it in a set, put it in a film.</p>
+    <p>Collabs, DJ plays, radio, playlists, clips, press &mdash; <b>always open</b>. The fastest way in is a message.</p>
+  </div>
+
+
+  <!-- ============ FOLLOW ============
+       !!! CHECK THE TELEGRAM LINK — placeholder handle, confirm it's right. -->
+  <p class="rowlabel">Join the party</p>
+  <ul class="plat">
+
+    <li><a class="tg" href="https://t.me/MarsitaTheUltra" title="Join on Telegram">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" fill="#2aabee"/>
+        <path fill="#fff" d="M17.4 7.2 15.6 16c-.13.6-.5.74-1 .46l-2.8-2.06-1.35 1.3c-.15.15-.27.27-.56.27l.2-2.85 5.2-4.7c.23-.2-.05-.31-.35-.11l-6.4 4.03-2.77-.87c-.6-.19-.61-.6.13-.89l10.8-4.16c.5-.19.94.11.78.78z"/>
+      </svg>
+      <small>Telegram</small>
+    </a></li>
+
+    <li><a class="xx" href="https://x.com/MarsitaTheUltra" title="Follow on X">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#fff" d="M17.7 3h3.2l-7 8 8.2 10h-6.4l-5-6.1L4.9 21H1.7l7.5-8.6L1.4 3H8l4.5 5.6L17.7 3zm-1.1 16.1h1.8L7.9 4.8H6l10.6 14.3z"/>
+      </svg>
+      <small>X</small>
+    </a></li>
+
+    <li><a class="ig" href="https://www.instagram.com/MarsitaTheUltra" title="Follow on Instagram">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="none" stroke="#e1306c" stroke-width="2"/>
+        <circle cx="12" cy="12" r="4.3" fill="none" stroke="#e1306c" stroke-width="2"/>
+        <circle cx="17.6" cy="6.4" r="1.35" fill="#e1306c"/>
+      </svg>
+      <small>Instagram</small>
+    </a></li>
+
+    <li><a class="tt" href="https://www.tiktok.com/@marsrobertson" title="Follow on TikTok">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#25f4ee" d="M15.8 2h-2.9v13.3a2.6 2.6 0 1 1-2.2-2.6v-3a5.6 5.6 0 1 0 5.1 5.6V8.9a7 7 0 0 0 4 1.3V7.3a4 4 0 0 1-4-4V2z"/>
+      </svg>
+      <small>TikTok</small>
+    </a></li>
+
+    <li><a class="sp" href="https://open.spotify.com/playlist/7lu83IHHSAOOC3qoRfoBUr" title="Marsita the Ultra on Spotify">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" fill="#1db954"/>
+        <g stroke="#0b1020" stroke-width="1.7" stroke-linecap="round" fill="none">
+          <path d="M7.1 9.3c3.3-.9 6.9-.6 9.6 1.1"/>
+          <path d="M7.7 12.6c2.7-.7 5.6-.4 7.8 1"/>
+          <path d="M8.3 15.6c2.1-.5 4.4-.3 6.1.8"/>
+        </g>
+      </svg>
+      <small>Spotify</small>
+    </a></li>
+
+    <li><a class="gh" href="https://github.com/PlanetaryCouncil/marsita-the-ultra" title="Everything on GitHub">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#8b7bff" d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2z"/></svg>
+      <small>GitHub</small>
+    </a></li>
+
+  </ul>
+
+
+  <!-- ============ CALL TO ACTION ============ -->
+  <h2>Then do the thing</h2>
+  <a class="ballot" href="mailto:email@genesis.re?subject=SOUND%20SYSTEM%20%E2%80%94%20let's%20talk">&#128266; Book it &middot; remix it &middot; suggest something wild</a>
+
+
+  <!-- ============ FOOTER ============ -->
+  <p class="foot">
+    Available for DJ plays, radio, playlists, clips and press.<br>
+    <a href="mailto:email@genesis.re">email@genesis.re</a> &middot; Marsita the Ultra<br><br>
+    Work in progress, shared early on purpose.<br>
+    Truth, not hate. Party till we win.
+  </p>
+
+</div>
+
+
+<script>
+/* ==========================================================================
+   ARTWORK CANDIDATES
+   Thumbs are ./art/artNN.jpg (committed next to this file).
+   "full" is the original PNG in the repo, loaded only when zoomed.
+   To add/remove candidates: edit this array, drop a thumb in ./art/.
+   ========================================================================== */
+var RAW = 'https://raw.githubusercontent.com/PlanetaryCouncil/marsita-the-ultra/main/Song%2035%20-%20soundsystem/ARTWORK%20COVER/';
+
+var ART = [
+  { n:  1, name: 'Warehouse WOW',      file: 'grok WOW.png' },
+  { n:  2, name: 'Neon Cathedral',     file: 'grok chat NICE.png' },
+  { n:  3, name: 'Laser Temple',       file: 'grok chat v2.png' },
+  { n:  4, name: 'Big Rig',            file: 'grok chat v3.png' },
+  { n:  5, name: 'Boombox Wall',       file: 'grok chat v4.png' },
+  { n:  6, name: 'Heart Stack',        file: 'grok chat v5.png' },
+  { n:  7, name: 'Rainbow Type',       file: 'soundssystem 02 d7e9df10-b2d0-429e-b3f2-69b58a15fa8f.png' },
+  { n:  8, name: 'Widescreen Rig',     file: 'soundssystem d7e9df10-b2d0-429e-b3f2-69b58a15fa8f.png' },
+  { n:  9, name: 'Doves & Butterflies',file: 'soundssystem initial improved d7e9df10-b2d0-429e-b3f2-69b58a15fa8f.png' },
+  { n: 10, name: 'Sky Towers',         file: 'soundsyste m0bb19da1-1408-491e-b159-79318d9b5f1f.png' },
+  { n: 11, name: 'Planet Heart',       file: 'soundsystem 04 e32f9f8f-ec33-4726-86be-302275c1a36b.png' },
+  { n: 12, name: 'The Listener',       file: 'techno rave 877f848c-c5f2-4a6e-bc13-1315188ee92c.png' },
+  { n: 13, name: 'Listener II',        file: 'techno rave title speaker 877f848c-c5f2-4a6e-bc13-1315188ee92c.png' }
+];
+
+var SITE_URL = 'https://soundsystem.planetarycouncil.org/';
+
+(function () {
+  var gallery  = document.getElementById('gallery');
+  var votebar  = document.getElementById('votebar');
+  var pickname = document.getElementById('pickname');
+  var lightbox = document.getElementById('lightbox');
+  var lightimg = document.getElementById('lightimg');
+  var lightcap = document.getElementById('lightcap');
+
+  function fullUrl(a) { return RAW + encodeURIComponent(a.file); }
+  function thumbUrl(a) {
+    var i = a.n < 10 ? '0' + a.n : '' + a.n;
+    return 'art/art' + i + '.jpg';
+  }
+
+  // build the grid
+  ART.forEach(function (a) {
+    var li = document.createElement('li');
+    li.id = 'art-' + a.n;
+    li.innerHTML =
+      '<button class="shot" title="Zoom">' +
+        '<img loading="lazy" src="' + thumbUrl(a) + '" alt="Cover candidate ' + a.n + ': ' + a.name + '">' +
+      '</button>' +
+      '<div class="strip">' +
+        '<span class="num">#' + a.n + ' ' + a.name + '</span>' +
+        '<button class="vote">Vote</button>' +
+      '</div>';
+    li.querySelector('.shot').addEventListener('click', function () { zoom(a); });
+    li.querySelector('.vote').addEventListener('click', function () { pick(a); });
+    gallery.appendChild(li);
+  });
+
+  function zoom(a) {
+    lightimg.src = fullUrl(a);
+    lightimg.alt = 'Cover candidate ' + a.n + ': ' + a.name;
+    lightcap.textContent = '#' + a.n + ' ' + a.name + ' — tap anywhere to close';
+    lightbox.classList.add('show');
+  }
+  lightbox.addEventListener('click', function () { lightbox.classList.remove('show'); lightimg.src = ''; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lightbox.classList.remove('show'); });
+
+  function pick(a) {
+    try { localStorage.setItem('ss-artwork-pick', a.n); } catch (e) {}
+    render(a);
+    votebar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function render(a) {
+    ART.forEach(function (b) {
+      document.getElementById('art-' + b.n).classList.toggle('picked', b.n === a.n);
+      document.querySelector('#art-' + b.n + ' .vote').textContent = (b.n === a.n) ? 'Picked ✓' : 'Vote';
+    });
+    pickname.textContent = '#' + a.n + ' ' + a.name;
+
+    var msg = 'My vote for the SOUND SYSTEM cover: #' + a.n + ' "' + a.name + '" 🔊 ' + SITE_URL;
+    document.getElementById('voteTg').href =
+      'https://t.me/share/url?url=' + encodeURIComponent(SITE_URL) +
+      '&text=' + encodeURIComponent('My vote for the SOUND SYSTEM cover: #' + a.n + ' "' + a.name + '" @MarsitaTheUltra');
+    document.getElementById('voteX').href =
+      'https://twitter.com/intent/tweet?text=' + encodeURIComponent(msg + ' @MarsitaTheUltra');
+    document.getElementById('voteEm').href =
+      'mailto:email@genesis.re?subject=' + encodeURIComponent('Artwork vote: #' + a.n + ' ' + a.name) +
+      '&body=' + encodeURIComponent('My vote for the SOUND SYSTEM cover is #' + a.n + ' "' + a.name + '".\n\nIdeas / remarks:\n');
+    votebar.classList.add('show');
+  }
+
+  // restore a previous pick
+  try {
+    var saved = parseInt(localStorage.getItem('ss-artwork-pick'), 10);
+    var found = ART.filter(function (a) { return a.n === saved; })[0];
+    if (found) render(found);
+  } catch (e) {}
+})();
+
+
+/* ==========================================================================
+   BACKGROUND LASERS
+   Slow drifting dots. Set PARTICLE_COUNT to 0 to switch this off entirely.
+   ========================================================================== */
+var PARTICLE_COUNT = 64;
+
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (PARTICLE_COUNT === 0) return;
+
+  var canvas = document.getElementById('bg');
+  var ctx    = canvas.getContext('2d');
+  var W, H, particles = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth  * window.devicePixelRatio;
+    H = canvas.height = window.innerHeight * window.devicePixelRatio;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // magenta, cyan, violet, gold — as rgb triplets so we can vary the alpha
+  var COLOURS = ['255,47,179', '47,230,255', '139,123,255', '255,210,63'];
+
+  for (var i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: (Math.random() * 1.9 + 0.5) * window.devicePixelRatio,  // radius
+      s: Math.random() * 0.3 + 0.07,                              // rise speed
+      c: COLOURS[i % 4],
+      a: Math.random() * 0.45 + 0.14,                             // base opacity
+      ph: Math.random() * 6.28                                    // twinkle offset
+    });
+  }
+
+  function frame(t) {
+    ctx.clearRect(0, 0, W, H);
+
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+
+      p.y -= p.s * window.devicePixelRatio;
+      if (p.y < -8) { p.y = H + 8; p.x = Math.random() * W; }     // wrap to bottom
+
+      var twinkle = p.a * (0.6 + 0.4 * Math.sin(t / 900 + p.ph));
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, 6.28);
+      ctx.fillStyle = 'rgba(' + p.c + ',' + twinkle + ')';
+      ctx.fill();
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
