@@ -82,6 +82,39 @@
   .pill.p-pipe { border-color: #2694b8; }
   .pill.p-pipe:hover { background: #6fd6f2; color: var(--night); }
 
+  /* ---------- SIGNUP ---------- */
+  .signup { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 1.8rem; width: 100%; max-width: 30rem; }
+  .signup input[type=email] {
+    flex: 1 1 14rem; min-width: 0; padding: 0.85rem 1rem; font: inherit; font-size: 0.95rem;
+    background: rgba(13,10,20,0.7); color: var(--ink); border: 1px solid var(--sand-deep); border-radius: 4px;
+  }
+  .signup input[type=email]::placeholder { color: #7a6a55; }
+  .signup input[type=email]:focus { outline: 2px solid var(--dusk); outline-offset: 1px; }
+  .signup button {
+    flex: 0 0 auto; padding: 0.85rem 1.4rem; font-family: 'Courier New', monospace; font-size: 0.78rem; letter-spacing: 0.15em;
+    text-transform: uppercase; background: var(--dusk); color: var(--night); border: 2px solid var(--dusk); border-radius: 4px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .signup button:hover { background: transparent; color: var(--ink); }
+  .signup .hp { position: absolute; left: -9999px; }
+  .signup-note { margin-top: 0.7rem; font-size: 0.72rem; color: #8a7a62; font-style: italic; text-align: center; }
+  .signup-msg { margin-top: 0.8rem; font-size: 0.85rem; color: var(--glacier); min-height: 1.2em; text-align: center; }
+  .signup.big input[type=email] { padding: 1.1rem 1.2rem; font-size: 1.05rem; }
+  .signup.big button { padding: 1.1rem 2rem; font-size: 0.85rem; }
+
+  /* ---------- ANTI-PROSPECTUS ---------- */
+  .prospectus { background: linear-gradient(180deg, var(--night) 0%, #1a0f14 50%, var(--night) 100%); border-top: 1px solid rgba(255,93,93,0.25); border-bottom: 1px solid rgba(255,93,93,0.25); }
+  .prospectus h2 { color: #ff8fa3; }
+  .prospectus .section-num { color: #ff5d5d; }
+  .disclose { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1px; background: #3a1f28; border: 1px solid #3a1f28; margin: 3rem 0; }
+  .disclose .d { background: var(--night); padding: 1.4rem 1.4rem; }
+  .disclose .k { display: block; font-family: 'Courier New', monospace; font-size: 0.66rem; letter-spacing: 0.25em; text-transform: uppercase; color: #ff5d5d; margin-bottom: 0.5rem; }
+  .disclose .v { display: block; font-size: 1.15rem; color: var(--ink); line-height: 1.3; }
+  .disclose .v small { display: block; font-size: 0.75rem; color: var(--muted); font-style: italic; margin-top: 0.4rem; }
+  .warn-box { border: 2px solid #ff5d5d; padding: 1.6rem 1.8rem; margin: 2.5rem 0; max-width: 44rem; background: rgba(255,93,93,0.05); }
+  .warn-box .t { font-family: 'Courier New', monospace; font-size: 0.7rem; letter-spacing: 0.3em; text-transform: uppercase; color: #ff5d5d; display: block; margin-bottom: 0.7rem; }
+  .warn-box p { color: var(--ink); margin: 0; }
+
   /* ---------- HERO ---------- */
   .hero {
     min-height: 100vh;
@@ -428,7 +461,16 @@
     <a class="pill p-kazakh" href="kazakhstan.html">🚀 Kazakhstan &amp; BaseX</a>
     <a class="pill p-pipe" href="pipeline.html">🧊 Arctic Pipeline</a>
     <a class="pill p-city" href="#ask">💸 The YC Ask</a>
+    <a class="pill p-salton" href="#prospectus">⚠️ Anti-Prospectus</a>
   </nav>
+
+  <form class="signup js-signup" action="#" method="post" novalidate>
+    <input type="email" name="email" placeholder="your@email — get updates" required autocomplete="email" aria-label="Email address">
+    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit">Sign up</button>
+  </form>
+  <p class="signup-msg js-signup-msg" aria-live="polite"></p>
+  <p class="signup-note">Updates only. No money changes hands. Unsubscribe by wandering into the desert.</p>
 
   <div class="dunes">
     <svg viewBox="0 0 1440 190" preserveAspectRatio="none" aria-hidden="true">
@@ -920,10 +962,43 @@
   </div>
 </section>
 
+<!-- ============ THE ANTI-PROSPECTUS ============ -->
+<section class="prospectus" id="prospectus">
+  <div class="wrap">
+    <div class="section-num mono">11 / The Anti-Prospectus</div>
+    <h2>Everything a real prospectus hides. Up front. In large type.</h2>
+    <p class="lede">This section is for the one percent. You have a billion, you want <strong>one percent a month</strong>, you want it offshore, and you want it from someone crazier than your current advisors. We can offer exactly one of those things with certainty, and it isn't the return.</p>
+    <p class="body-text">The last man who ran an uninsured, unregulated financial operation out of the Bahamas told everyone it was safe. He is now serving twenty-five years. We have studied his pitch deck with great care and removed the sentence where it lies. What remains is below.</p>
+
+    <div class="disclose">
+      <div class="d"><span class="k">Target return</span><span class="v">1% per month<small>Guaranteed return: none. Not one basis point. Read that twice.</small></span></div>
+      <div class="d"><span class="k">Jurisdiction</span><span class="v">None<small>We considered the Bahamas, the Cayman Islands and the BVI, and chose "no legal entity" as the most honest of the four.</small></span></div>
+      <div class="d"><span class="k">Legal entity</span><span class="v">Unincorporated<small>Unregistered, uninsured, unaudited, unbothered.</small></span></div>
+      <div class="d"><span class="k">Asset class</span><span class="v">Ultraspeculative<small>Crypto-adjacent. "Risky" is not a disclosure here; it is the marketing.</small></span></div>
+      <div class="d"><span class="k">Deposit protection</span><span class="v">Zero<small>There is no scheme, no fund, no adult in the room. The room is a dune.</small></span></div>
+      <div class="d"><span class="k">Use of proceeds</span><span class="v">Dirt → islands → bunkers<small>Excavation spoil from the canals becomes new land offshore; the bunkers underneath are for the investors who insisted.</small></span></div>
+      <div class="d"><span class="k">The founder</span><span class="v">100+ psychedelic journeys, logged<small>Ayahuasca disclosed as a competitive advantage. Self-certified "legally crazy, not dangerous" — his words, and, he reports, his therapist's.</small></span></div>
+      <div class="d"><span class="k">Track record</span><span class="v">See the rest of this website<small>Every project on it is either satire or somebody else's real megaproject. We have never returned 1% a month to anyone, including ourselves.</small></span></div>
+    </div>
+
+    <div class="warn-box">
+      <span class="t">The only guarantee</span>
+      <p>This is a high-risk investment. That is the sole guarantee we make, and we stand behind it with our whole chest. Everything else on this page — the islands, the bunkers, the one percent — is an ambition with excellent lighting.</p>
+    </div>
+
+    <p class="body-text">Why publish this? Because every collapse of the last decade came wrapped in a prospectus that said "secure." Ours says "unhinged." You are reading the first financial document in history where the fine print is larger than the headline, and the headline is a warning. If that is somehow <em class="hot">more</em> appealing to you, welcome: you are precisely the one percent we were describing.</p>
+
+    <div class="warn-box" style="border-style:dashed; background:transparent;">
+      <span class="t">The actual legal line</span>
+      <p style="color:var(--muted); font-size:0.95rem;">Nothing on this website is an offer to sell, or a solicitation to buy, securities, tokens, plots, bunkers or anything else. No money is being taken. Signing up below gets you emails, not equity. If you wire funds anyway, that is between you and your ayahuasca.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ============ FAQ ============ -->
 <section>
   <div class="wrap">
-    <div class="section-num mono">11 / FAQ</div>
+    <div class="section-num mono">12 / FAQ</div>
     <h2>Frequently Anticipated Questions</h2>
 
     <details>
@@ -996,11 +1071,16 @@
 <!-- ============ CTA ============ -->
 <section class="cta-section">
   <div class="wrap">
-    <div class="section-num mono">12 / Join</div>
+    <div class="section-num mono">13 / Join</div>
     <h2>The desert is filling up.<br>With ambition.</h2>
-    <p class="lede" style="margin-left:auto; margin-right:auto;">Reserve your kilometre today. Plots are sold by the linear kilometre, because area is for cities with two dimensions.</p>
-    <button class="cta-btn mono" onclick="this.textContent='POSITION IN QUEUE: 1,500,000,000,000,000,000,000,000'; this.style.letterSpacing='0.05em'; this.style.fontSize='0.6rem';">Join the Waitlist</button>
-    <p class="cta-fine">Deposits are non-refundable, non-transferable, and non-existent until our payments provider returns our calls. Waitlist position determined by vibes and settled in sand.</p>
+    <p class="lede" style="margin-left:auto; margin-right:auto;">Sign up with your email and follow the build — the water, the islands, the launches, the picks, the inevitable pivots. Plots are still sold by the linear kilometre, because area is for cities with two dimensions.</p>
+    <form class="signup big js-signup" action="#" method="post" novalidate style="margin-left:auto; margin-right:auto;">
+      <input type="email" name="email" placeholder="your@email" required autocomplete="email" aria-label="Email address">
+      <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button type="submit">Sign up — it's free</button>
+    </form>
+    <p class="signup-msg js-signup-msg" aria-live="polite"></p>
+    <p class="cta-fine">Position in queue on signup: 1,500,000,000,000,000,000,000,000 — one per grain of sand. Deposits are non-refundable, non-transferable, and non-existent. No money changes hands; the Anti-Prospectus above explains why that's the safest sentence on the internet.</p>
   </div>
 </section>
 
@@ -1009,5 +1089,38 @@
   <div class="disclaimer">This is satire. No deserts were purchased in the making of this brochure. The glaciers, regrettably, are actually melting — that part isn't a joke, which is sort of the point. Not affiliated with any billionaire, living, dead, or on Mars.</div>
 </footer>
 
+<script>
+(function () {
+  // Where sign-ups go. Paste a Formspree / Buttondown / Mailchimp POST URL here.
+  // Leave empty to fall back to a mailto: link so the button still works everywhere.
+  var SIGNUP_ENDPOINT = "";
+  var FALLBACK_MAILTO = "waitlist@planetarycouncil.org";
+
+  document.querySelectorAll('.js-signup').forEach(function (form) {
+    var msg = form.parentNode.querySelector('.js-signup-msg');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = (form.email.value || '').trim();
+      if (form.website && form.website.value) return; // honeypot
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        msg.textContent = 'That does not look like an email. The Ministry has been notified.'; return;
+      }
+      if (SIGNUP_ENDPOINT) {
+        msg.textContent = 'Sending…';
+        fetch(SIGNUP_ENDPOINT, { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, source: 'sahara-elongated-city' }) })
+        .then(function (r) { if (!r.ok) throw 0;
+          msg.textContent = 'Signed up. Position in queue: 1.5 septillion. Welcome to the desert.'; form.reset(); })
+        .catch(function () { msg.textContent = 'The pipeline leaked (harmlessly). Try again, or email ' + FALLBACK_MAILTO + '.'; });
+      } else {
+        var subject = encodeURIComponent('Waitlist — Sahara Elongated City');
+        var body = encodeURIComponent('Sign me up for updates.\n\nEmail: ' + email + '\n\nVibes: good must be.');
+        window.location.href = 'mailto:' + FALLBACK_MAILTO + '?subject=' + subject + '&body=' + body;
+        msg.textContent = 'Opening your email app — hit send and you are in.';
+      }
+    });
+  });
+})();
+</script>
 </body>
 </html>
