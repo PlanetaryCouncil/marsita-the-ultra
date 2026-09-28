@@ -1,0 +1,56 @@
+# Publishes site/ to GitHub Pages whenever it changes on main.
+#
+# The repo is ~6 GB of audio history, so the checkout pulls ONLY the site/
+# folder (sparse, shallow, no blobs outside it). Songs' audio/stems are
+# linked straight from the repo via raw.githubusercontent.com, not copied.
+#
+# One-time setup: repo Settings -> Pages -> Source: "GitHub Actions",
+# then add the custom domain there. See site/README.md.
+
+name: Publish site
+
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: site
+          sparse-checkout-cone-mode: false
+          lfs: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build song pages from catalog.js
+        run: node site/build.js
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
