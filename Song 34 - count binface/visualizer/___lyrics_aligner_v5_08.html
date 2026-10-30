@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LYRICS ALIGNER v5.08 — undo, pan, revert</title>
+<style>
+:root{--void:#010207;--pink:#ff2bd6;--cyan:#25dcff;--gold:#ffe56b;--acid:#63ff9d;--violet:#735cff}
+*{box-sizing:border-box;margin:0}
+body{background:var(--void);color:#e8ecf7;font:500 12px/1.5 ui-monospace,Menlo,Consolas,monospace;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.12)}
+h1{font:1000 15px/1 "Arial Black",Impact,sans-serif;letter-spacing:-.01em;text-transform:uppercase;color:#fff;
+   text-shadow:-2px 0 var(--pink),2px 0 var(--cyan);margin-right:6px}
+button,select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.22);color:#fff;font:700 10px/1 ui-monospace,monospace;
+  letter-spacing:.1em;padding:8px 10px;cursor:pointer;text-transform:uppercase}
+button:hover{border-color:var(--acid);color:var(--acid)}
+button.on{background:var(--violet);border-color:var(--violet);color:#fff}
+button.go{background:var(--acid);color:#031008;border:0}
+button:disabled{opacity:.35;cursor:not-allowed}
+.spacer{flex:1}
+#waves{position:relative;flex:0 0 auto;padding:8px 14px 0}
+canvas{display:block;width:100%;background:#05060d;border:1px solid rgba(255,255,255,.12);cursor:crosshair}
+canvas.res{cursor:ew-resize}
+canvas.mov{cursor:grab}
+canvas.drag{cursor:grabbing}
+.wlabel{font:700 9px/1 ui-monospace,monospace;letter-spacing:.24em;color:var(--gold);text-transform:uppercase;margin:8px 0 3px}
+#strip{flex:1;overflow-y:auto;padding:10px 14px;border-top:1px solid rgba(255,255,255,.12);margin-top:10px}
+.w{display:inline-block;padding:6px 9px;margin:0 4px 6px 0;border:1px solid rgba(255,255,255,.18);cursor:pointer;
+   font:700 12px/1 ui-monospace,monospace;white-space:nowrap}
+.w.placed{border-color:rgba(37,220,255,.5);color:var(--cyan)}
+.w.next{background:var(--acid);color:#031008;border-color:var(--acid)}
+.w.sel{outline:2px solid var(--violet);outline-offset:1px}
+.w.hov{border-color:var(--gold)}
+.w small{opacity:.6;font-weight:400;margin-left:6px}
+footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;border-top:1px solid rgba(255,255,255,.12);font-size:11px}
+.k{color:var(--gold)}
+#paste{position:fixed;inset:0;background:rgba(1,2,7,.94);z-index:40;display:none;place-items:center;padding:24px}
+#paste.on{display:grid}
+#paste div{width:min(760px,94vw)}
+textarea{width:100%;height:44vh;background:#05060d;color:#e8ecf7;border:1px solid rgba(255,255,255,.2);padding:12px;
+  font:500 13px/1.6 ui-monospace,monospace;resize:vertical}
+.note{color:rgba(255,255,255,.5);font-size:10px;line-height:1.7}
+#status{color:var(--gold);font-size:11px}
+#drop{position:fixed;inset:0;background:rgba(99,255,157,.10);border:3px dashed var(--acid);
+  z-index:60;display:none;place-items:center;font:1000 22px/1 "Arial Black",sans-serif;color:var(--acid);
+  letter-spacing:.06em;text-transform:uppercase}
+#drop.on{display:grid}
+audio{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Lyrics Aligner</h1>
+  <button id="loadMix">Load mix</button>
+  <button id="loadVox">Load vocals</button>
+  <button id="addVox">+ Add stem</button>
+  <button id="pasteBtn">Paste lyrics</button>
+  <button id="loadJson">Load JSON</button>
+  <span class="spacer"></span>
+  <button id="loadAsr">Load ASR</button>
+  <button id="align" class="go" disabled>⌁ Align</button>
+  <button id="useAsr" disabled>Use transcript</button>
+  <button id="shiftL">−50ms</button><button id="shiftR">+50ms</button>
+  <button id="analyse">⚡ Analyse</button>
+  <button id="snapBtn" class="hp on">Snap ⌁</button>
+  <button id="fill">Fill gaps</button>
+  <button id="undoBtn" disabled>↶ Undo</button>
+  <button id="redoBtn" disabled>↷</button>
+  <button id="revert">Revert</button>
+  <button id="clearT">Clear times</button>
+  <button id="save">Save</button>
+  <button id="open">Open</button>
+  <span class="spacer"></span>
+  <span class="note">Hands</span>
+  <button class="hp on" data-h="left">Left ASDF</button>
+  <button class="hp" data-h="right">Right JKL</button>
+  <span class="spacer"></span>
+  <span id="status">load a mix + paste lyrics</span>
+  <button id="export" class="go">Export JSON</button>
+</header>
+
+<div id="waves">
+  <div class="wlabel">Song — full mix</div>
+  <canvas id="cMix" height="120"></canvas>
+  <div class="wlabel">Vocals — the stem you aim at</div>
+  <canvas id="cVox" height="120"></canvas>
+</div>
+
+<div id="strip"></div>
+
+<footer>
+  <button id="play">▶ Play</button>
+  <select id="rate">
+    <option value="0.25">0.25×</option><option value="0.5">0.5×</option>
+    <option value="0.75">0.75×</option><option value="1" selected>1×</option>
+  </select>
+  <button id="audioSrc">🔊 Mix</button>
+  <span id="tdisp">0:00.000</span>
+  <span class="spacer"></span>
+  <span id="keyhelp"></span>
+</footer>
+
+<div id="drop">drop asr_words.json · lyrics · audio</div>
+
+<div id="paste"><div>
+  <p style="margin-bottom:8px">Paste the lyrics (straight from Suno is fine — <b>[Verse]</b> / <b>[Chorus]</b> markers are ignored).</p>
+  <textarea id="ta" placeholder="EVERYBODY IN&#10;VOTE FOR THE BIN&#10;..."></textarea>
+  <div style="margin-top:10px;display:flex;gap:8px">
+    <button class="go" id="useText">Use these words</button>
+    <button id="cancelText">Cancel</button>
+    <span class="note" style="align-self:center">Every whitespace-separated token becomes one timed entry. Split them finer later with E.</span>
+  </div>
+</div></div>
+
+<audio id="aMix" preload="auto"></audio>
+<audio id="aVox" preload="auto"></audio>
+
+<script>
+/* ================= state ================= */
+var words=[];               /* {w, t:null|number} */
+var sel=-1, hov=-1;
+var peaksMix=null, peaksVox=null, PPS=400;   /* peak buckets per second */
+var envVox=null, EHZ=100;                    /* RMS envelope of the vocals, 100Hz */
+var regions=[], onsets=[], showDet=true, snapOn=true;
+var SNAP=0.12;                               /* how far a stamp may jump to an onset */
+var asr=null;                                /* [{t,e,w}] from transcribe_vocals.py */
+var viewStart=0, viewDur=12;                 /* visible window, seconds */
+var hands='left', audible='mix';
+var aMix=document.getElementById('aMix'), aVox=document.getElementById('aVox');
+var cMix=document.getElementById('cMix'), cVox=document.getElementById('cVox');
+var xMix=cMix.getContext('2d'), xVox=cVox.getContext('2d');
+var statusEl=document.getElementById('status'), strip=document.getElementById('strip');
+
+/* ================= keyboard presets ================= */
+var PRESETS={
+  left:  {stamp:'f', undo:'d', prev:'s', next:'a', nudgeD:'w', nudgeU:'r', label:'SPACE play · F stamp · D undo · S/A prev·next · W/R nudge · E split · G fill · Q next onset · ,/. shift all · CMD+Z undo · drag empty space to pan'},
+  right: {stamp:'j', undo:'k', prev:'l', next:';', nudgeD:'i', nudgeU:'o', label:'SPACE play · J stamp · K undo · L/; prev·next · I/O nudge · E split · G fill · Q next onset · ,/. shift all · CMD+Z undo · drag empty space to pan'}
+};
+function keyhelp(){document.getElementById('keyhelp').innerHTML=PRESETS[hands].label.replace(/([A-Z;\/]+) /g,'<span class="k">$1</span> ');}
+
+/* ================= lyrics text ================= */
+function parseText(txt){
+  var out=[], lines=txt.split(/\r?\n/);
+  for(var i=0;i<lines.length;i++){
+    var ln=lines[i].trim();
+    if(!ln) continue;
+    if(/^\[[^\]]*\]$/.test(ln)) continue;          /* [Verse] / [Chorus] section markers */
+    if(/^\([^)]*\)$/.test(ln)) continue;
+    var toks=ln.split(/\s+/);
+    for(var j=0;j<toks.length;j++){
+      var t=toks[j].replace(/\[(verse|chorus|bridge|intro|outro|hook|pre-chorus)[^\]]*\]/ig,'')
+                   .replace(/[",]/g,'').trim();
+      if(t) out.push({w:t.toUpperCase(), t:null});
+    }
+  }
+  return out;
+}
+document.getElementById('pasteBtn').onclick=function(){document.getElementById('paste').classList.add('on');document.getElementById('ta').focus()};
+document.getElementById('cancelText').onclick=function(){document.getElementById('paste').classList.remove('on')};
+document.getElementById('useText').onclick=function(){
+  var v=document.getElementById('ta').value;
+  if(!v.trim())return;
+  words=parseText(v); sel=-1;
+  document.getElementById('paste').classList.remove('on');
+  renderStrip(); saveLocal();
+  if(asr)document.getElementById('align').disabled=false;
+  note(words.length+' words ready — '+(asr?'press \u2301 Align':'Load ASR then \u2301 Align, or tap them in with '+PRESETS[hands].stamp.toUpperCase()));
+};
+document.getElementById('analyse').onclick=analyse;
+document.getElementById('align').onclick=alignASR;
+document.getElementById('useAsr').onclick=useTranscript;
+document.getElementById('shiftL').onclick=function(){shiftAll(-0.05)};
+document.getElementById('shiftR').onclick=function(){shiftAll(0.05)};
+document.getElementById('loadAsr').onclick=function(){
+  var i=document.createElement('input');i.type='file';i.accept='.json,application/json';
+  i.onchange=function(e){
+    var f=e.target.files[0]; if(!f)return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var j=JSON.parse(r.result);
+        asr=j.words||j;
+        if(!asr.length)throw new Error('no words in it');
+        document.getElementById('align').disabled=!words.length;
+        document.getElementById('useAsr').disabled=false;
+        note('ASR loaded · '+asr.length+' sung words, '+asr[0].t.toFixed(1)+'s..'+
+             asr[asr.length-1].t.toFixed(1)+'s — press ⌁ Align');
+      }catch(err){note('bad ASR file: '+err.message)}
+    };
+    r.readAsText(f);
+  };
+  i.click();
+};
+document.getElementById('fill').onclick=fillGaps;
+document.getElementById('snapBtn').onclick=function(){
+  snapOn=!snapOn; this.classList.toggle('on',snapOn);
+  note(snapOn?'snap ON — stamps jump to the nearest onset within 120ms':'snap OFF — stamps land exactly where you tap');
+};
+document.getElementById('clearT').onclick=function(){
+  snapshot('clear times');
+  for(var i=0;i<words.length;i++){words[i].t=null;words[i].e=null}
+  sel=-1;renderStrip();draw();saveLocal();note('cleared all times — words kept (CMD+Z to bring them back)');
+};
+document.getElementById('undoBtn').onclick=undoEdit;
+document.getElementById('redoBtn').onclick=redoEdit;
+document.getElementById('revert').onclick=revertAll;
+document.getElementById('loadJson').onclick=function(){
+  var i=document.createElement('input');i.type='file';i.accept='.json,application/json';
+  i.onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();
+    r.onload=function(){try{var j=JSON.parse(r.result);
+      words=j.map(function(x){return {w:String(x.w!=null?x.w:x.word).toUpperCase(),t:(typeof x.t==='number'?x.t:null)}});
+      renderStrip();note('loaded '+words.length+' words from '+f.name);
+    }catch(err){note('bad JSON: '+err.message)}};
+    r.readAsText(f)};
+  i.click();
+};
+
+/* ================= audio ================= */
+function pickAudio(which){
+  var i=document.createElement('input');i.type='file';i.accept='audio/*';
+  i.onchange=function(e){var f=e.target.files[0];if(f)loadAudio(which,f)};
+  i.click();
+}
+document.getElementById('loadMix').onclick=function(){pickAudio('mix')};
+document.getElementById('loadVox').onclick=function(){addMode=false;pickAudio('vox')};
+document.getElementById('addVox').onclick=function(){
+  if(!envVox){note('load one vocal stem first');return}
+  addMode=true; note('pick a second vocal stem to add in (backing vocals, doubles…)'); pickAudio('vox');
+};
+
+var addMode=false;
+function loadAudio(which,file){
+  var el=(which==='mix')?aMix:aVox;
+  el.src=URL.createObjectURL(file);
+  note('decoding '+file.name+' …');
+  return file.arrayBuffer().then(function(buf){
+    var ac=new (window.AudioContext||window.webkitAudioContext)();
+    return ac.decodeAudioData(buf);
+  }).then(function(ab){
+    var p=computePeaks(ab), ev=computeEnv(ab,EHZ);
+    if(which==='mix'){peaksMix=p}
+    else if(addMode){peaksVox=sumPeaks(peaksVox,p); envVox=sumEnv(envVox,ev); addMode=false}
+    else{peaksVox=p; envVox=ev}
+    regions=[];onsets=[];
+    note((which==='mix'?'Mix':'Vocals')+' ready · '+fmt(ab.duration)+
+         (which!=='mix'?' — press ⚡ Analyse':''));
+    draw();
+  }).catch(function(e){note('decode failed: '+e.message)});
+}
+function computePeaks(ab){
+  var ch=ab.getChannelData(0), n=Math.ceil(ab.duration*PPS), step=Math.floor(ch.length/n)||1;
+  var out=new Float32Array(n);
+  for(var i=0;i<n;i++){
+    var s=i*step, e=Math.min(ch.length,s+step), m=0;
+    for(var k=s;k<e;k+=2){var v=ch[k]<0?-ch[k]:ch[k]; if(v>m)m=v}
+    out[i]=m;
+  }
+  return {data:out, dur:ab.duration};
+}
+function computeEnv(ab,hz){
+  var ch=ab.getChannelData(0), n=Math.max(1,Math.floor(ab.duration*hz));
+  var step=Math.floor(ch.length/n)||1, out=new Float32Array(n);
+  for(var i=0;i<n;i++){
+    var a=i*step,e=Math.min(ch.length,a+step),acc=0,c=0;
+    for(var k=a;k<e;k++){acc+=ch[k]*ch[k];c++}
+    out[i]=c?Math.sqrt(acc/c):0;
+  }
+  return {data:out,hz:hz,dur:ab.duration};
+}
+function sumEnv(A,B){
+  if(!A)return B; if(!B)return A;
+  var n=Math.min(A.data.length,B.data.length), out=new Float32Array(n);
+  for(var i=0;i<n;i++)out[i]=Math.sqrt(A.data[i]*A.data[i]+B.data[i]*B.data[i]);
+  return {data:out,hz:A.hz,dur:Math.max(A.dur,B.dur)};
+}
+function sumPeaks(A,B){
+  if(!A)return B; if(!B)return A;
+  var n=Math.min(A.data.length,B.data.length), out=new Float32Array(n);
+  for(var i=0;i<n;i++)out[i]=Math.max(A.data[i],B.data[i]);
+  return {data:out,dur:Math.max(A.dur,B.dur)};
+}
+function pct(a,p){
+  var v=Array.prototype.slice.call(a).sort(function(x,y){return x-y});
+  return v[Math.min(v.length-1,Math.max(0,Math.floor(p*(v.length-1))))];
+}
+function syllables(w){
+  var b=w.replace(/^\[|\]$/g,'').replace(/[^A-Za-z]/g,'');
+  if(!b)return 1;
+  var m=b.toUpperCase().match(/[AEIOUY]+/g), n=m?m.length:1;
+  if(/E$/.test(b.toUpperCase())&&n>1)n--;
+  return Math.max(1,n);
+}
+function dur(){return aMix.duration||(peaksMix&&peaksMix.dur)||0}
+function now(){return aMix.currentTime||0}
+
+/* ================= Whisper alignment =================
+   transcribe_vocals.py runs Whisper over your vocal stems and writes
+   asr_words.json — every sung word with a real timestamp. Here we match YOUR
+   lyrics against that transcript with Needleman-Wunsch: monotonic, so a
+   chanted line repeated nine times can never bind to the wrong repetition,
+   and Suno's typos simply go unmatched and get interpolated instead.
+
+   Measured against a full hand alignment of one song: median 0.23s once the
+   global offset is taken out. That is a draft to nudge, not a finished take. */
+function normw(s){return s.toUpperCase().replace(/-/g,'').replace(/[^A-Z0-9]/g,'')}
+function editSim(a,b){
+  if(a===b)return 2;
+  if(!a||!b)return -1;
+  if(a.indexOf(b)===0||b.indexOf(a)===0)return 1;
+  var m=a.length,n=b.length,d=[],i,j;
+  for(j=0;j<=n;j++)d[j]=j;
+  for(i=1;i<=m;i++){
+    var prev=d[0]; d[0]=i;
+    for(j=1;j<=n;j++){
+      var cur=d[j];
+      d[j]=Math.min(d[j]+1,d[j-1]+1,prev+(a.charAt(i-1)!==b.charAt(j-1)?1:0));
+      prev=cur;
+    }
+  }
+  return 2*(1-d[n]/Math.max(m,n))-0.6;
+}
+/* [CHNO] continues the word before it, so TE+[CHNO]+[LOGY] matches "technology" */
+function buildUnits(){
+  var u=[],i;
+  for(i=0;i<words.length;i++){
+    var w=words[i].w;
+    if(/^\[/.test(w)&&u.length){u[u.length-1].idx.push(i);u[u.length-1].text+=normw(w)}
+    else u.push({text:normw(w),idx:[i]});
+  }
+  return u.filter(function(x){return x.text});
+}
+function alignASR(){
+  if(!asr||!asr.length){note('load asr_words.json first (run transcribe_vocals.py)');return}
+  if(!words.length){note('paste the lyrics first');return}
+  var U=buildUnits(), A=[],i,j;
+  for(i=0;i<asr.length;i++)A.push(normw(asr[i].w));
+  var M=U.length,N=A.length,GAP=-0.7;
+  if(M*N>4000000){note('too much text to align at once');return}
+  var S=new Float32Array((M+1)*(N+1)), P=new Uint8Array((M+1)*(N+1));
+  for(j=0;j<=N;j++)S[j]=j*GAP;
+  for(i=0;i<=M;i++)S[i*(N+1)]=i*GAP;
+  for(i=1;i<=M;i++){
+    var ui=U[i-1].text, row=i*(N+1), prow=(i-1)*(N+1);
+    for(j=1;j<=N;j++){
+      var a=S[prow+j-1]+editSim(ui,A[j-1]), b=S[prow+j]+GAP, c=S[row+j-1]+GAP;
+      if(a>=b&&a>=c){S[row+j]=a;P[row+j]=0}
+      else if(b>=c){S[row+j]=b;P[row+j]=1}
+      else{S[row+j]=c;P[row+j]=2}
+    }
+  }
+  i=M;j=N;var pair={},matched=0;
+  while(i>0&&j>0){
+    var p=P[i*(N+1)+j];
+    if(p===0){ if(editSim(U[i-1].text,A[j-1])>0){pair[i-1]=j-1;matched++} i--;j--; }
+    else if(p===1){i--} else {j--}
+  }
+  /* matched units take the ASR time; fragments share the word's span */
+  for(i=0;i<words.length;i++)words[i].t=null;
+  for(var k in pair){
+    var u=U[k], aw=asr[pair[k]];
+    var s0=aw.t, e0=Math.max(aw.e||s0+0.12,s0+0.08), n=u.idx.length, sp=(e0-s0)/n;
+    for(var f=0;f<n;f++){
+      words[u.idx[f]].t=Math.round((s0+sp*f)*1000)/1000;
+      words[u.idx[f]].e=Math.round((s0+sp*(f+1))*1000)/1000;
+    }
+  }
+  /* everything Whisper missed rides between its neighbours */
+  var kn=[]; for(i=0;i<words.length;i++)if(words[i].t!=null)kn.push(i);
+  if(!kn.length){note('no lyrics matched the transcript — wrong song?');return}
+  for(var a2=0;a2<kn.length-1;a2++){
+    var i0=kn[a2],i1=kn[a2+1];
+    for(j=i0+1;j<i1;j++)
+      words[j].t=Math.round((words[i0].t+(words[i1].t-words[i0].t)*(j-i0)/(i1-i0))*1000)/1000;
+  }
+  for(j=kn[0]-1;j>=0;j--)words[j].t=Math.max(0,words[j+1].t-0.3);
+  for(j=kn[kn.length-1]+1;j<words.length;j++)words[j].t=words[j-1].t+0.3;
+  sel=0; renderStrip(); draw(); saveLocal(); setBaseline(); histU.length=0; histR.length=0; histBtns();
+  note('⌁ aligned '+matched+'/'+U.length+' words to the transcript ('+
+       Math.round(100*matched/U.length)+'% matched, rest interpolated) — play it and shift ±50ms to taste');
+}
+/* For a chant, Whisper already heard every repetition in the right order with
+   real timings — that beats a lyric sheet that only lists the chant once. Take
+   the transcript as the words, then fix spellings by hand. */
+function useTranscript(){
+  if(!asr||!asr.length){note('load asr_words.json first');return}
+  words=asr.map(function(a){
+    return {w:String(a.w).toUpperCase().replace(/[^A-Z0-9'\-]/g,''),
+            t:Math.round(a.t*1000)/1000,
+            e:(typeof a.e==='number'&&a.e>a.t)?Math.round(a.e*1000)/1000:null};
+  }).filter(function(x){return x.w});
+  sel=0; renderStrip(); draw(); saveLocal(); setBaseline(); histU.length=0; histR.length=0; histBtns();
+  document.getElementById('align').disabled=false;
+  note('took '+words.length+' words straight from the transcript, already timed — '+
+       'fix spellings by hand, split with E, shift with , and .');
+}
+function shiftAll(d){
+  snapshot('shift all');
+  var n=0;
+  for(var i=0;i<words.length;i++)if(words[i].t!=null){
+    words[i].t=Math.max(0,Math.round((words[i].t+d)*1000)/1000);
+    if(words[i].e!=null)words[i].e=Math.max(words[i].t+0.05,Math.round((words[i].e+d)*1000)/1000);
+    n++;}
+  if(!n){note('nothing placed yet');return}
+  renderStrip(); draw(); saveLocal();
+  note('shifted all '+n+' words by '+(d>0?'+':'')+Math.round(d*1000)+'ms');
+}
+
+/* ================= analysis =================
+   This finds where the VOICE IS, not what it says. Two products:
+     regions — stretches where the stem is singing at all
+     onsets  — rising edges inside them: syllable/word attacks
+   Measured against a hand alignment of this song, 85% of real word times
+   have an onset within 0.15s (median 47ms) — so snapping your taps to
+   them is reliable. Guessing WHICH word belongs to WHICH onset is not:
+   backing vocals and ad-libs make onsets the lyrics never use. That part
+   stays yours. */
+function analyse(){
+  if(!envVox){note('load a vocals stem first');return}
+  var d=envVox.data, hz=envVox.hz;
+  var fl=pct(d,0.10), pk=pct(d,0.95), span=Math.max(1e-9,pk-fl);
+  var on=fl+0.13*span, off=fl+0.06*span;
+  var raw=[], inR=false, s=0, i;
+  for(i=0;i<d.length;i++){
+    if(!inR&&d[i]>on){inR=true;s=i}
+    else if(inR&&d[i]<off){inR=false;raw.push({s:s/hz,e:i/hz})}
+  }
+  if(inR)raw.push({s:s/hz,e:d.length/hz});
+  regions=[];
+  for(i=0;i<raw.length;i++){
+    if(regions.length&&raw[i].s-regions[regions.length-1].e<0.18)regions[regions.length-1].e=raw[i].e;
+    else regions.push(raw[i]);
+  }
+  regions=regions.filter(function(r){return r.e-r.s>=0.12});
+
+  var minRise=0.10*span, gap=Math.round(0.09*hz);
+  onsets=[];
+  for(var r=0;r<regions.length;r++){
+    var a=Math.floor(regions[r].s*hz), b=Math.floor(regions[r].e*hz), last=-1e9;
+    onsets.push(regions[r].s); last=a;
+    for(i=a+3;i<b-1;i++){
+      if(d[i]-d[i-3]<minRise)continue;
+      if(!(d[i]>=d[i-1]&&d[i]>=d[i+1]))continue;
+      if(i-last<gap)continue;
+      onsets.push(i/hz); last=i;
+    }
+  }
+  var voiced=0; for(r=0;r<regions.length;r++)voiced+=regions[r].e-regions[r].s;
+  var covered=envVox.dur?100*voiced/envVox.dur:0;
+  note('⚡ '+regions.length+' phrases · '+onsets.length+' onsets · voice on '+covered.toFixed(0)+
+       '% of the stem'+(words.length?' · '+words.length+' words to place':'')+
+       (covered<35?'  ⚠ looks sparse — try + Add stem for backing vocals':''));
+  draw();
+}
+function nearestOnset(t,tol){
+  var best=null,bd=tol;
+  for(var i=0;i<onsets.length;i++){var d=Math.abs(onsets[i]-t); if(d<bd){bd=d;best=onsets[i]}}
+  return best;
+}
+/* Fill every run of unplaced words that sits BETWEEN two placed ones.
+   Bounded by your own anchors, so a bad guess can never cascade. */
+function fillGaps(){
+  if(!words.length){note('no words');return}
+  var placed=[]; for(var i=0;i<words.length;i++)if(words[i].t!=null)placed.push(i);
+  if(placed.length<2){note('place at least two words first — they are the anchors');return}
+  snapshot('fill gaps');
+  var filled=0,snapped=0;
+  for(var p=0;p<placed.length-1;p++){
+    var i0=placed[p], i1=placed[p+1];
+    if(i1-i0<2)continue;
+    var t0=words[i0].t, t1=words[i1].t;
+    if(!(t1>t0))continue;
+    var syl=[],tot=0;
+    for(var k=i0;k<i1;k++){var sy=syllables(words[k].w); syl.push(sy); tot+=sy}
+    var acc=0, used={};
+    for(var j=1;j<i1-i0;j++){
+      acc+=syl[j-1];
+      var t=t0+(acc/tot)*(t1-t0);
+      if(snapOn&&onsets.length){
+        var best=null,bd=0.20;
+        for(var q=0;q<onsets.length;q++){
+          if(used[q]||onsets[q]<=t0||onsets[q]>=t1)continue;
+          var dd=Math.abs(onsets[q]-t);
+          if(dd<bd){bd=dd;best=q}
+        }
+        if(best!=null){t=onsets[best];used[best]=1;snapped++}
+      }
+      words[i0+j].t=Math.round(t*1000)/1000; filled++;
+    }
+  }
+  renderStrip(); draw(); saveLocal();
+  note('filled '+filled+' words between your anchors ('+snapped+' landed on an onset) — expect ~0.2s slop, fix by ear');
+}
+
+/* ================= history =================
+   Every change that touches a time is snapshotted first, so CMD+Z walks back
+   through them. 'baseline' is the last clean import — Revert returns there
+   without losing the ability to undo the revert itself. */
+var histU=[], histR=[], HIST_MAX=100, baseline=null;
+function clone(a){return a.map(function(w){return {w:w.w,t:w.t,e:(w.e==null?null:w.e)}})}
+function snapshot(label){
+  histU.push({label:label,words:clone(words)});
+  if(histU.length>HIST_MAX)histU.shift();
+  histR.length=0; histBtns();
+}
+function histBtns(){
+  var u=document.getElementById('undoBtn'), r=document.getElementById('redoBtn');
+  if(!u)return;
+  u.disabled=!histU.length; r.disabled=!histR.length;
+  u.textContent=histU.length?('↶ '+histU[histU.length-1].label):'↶ Undo';
+}
+function undoEdit(){
+  if(!histU.length){note('nothing to undo');return}
+  var s=histU.pop();
+  histR.push({label:s.label,words:clone(words)});
+  words=s.words; sel=Math.min(sel,words.length-1);
+  renderStrip(); draw(); saveLocal(); histBtns();
+  note('↶ undid: '+s.label);
+}
+function redoEdit(){
+  if(!histR.length){note('nothing to redo');return}
+  var s=histR.pop();
+  histU.push({label:s.label,words:clone(words)});
+  words=s.words; renderStrip(); draw(); saveLocal(); histBtns();
+  note('↷ redid: '+s.label);
+}
+function setBaseline(){baseline=clone(words)}
+function revertAll(){
+  if(!baseline||!baseline.length){note('no clean import to revert to — load the transcript first');return}
+  snapshot('revert');
+  words=clone(baseline); sel=0;
+  renderStrip(); draw(); saveLocal();
+  note('reverted to the last clean import — '+words.length+' words (CMD+Z puts your edits back)');
+}
+
+/* ================= word boxes =================
+   A subtitle has an IN and an OUT. Whisper gives both, so boxes start with real
+   lengths; drag an edge to trim, drag the middle to slide the whole word. A word
+   with no explicit end borrows the gap to the next one. */
+function effEnd(i){
+  var w=words[i];
+  if(w.t==null)return null;
+  if(w.e!=null&&w.e>w.t+0.02)return w.e;
+  var nx=null;
+  for(var k=i+1;k<words.length;k++){if(words[k].t!=null){nx=words[k].t;break}}
+  var d=0.45;
+  if(nx!=null)d=Math.min(1.2,Math.max(0.12,nx-w.t-0.02));
+  return w.t+d;
+}
+function hitBox(cv,t){
+  var tol=7*viewDur/cv.width, i;            /* 7px, in seconds */
+  /* Boxes are usually contiguous, so an OUT point sits on the next word's IN
+     point. The SELECTED word owns its handles — click a box once, then its
+     edges are yours. Otherwise the later word wins the shared edge. */
+  var order=[];
+  if(sel>=0&&sel<words.length&&words[sel].t!=null)order.push(sel);
+  for(i=words.length-1;i>=0;i--)if(i!==sel)order.push(i);
+  for(var q=0;q<order.length;q++){
+    i=order[q];
+    if(words[i].t==null)continue;
+    var a=words[i].t,b=effEnd(i);
+    if(t<a-tol||t>b+tol)continue;
+    if(Math.abs(t-a)<=tol)return{i:i,part:'l'};
+    if(Math.abs(t-b)<=tol)return{i:i,part:'r'};
+    if(t>a&&t<b)return{i:i,part:'m'};
+  }
+  return null;
+}
+function snapEdge(t){
+  if(!snapOn||!onsets.length)return t;
+  var o=nearestOnset(t,0.08);
+  return o==null?t:o;
+}
+
+/* ================= waveform drawing ================= */
+function sizeCanvases(){
+  [cMix,cVox].forEach(function(c){
+    var w=c.clientWidth||900;
+    if(c.width!==w){c.width=w}
+  });
+}
+function drawWave(ctx,cv,peaks,color,isVox){
+  var W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#05060d';ctx.fillRect(0,0,W,H);
+  if(peaks){
+    ctx.strokeStyle=color;ctx.globalAlpha=.85;ctx.beginPath();
+    for(var x=0;x<W;x++){
+      var t=viewStart+(x/W)*viewDur, idx=Math.floor(t*PPS);
+      var v=(idx>=0&&idx<peaks.data.length)?peaks.data[idx]:0;
+      var h=v*(H*0.46);
+      ctx.moveTo(x+.5,H/2-h);ctx.lineTo(x+.5,H/2+h);
+    }
+    ctx.stroke();ctx.globalAlpha=1;
+  }
+  /* analysis overlay */
+  if(isVox&&showDet&&regions.length){
+    for(var q=0;q<regions.length;q++){
+      var rs=((regions[q].s-viewStart)/viewDur)*W, re=((regions[q].e-viewStart)/viewDur)*W;
+      if(re<0||rs>W)continue;
+      ctx.fillStyle='rgba(99,255,157,.09)'; ctx.fillRect(rs,0,Math.max(1,re-rs),H);
+      ctx.fillStyle='rgba(99,255,157,.45)'; ctx.fillRect(rs,H-3,Math.max(1,re-rs),3);
+    }
+    for(var q2=0;q2<onsets.length;q2++){
+      var ox=((onsets[q2]-viewStart)/viewDur)*W;
+      if(ox<0||ox>W)continue;
+      ctx.fillStyle='rgba(99,255,157,.85)'; ctx.fillRect(ox,0,1,12);
+    }
+  }
+  /* second ticks */
+  ctx.fillStyle='rgba(255,255,255,.18)';
+  var s0=Math.ceil(viewStart), s1=viewStart+viewDur;
+  for(var s=s0;s<s1;s++){
+    var x=((s-viewStart)/viewDur)*W;
+    ctx.fillRect(x,0,1,6);
+    if(viewDur<40){ctx.font='9px ui-monospace,monospace';ctx.fillText(fmt(s),x+3,14)}
+  }
+  /* word boxes — in point, out point, label */
+  var LANE=18;
+  for(var i=0;i<words.length;i++){
+    if(words[i].t==null)continue;
+    var a=words[i].t, b=effEnd(i);
+    if(b<viewStart-0.5||a>viewStart+viewDur+0.5)continue;
+    var xa=((a-viewStart)/viewDur)*W, xb=((b-viewStart)/viewDur)*W;
+    var bw=Math.max(2,xb-xa), isSel=(i===sel), isHov=(i===hov);
+    ctx.fillStyle=isSel?'rgba(115,92,255,.20)':(isHov?'rgba(255,229,107,.16)':'rgba(255,229,107,.075)');
+    ctx.fillRect(xa,0,bw,H);
+    ctx.fillStyle=isSel?'rgba(115,92,255,.55)':'rgba(255,229,107,.22)';
+    ctx.fillRect(xa,H-LANE,bw,LANE);
+    /* the two handles */
+    ctx.fillStyle=isSel?'#735cff':'rgba(255,229,107,.95)';
+    ctx.fillRect(xa,0,isSel?2.5:1.5,H);
+    ctx.fillStyle=isSel?'#a08bff':'rgba(255,229,107,.55)';
+    ctx.fillRect(xb-(isSel?2.5:1.5),0,isSel?2.5:1.5,H);
+    if(bw>16){
+      ctx.save(); ctx.beginPath(); ctx.rect(xa+3,H-LANE,bw-6,LANE); ctx.clip();
+      ctx.fillStyle=isSel?'#fff':'rgba(255,229,107,.95)';
+      ctx.font='700 10px ui-monospace,monospace';
+      ctx.fillText(words[i].w.slice(0,16),xa+4,H-5);
+      ctx.restore();
+    }
+  }
+  /* playhead */
+  var px=((now()-viewStart)/viewDur)*W;
+  if(px>=0&&px<=W){ctx.fillStyle='#63ff9d';ctx.fillRect(px-1,0,2,H)}
+}
+function draw(){
+  sizeCanvases();
+  drawWave(xMix,cMix,peaksMix,'#25dcff');
+  drawWave(xVox,cVox,peaksVox,'#ff2bd6',true);
+  document.getElementById('tdisp').textContent=fmt3(now());
+}
+function follow(){
+  var t=now();
+  if(t<viewStart+viewDur*0.15||t>viewStart+viewDur*0.85){
+    viewStart=Math.max(0,t-viewDur*0.35);
+  }
+}
+function loop(){ if(!aMix.paused){follow()} draw(); requestAnimationFrame(loop) }
+requestAnimationFrame(loop);
+addEventListener('resize',draw);
+
+/* drag a box edge to trim, drag its middle to slide, click empty space to seek */
+var drag=null;
+function tAt(cv,e){
+  var r=cv.getBoundingClientRect();
+  return viewStart+((e.clientX-r.left)/r.width)*viewDur;
+}
+[cMix,cVox].forEach(function(cv){
+  cv.addEventListener('mousedown',function(e){
+    var t=tAt(cv,e), h=hitBox(cv,t);
+    if(h){
+      sel=h.i; renderStrip();
+      snapshot((h.part==='m'?'move ':'trim ')+words[h.i].w);
+      drag={i:h.i,part:h.part,grab:t,t0:words[h.i].t,e0:effEnd(h.i)};
+      cv.classList.add('drag'); e.preventDefault();
+    }else{
+      /* empty space: drag to slide the timeline, click to seek */
+      drag={pan:true,grab:t,x0:e.clientX,view0:viewStart,moved:false};
+      cv.classList.add('drag'); e.preventDefault();
+    }
+  });
+  cv.addEventListener('mousemove',function(e){
+    var t=tAt(cv,e);
+    if(drag&&drag.pan){
+      var rr=cv.getBoundingClientRect(), dpx=e.clientX-drag.x0;
+      if(Math.abs(dpx)>2)drag.moved=true;
+      viewStart=Math.max(0,drag.view0-(dpx/rr.width)*viewDur);
+      draw(); return;
+    }
+    if(drag&&!drag.pan){
+      var w=words[drag.i];
+      if(drag.part==='l'){
+        var nt=Math.max(0,Math.min(snapEdge(t),drag.e0-0.05));
+        w.t=Math.round(nt*1000)/1000;
+        if(w.e==null)w.e=Math.round(drag.e0*1000)/1000;
+      }else if(drag.part==='r'){
+        w.e=Math.round(Math.max(w.t+0.05,snapEdge(t))*1000)/1000;
+      }else{
+        var d=t-drag.grab, len=drag.e0-drag.t0;
+        var st=Math.max(0,snapEdge(drag.t0+d));
+        w.t=Math.round(st*1000)/1000; w.e=Math.round((st+len)*1000)/1000;
+      }
+      renderStrip(); draw(); return;
+    }
+    var h=hitBox(cv,t);
+    hov=h?h.i:-1;
+    cv.classList.toggle('res',!!h&&h.part!=='m');
+    cv.classList.toggle('mov',!!h&&h.part==='m');
+  });
+  cv.addEventListener('mouseleave',function(){hov=-1;cv.classList.remove('res','mov')});
+  addEventListener('mouseup',function(){
+    if(!drag)return;
+    if(drag.pan){ if(!drag.moved)seek(drag.grab); }
+    else{ saveLocal(); }
+    cv.classList.remove('drag'); drag=null;
+  });
+  cv.addEventListener('wheel',function(e){
+    e.preventDefault();
+    var r=cv.getBoundingClientRect(), f=(e.clientX-r.left)/r.width;
+    var anchor=viewStart+f*viewDur;
+    viewDur=Math.max(1.5,Math.min(120,viewDur*(e.deltaY>0?1.15:0.87)));
+    viewStart=Math.max(0,anchor-f*viewDur);
+    draw();
+  },{passive:false});
+});
+
+/* ================= transport ================= */
+function seek(t){
+  t=Math.max(0,Math.min(dur()||1e9,t));
+  aMix.currentTime=t; if(aVox.src)aVox.currentTime=t;
+  draw();
+}
+function playPause(){
+  if(aMix.paused){
+    if(aVox.src){aVox.currentTime=aMix.currentTime;aVox.play().catch(function(){})}
+    aMix.play().catch(function(){});
+    document.getElementById('play').textContent='❚❚ Pause';
+  }else{
+    aMix.pause();if(aVox.src)aVox.pause();
+    document.getElementById('play').textContent='▶ Play';
+  }
+}
+document.getElementById('play').onclick=playPause;
+document.getElementById('rate').onchange=function(e){
+  var r=parseFloat(e.target.value);
+  aMix.playbackRate=r;aVox.playbackRate=r;
+  aMix.preservesPitch=aVox.preservesPitch=true;
+};
+document.getElementById('audioSrc').onclick=function(){
+  audible=(audible==='mix')?'vox':'mix';
+  aMix.muted=(audible!=='mix'); aVox.muted=(audible!=='vox');
+  this.textContent=(audible==='mix')?'🔊 Mix':'🔊 Vocals';
+};
+aMix.muted=false;aVox.muted=true;
+
+/* ================= the word strip ================= */
+function nextUnplaced(){for(var i=0;i<words.length;i++){if(words[i].t==null)return i} return -1}
+function renderStrip(){
+  var nu=nextUnplaced(), html='';
+  for(var i=0;i<words.length;i++){
+    var w=words[i], cls='w';
+    if(w.t!=null)cls+=' placed';
+    if(i===nu)cls+=' next';
+    if(i===sel)cls+=' sel';
+    html+='<span class="'+cls+'" data-i="'+i+'">'+esc(w.w)+
+          (w.t!=null?'<small>'+w.t.toFixed(2)+'<b style="font-weight:400;opacity:.7"> +'+
+             (effEnd(i)-w.t).toFixed(2)+'s</b></small>':'')+'</span>';
+  }
+  strip.innerHTML=html;
+  var els=strip.querySelectorAll('.w');
+  for(var k=0;k<els.length;k++){
+    els[k].onmouseenter=function(){hov=parseInt(this.dataset.i,10)};
+    els[k].onmouseleave=function(){hov=-1};
+    els[k].onclick=function(){
+      sel=parseInt(this.dataset.i,10);
+      if(words[sel].t!=null)seek(words[sel].t);
+      renderStrip();
+    };
+  }
+  var nx=strip.querySelector('.next'); if(nx&&nx.scrollIntoView)nx.scrollIntoView({block:'nearest'});
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+/* ================= actions ================= */
+function stamp(){
+  var i=nextUnplaced(); if(i<0){note('all words placed');return}
+  snapshot('stamp '+words[i].w);
+  var t=now(), snap=null;
+  if(snapOn){snap=nearestOnset(t,SNAP); if(snap!=null)t=snap}
+  words[i].t=Math.round(t*1000)/1000; sel=i; renderStrip(); saveLocal();
+  note('placed '+words[i].w+' @ '+words[i].t.toFixed(3)+(snap!=null?' ⌁snapped':'')+
+       '  ('+(i+1)+'/'+words.length+')');
+}
+function undo(){
+  var i=nextUnplaced(); var j=(i<0?words.length:i)-1;
+  if(j<0)return;
+  snapshot('un-place '+words[j].w);
+  words[j].t=null; sel=j; renderStrip(); note('un-placed '+words[j].w);
+}
+function nudge(d,endOnly){
+  if(sel<0||words[sel].t==null)return;
+  snapshot('nudge '+words[sel].w);
+  if(endOnly){
+    words[sel].e=Math.max(words[sel].t+0.05,Math.round((effEnd(sel)+d)*1000)/1000);
+    renderStrip();draw();saveLocal();return;
+  }
+  if(words[sel].e!=null)words[sel].e=Math.round((words[sel].e+d)*1000)/1000;
+  words[sel].t=Math.max(0,words[sel].t+d); renderStrip(); seek(words[sel].t); saveLocal();
+}
+/* E — split a word in half. The second half becomes an APPEND token so the
+   engine still renders one word: TECHNOLOGY -> TECHNO + [LOGY]. */
+function splitWord(i){
+  if(i<0||i>=words.length)return;
+  snapshot('split '+words[i].w);
+  var w=words[i].w, isApp=/^\[.*\]$/.test(w);
+  var core=isApp?w.slice(1,-1):w;
+  var bare=core.replace(/^-/,'');
+  if(bare.length<2){note('too short to split');return}
+  var half=Math.ceil(bare.length/2);
+  var a=bare.slice(0,half), b=bare.slice(half);
+  var first=isApp?('['+(core.charAt(0)==='-'?'-':'')+a+']'):a;
+  var t0=words[i].t;
+  var t1=null;
+  if(t0!=null){
+    var nt=null;
+    for(var k=i+1;k<words.length;k++){if(words[k].t!=null){nt=words[k].t;break}}
+    t1=(nt!=null)?t0+(nt-t0)/2:t0+0.2;
+  }
+  words.splice(i,1,{w:first,t:t0},{w:'['+b+']',t:t1});
+  sel=i+1; renderStrip(); saveLocal();
+  note('split → '+first+' + ['+b+']');
+}
+
+/* ================= keys ================= */
+addEventListener('keydown',function(e){
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){
+    e.preventDefault(); if(e.shiftKey)redoEdit(); else undoEdit(); return;
+  }
+  if(document.getElementById('paste').classList.contains('on'))return;
+  var tag=e.target.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+  var k=e.key.toLowerCase(), P=PRESETS[hands];
+  if(k===' '){e.preventDefault();playPause();return}
+  if(k==='e'){e.preventDefault();splitWord(hov>=0?hov:sel);return}
+  if(k==='g'){e.preventDefault();fillGaps();return}
+  if(k===','){e.preventDefault();shiftAll(-0.05);return}
+  if(k==='.'){e.preventDefault();shiftAll(0.05);return}
+  if(k==='q'){e.preventDefault();var n2=null;for(var z=0;z<onsets.length;z++){if(onsets[z]>now()+0.02){n2=onsets[z];break}}if(n2!=null)seek(n2);return}
+  if(k===P.stamp){e.preventDefault();stamp();return}
+  if(k===P.undo){e.preventDefault();undo();return}
+  if(k===P.prev){e.preventDefault();if(sel>0){sel--;if(words[sel].t!=null)seek(words[sel].t);renderStrip()}return}
+  if(k===P.next){e.preventDefault();if(sel<words.length-1){sel++;if(words[sel].t!=null)seek(words[sel].t);renderStrip()}return}
+  if(k===P.nudgeD){e.preventDefault();nudge(-0.02,e.shiftKey);return}
+  if(k===P.nudgeU){e.preventDefault();nudge(0.02,e.shiftKey);return}
+  if(k==='arrowleft'){e.preventDefault();seek(now()-(e.shiftKey?5:1));return}
+  if(k==='arrowright'){e.preventDefault();seek(now()+(e.shiftKey?5:1));return}
+});
+var hpBtns=document.querySelectorAll('.hp');
+for(var q=0;q<hpBtns.length;q++){
+  hpBtns[q].onclick=function(){
+    hands=this.dataset.h;
+    for(var z=0;z<hpBtns.length;z++)hpBtns[z].classList.toggle('on',hpBtns[z]===this);
+    histBtns();
+keyhelp();
+    try{localStorage.setItem('aligner-hands',hands)}catch(err){}
+  };
+}
+try{var sh=localStorage.getItem('aligner-hands'); if(sh){hands=sh;
+  for(var z2=0;z2<hpBtns.length;z2++)hpBtns[z2].classList.toggle('on',hpBtns[z2].dataset.h===hands);}}catch(err){}
+
+/* ================= save / open / autosave ================= */
+function saveLocal(){
+  try{localStorage.setItem('aligner-project',JSON.stringify({
+    when:Date.now(), words:words
+  }))}catch(e){}
+}
+function restoreLocal(){
+  try{
+    var j=JSON.parse(localStorage.getItem('aligner-project')||'null');
+    if(j&&j.words&&j.words.length){
+      words=j.words; renderStrip(); draw();
+      var ago=Math.round((Date.now()-j.when)/60000);
+      note('restored '+words.length+' words from your last session ('+
+           (ago<1?'just now':ago+' min ago')+') — Clear times to start over');
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+document.getElementById('save').onclick=function(){
+  if(!words.length){note('nothing to save');return}
+  var blob=new Blob([JSON.stringify({v:'aligner-5.04',words:words},null,1)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='aligner_project.json'; a.click();
+  note('saved the project — words and times, reopen with Open');
+};
+document.getElementById('open').onclick=function(){
+  var i=document.createElement('input');i.type='file';i.accept='.json,application/json';
+  i.onchange=function(e){
+    var f=e.target.files[0]; if(!f)return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var j=JSON.parse(r.result);
+        var arr=j.words||j;
+        words=arr.map(function(x){return {w:String(x.w).toUpperCase(),t:(typeof x.t==='number'?x.t:null)}});
+        sel=-1; renderStrip(); draw(); saveLocal();
+        note('opened '+words.length+' words from '+f.name);
+      }catch(err){note('bad file: '+err.message)}
+    };
+    r.readAsText(f);
+  };
+  i.click();
+};
+
+/* ================= export ================= */
+document.getElementById('export').onclick=function(){
+  var placed=[];
+  for(var pi=0;pi<words.length;pi++){
+    if(words[pi].t==null)continue;
+    placed.push({t:+words[pi].t.toFixed(3), w:words[pi].w, e:+effEnd(pi).toFixed(3)});
+  }
+  placed.sort(function(a,b){return a.t-b.t});
+  if(!placed.length){note('nothing placed yet');return}
+  var blob=new Blob([JSON.stringify(placed,null,1)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='aligned_words.json'; a.click();
+  note('exported '+placed.length+' words');
+};
+
+/* ================= session restore =================
+   stage_session.py parks mix / vocals / transcript in _session/. On boot we
+   pull them straight back in, so a reload costs nothing — the words themselves
+   already survive in localStorage. */
+function restoreSession(){
+  fetch('_session/session.json',{cache:'no-store'}).then(function(r){
+    if(!r.ok)throw 0; return r.json();
+  }).then(function(man){
+    var jobs=[];
+    if(man.asr) jobs.push(
+      fetch('_session/'+man.asr).then(function(r){return r.json()}).then(function(j){
+        asr=j.words||j;
+        document.getElementById('useAsr').disabled=false;
+        document.getElementById('align').disabled=!words.length;
+      }));
+    ['mix','vocals'].forEach(function(k){
+      if(!man[k])return;
+      jobs.push(fetch('_session/'+man[k]).then(function(r){return r.blob()}).then(function(b){
+        b.name=man[k];
+        return loadAudio(k==='mix'?'mix':'vox', b);
+      }));
+    });
+    Promise.all(jobs).then(function(){
+      note('↻ '+man.name+' restored — '+(man.asr?asr.length+' transcript words · ':'')+
+           (words.length?words.length+' words on the strip':'press USE TRANSCRIPT'));
+    });
+  }).catch(function(){ /* no session staged — normal empty start */ });
+}
+
+/* ================= drag & drop =================
+   asr_words.json, a saved project, a .txt of lyrics, or an audio file —
+   drop it on the window and it lands in the right slot. */
+function takeJSON(text,name){
+  var j=JSON.parse(text);
+  if(j.words&&j.words.length&&j.words[0].w!==undefined&&j.model){   /* transcript */
+    asr=j.words;
+    document.getElementById('useAsr').disabled=false;
+    document.getElementById('align').disabled=!words.length;
+    note('ASR loaded · '+asr.length+' sung words, '+asr[0].t.toFixed(1)+'s..'+
+         asr[asr.length-1].t.toFixed(1)+'s — press USE TRANSCRIPT');
+    return;
+  }
+  var arr=j.words||j;                                              /* project / word list */
+  words=arr.map(function(x){return {w:String(x.w).toUpperCase(),t:(typeof x.t==='number'?x.t:null)}});
+  sel=-1; renderStrip(); draw(); saveLocal();
+  if(asr)document.getElementById('align').disabled=false;
+  note('loaded '+words.length+' words from '+name);
+}
+var dz=document.getElementById('drop'), dragN=0;
+addEventListener('dragover',function(e){e.preventDefault()});
+addEventListener('dragenter',function(e){e.preventDefault();dragN++;dz.classList.add('on')});
+addEventListener('dragleave',function(){if(--dragN<=0){dragN=0;dz.classList.remove('on')}});
+addEventListener('drop',function(e){
+  e.preventDefault(); dragN=0; dz.classList.remove('on');
+  var fs=e.dataTransfer.files; if(!fs||!fs.length)return;
+  for(var i=0;i<fs.length;i++){
+    (function(f){
+      var n=f.name.toLowerCase();
+      if(/\.json$/.test(n)){
+        var r=new FileReader();
+        r.onload=function(){try{takeJSON(r.result,f.name)}catch(err){note('bad JSON in '+f.name+': '+err.message)}};
+        r.readAsText(f);
+      }else if(/\.(txt|md)$/.test(n)){
+        var r2=new FileReader();
+        r2.onload=function(){
+          words=parseText(String(r2.result)); sel=-1; renderStrip(); saveLocal();
+          if(asr)document.getElementById('align').disabled=false;
+          note(words.length+' words from '+f.name+(asr?' — press \u2301 ALIGN':' — now Load ASR'));
+        };
+        r2.readAsText(f);
+      }else if(f.type.indexOf('audio')===0||/\.(mp3|wav|m4a|flac|aif|aiff|ogg)$/.test(n)){
+        loadAudio(peaksMix?'vox':'mix', f);
+      }
+    })(fs[i]);
+  }
+});
+
+/* ================= util ================= */
+function fmt(t){t=t||0;return Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')}
+function fmt3(t){t=t||0;return Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')+'.'+String(Math.floor((t%1)*1000)).padStart(3,'0')}
+function note(m){statusEl.textContent=m}
+keyhelp();
+if(!restoreLocal()){
+  renderStrip();
+  note('drop your files here — mix, vocals stem, and asr_words.json (or run stage_session.py once)');
+}
+restoreSession();
+draw();
+</script>
+</body>
+</html>

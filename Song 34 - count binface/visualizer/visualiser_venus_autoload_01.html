@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VENUS AUTOLOAD 01 — Vote for the Bin</title>
+<style>
+:root{--bg:#03040a;--ink:#f7f5ff;--pink:#ff22b7;--cyan:#24e8ff;--gold:#ffd166}*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:ui-monospace,"SF Mono",Menlo,monospace}#stage{position:fixed;inset:0;z-index:0}#stage canvas{position:absolute;inset:0}#vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 50% 47%,transparent 20%,rgba(2,2,8,.22) 58%,rgba(0,0,0,.88) 110%)}#square{position:fixed;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);width:min(48vw,58vh);aspect-ratio:1;overflow:hidden;background:#03030a;border:1px solid rgba(255,255,255,.42);box-shadow:0 0 40px rgba(255,34,183,.3),0 0 90px rgba(36,232,255,.14)}#square:after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 0 35px rgba(0,0,0,.32)}#squareVideo{width:100%;height:100%;object-fit:cover;display:block}#wordWrap{position:absolute;z-index:4;left:3%;right:3%;bottom:4.5%;height:22%;display:grid;place-items:center;pointer-events:none}#word{position:relative;max-width:100%;padding:.05em .18em;color:#fff;font:900 clamp(28px,5.6vw,92px)/.88 Arial Black,Impact,sans-serif;letter-spacing:-.045em;text-align:center;text-transform:uppercase;white-space:nowrap;text-shadow:-3px 0 var(--pink),3px 0 var(--cyan),0 4px 18px #000,0 0 22px rgba(255,255,255,.48);transform-origin:center;filter:contrast(1.18)}#word.hit{animation:wordHit .21s steps(2,end),wordGlow .72s ease-out}#word.hit:before,#word.hit:after{content:attr(data-word);position:absolute;inset:0;overflow:hidden}#word.hit:before{color:var(--cyan);clip-path:inset(12% 0 58% 0);transform:translate(5px,-2px);opacity:.82}#word.hit:after{color:var(--pink);clip-path:inset(60% 0 8% 0);transform:translate(-5px,2px);opacity:.82}@keyframes wordHit{0%{transform:scale(.7) skewX(-12deg)}45%{transform:scale(1.13) skewX(5deg)}100%{transform:scale(1)}}@keyframes wordGlow{from{filter:brightness(2.6) contrast(1.5)}to{filter:brightness(1) contrast(1.18)}}#topbar{position:fixed;z-index:10;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 18px;background:linear-gradient(to bottom,rgba(3,4,10,.9),transparent)}#brand{min-width:0}#brand strong{display:block;font:900 clamp(13px,1.3vw,20px)/1 Arial Black,Impact,sans-serif;letter-spacing:.12em}#status{margin-top:6px;color:rgba(255,255,255,.64);font-size:10px;letter-spacing:.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:66vw}#play{flex:none;min-width:132px;padding:11px 17px;border:1px solid rgba(255,255,255,.55);border-radius:7px;color:#03040a;background:linear-gradient(110deg,var(--gold),#fff);font:900 12px/1 ui-monospace,monospace;letter-spacing:.12em;cursor:pointer;box-shadow:0 0 24px rgba(255,209,102,.25)}#play:disabled{opacity:.45;cursor:wait}#time{position:fixed;z-index:9;right:18px;bottom:14px;color:rgba(255,255,255,.58);font-size:10px;letter-spacing:.08em}details{position:fixed;z-index:11;left:14px;bottom:12px;color:rgba(255,255,255,.52);font-size:10px}summary{cursor:pointer;user-select:none}#overrides{margin-top:8px;width:min(520px,calc(100vw - 28px));padding:10px;display:grid;gap:6px;background:rgba(3,4,10,.92);border:1px solid rgba(255,255,255,.18)}label{display:grid;grid-template-columns:95px 1fr;align-items:center;gap:8px}input[type=file]{min-width:0;max-width:390px;color:#ddd;font-size:10px}@media(max-aspect-ratio:1/1){#square{width:min(88vw,56vh)}#status{max-width:54vw}#word{font-size:clamp(28px,10vw,78px)}}
+</style>
+</head>
+<body>
+<div id="stage"></div><div id="vignette"></div>
+<figure id="square"><video id="squareVideo" muted playsinline preload="auto"></video><div id="wordWrap"><div id="word" aria-live="polite"></div></div></figure>
+<header id="topbar"><div id="brand"><strong>VENUS / AUTOLOAD 01</strong><div id="status">Loading the complete project…</div></div><button id="play" disabled>LOADING…</button></header>
+<details><summary>OPTIONAL FILE OVERRIDES</summary><div id="overrides">
+<label>MASTER <input type="file" accept="audio/*" data-role="master"></label>
+<label>RHYTHM <input type="file" accept="audio/*" data-stem="0"></label>
+<label>HARMONY <input type="file" accept="audio/*" data-stem="1"></label>
+<label>VOICE <input type="file" accept="audio/*" data-stem="2"></label>
+<label>LYRICS <input type="file" accept="application/json,.json" data-role="lyrics"></label>
+<label>SQUARE <input type="file" accept="video/*" data-role="video"></label>
+</div></details><div id="time">00:00.000</div>
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+const DEFAULTS={master:'Marsita the Ultra — Vote for the Bin (Count Binface vs Farage).mp3',stems:['10 Drums.mp3','4 Synth.mp3','12 Vocals.mp3'],lyrics:'07_binface_words_fine.json',video:'video-visualizer-720.mp4'};
+const $=s=>document.querySelector(s),status=$('#status'),playBtn=$('#play'),video=$('#squareVideo'),wordEl=$('#word'),timeEl=$('#time');
+const actx=new(window.AudioContext||window.webkitAudioContext)();
+let masterBuffer=null,masterSource=null,words=[],startTime=0,playing=false,lastWord='',videoObjectUrl='';
+const stems=[null,null,null];
+function makeAnalyser(){const a=actx.createAnalyser();a.fftSize=1024;a.smoothingTimeConstant=.82;return a}
+function stemObject(buffer){return{buffer,analyser:makeAnalyser(),data:new Uint8Array(512),source:null}}
+async function decodeUrl(url){const r=await fetch(encodeURI(url),{cache:'no-cache'});if(!r.ok)throw new Error(`${url}: HTTP ${r.status}`);return actx.decodeAudioData(await r.arrayBuffer())}
+function normalizeWords(data){const list=Array.isArray(data)?data:(data.words||data.segments||[]);return list.map((x,i)=>({word:String(x.word??x.w??x.text??'').trim(),start:Number(x.start??x.start_time??x.time??x.t??0),end:Number(x.end??x.end_time??NaN),i})).filter(x=>x.word&&Number.isFinite(x.start)).sort((a,b)=>a.start-b.start)}
+async function preload(){
+ const jobs=[decodeUrl(DEFAULTS.master),...DEFAULTS.stems.map(decodeUrl),fetch(encodeURI(DEFAULTS.lyrics),{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error(`lyrics: HTTP ${r.status}`);return r.json()})];
+ const result=await Promise.allSettled(jobs);
+ if(result[0].status==='fulfilled')masterBuffer=result[0].value;
+ for(let i=0;i<3;i++)if(result[i+1].status==='fulfilled')stems[i]=stemObject(result[i+1].value);
+ if(result[4].status==='fulfilled')words=normalizeWords(result[4].value);
+ video.src=encodeURI(DEFAULTS.video);video.load();
+ const loaded=[masterBuffer?'master':null,...stems.map((s,i)=>s?['rhythm','harmony','voice'][i]:null),words.length?`${words.length} words`:null,'square'].filter(Boolean);
+ const failures=result.filter(x=>x.status==='rejected').length;
+ status.textContent=`DEFAULTS: ${loaded.join(' · ')}${failures?` · ${failures} unavailable`:''}`;
+ playBtn.disabled=!masterBuffer;playBtn.textContent=masterBuffer?'ENTER VENUS':'MASTER MISSING';
+}
+document.querySelectorAll('input[type=file]').forEach(input=>input.addEventListener('change',async()=>{
+ const file=input.files[0];if(!file)return;
+ try{
+  if(input.dataset.role==='master')masterBuffer=await actx.decodeAudioData(await file.arrayBuffer());
+  else if(input.dataset.role==='lyrics')words=normalizeWords(JSON.parse(await file.text()));
+  else if(input.dataset.role==='video'){if(videoObjectUrl)URL.revokeObjectURL(videoObjectUrl);videoObjectUrl=URL.createObjectURL(file);video.src=videoObjectUrl}
+  else{const i=+input.dataset.stem;stems[i]=stemObject(await actx.decodeAudioData(await file.arrayBuffer()))}
+  status.textContent=`Override ready: ${file.name}`;playBtn.disabled=!masterBuffer;
+ }catch(err){status.textContent=`Could not load ${file.name}: ${err.message}`}
+}));
+function silentAnalysisSource(s,t0,offset){if(!s)return;const source=actx.createBufferSource(),mute=actx.createGain();mute.gain.value=0;source.buffer=s.buffer;source.connect(s.analyser);s.analyser.connect(mute);mute.connect(actx.destination);source.start(t0,Math.min(offset,Math.max(0,s.buffer.duration-.01)));s.source=source}
+playBtn.addEventListener('click',async()=>{
+ if(playing){location.reload();return}await actx.resume();
+ const offset=Math.max(0,Number(new URLSearchParams(location.search).get('start'))||0),t0=actx.currentTime+.18;startTime=t0-offset;
+ masterSource=actx.createBufferSource();masterSource.buffer=masterBuffer;masterSource.connect(actx.destination);masterSource.start(t0,Math.min(offset,Math.max(0,masterBuffer.duration-.01)));
+ stems.forEach(s=>silentAnalysisSource(s,t0,offset));
+ try{video.currentTime=offset;await video.play()}catch(_){}
+ masterSource.onended=()=>{if(playing){playing=false;playBtn.textContent='REPLAY'}};
+ playing=true;playBtn.textContent='RESET';status.textContent='MASTER AUDIBLE · THREE SILENT STEMS DRIVE THE SPACE';
+});
+function band(s,lo,hi){if(!s)return 0;s.analyser.getByteFrequencyData(s.data);let sum=0,n=0;for(let i=lo;i<Math.min(hi,s.data.length);i++){sum+=s.data[i];n++}return n?sum/(n*255):0}
+function currentWord(sec){let lo=0,hi=words.length-1,best=-1;while(lo<=hi){const m=(lo+hi)>>1;if(words[m].start<=sec){best=m;lo=m+1}else hi=m-1}if(best<0)return'';const item=words[best],next=words[best+1],end=Number.isFinite(item.end)?item.end:Math.min(item.start+1.25,next?next.start:item.start+1.25);return sec<=end+.08?item.word:''}
+function showWord(word){if(word===lastWord)return;lastWord=word;wordEl.textContent=word;wordEl.dataset.word=word;wordEl.classList.remove('hit');void wordEl.offsetWidth;if(word)wordEl.classList.add('hit');wordEl.style.fontSize=word.length>14?'clamp(22px,3.8vw,60px)':word.length>9?'clamp(25px,4.7vw,76px)':''}
+function clock(sec){const m=Math.floor(sec/60),s=Math.floor(sec%60),ms=Math.floor((sec%1)*1000);return`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`}
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);$('#stage').appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x03040a,.038);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,100);camera.position.set(0,0,9);
+const ico=new THREE.Mesh(new THREE.IcosahedronGeometry(2.55,1),new THREE.MeshBasicMaterial({color:0xff22b7,wireframe:true,transparent:true,opacity:.78}));scene.add(ico);
+const knot=new THREE.Mesh(new THREE.TorusKnotGeometry(3.8,.075,340,12,2,5),new THREE.MeshBasicMaterial({color:0x24e8ff,transparent:true,opacity:.68}));scene.add(knot);
+const N=2600,pos=new Float32Array(N*3),base=new Float32Array(N*3);for(let i=0;i<N*3;i++)base[i]=pos[i]=(Math.random()-.5)*17;
+const pgeo=new THREE.BufferGeometry();pgeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const pts=new THREE.Points(pgeo,new THREE.PointsMaterial({color:0xffd166,size:.045,transparent:true,opacity:.82}));scene.add(pts);
+const rings=[];for(let i=0;i<7;i++){const r=new THREE.Mesh(new THREE.TorusGeometry(4.5+i*.42,.012,4,180),new THREE.MeshBasicMaterial({color:i%2?0xff22b7:0x24e8ff,transparent:true,opacity:.22}));r.rotation.x=Math.PI/2+(i-3)*.035;scene.add(r);rings.push(r)}
+let t=0;
+function tick(){
+ requestAnimationFrame(tick);t+=.008;
+ const low=band(stems[0],1,42),mid=band(stems[1],18,180),high=band(stems[2],80,480),lowMid=Math.sqrt(low*mid),midHigh=Math.sqrt(mid*high),voiceBeat=Math.sqrt(high*low);
+ ico.scale.setScalar(1+low*1.45+midHigh*.28);ico.rotation.x+=.002+low*.028;ico.rotation.y+=.003+voiceBeat*.028;ico.material.opacity=.28+low*.6+high*.12;
+ knot.rotation.z+=.001+mid*.018+lowMid*.015;knot.rotation.x=Math.sin(t*.6)*(.18+mid*.48);knot.scale.setScalar(1+mid*.42+voiceBeat*.2);knot.material.color.setHSL(.48+mid*.18+high*.08,.8,.44+mid*.24);
+ const p=pgeo.attributes.position.array;for(let i=0;i<N;i++){const j=i*3,w=Math.sin(t*2+i*.13);p[j]=base[j]+w*(high*1.9+lowMid*.9);p[j+1]=base[j+1]+Math.cos(t*1.7+i*.21)*(high*1.8+voiceBeat*.8);p[j+2]=base[j+2]+w*(high*1.2+midHigh*.8)}pgeo.attributes.position.needsUpdate=true;
+ pts.rotation.y+=.0006+high*.007+low*.002;pts.material.size=.035+high*.08+voiceBeat*.05;
+ rings.forEach((r,i)=>{r.scale.setScalar(1+low*(.06+i*.018)+midHigh*.09);r.rotation.z+=(i%2?1:-1)*(.0003+lowMid*.004);r.material.opacity=.1+low*.22+midHigh*.2});
+ camera.position.x=Math.sin(t*.3)*(1.05+lowMid*1.3);camera.position.y=Math.cos(t*.22)*(.7+midHigh*.9);camera.position.z=9-high*1.1;camera.lookAt(0,0,0);
+ if(playing){const sec=Math.max(0,actx.currentTime-startTime);showWord(currentWord(sec));timeEl.textContent=clock(sec);if(!video.paused&&Math.abs(video.currentTime-sec)>.3)video.currentTime=sec}
+ renderer.render(scene,camera);
+}
+tick();preload().catch(err=>{status.textContent=`AUTOLOAD FAILED: ${err.message}`;playBtn.textContent='LOAD MANUALLY'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>

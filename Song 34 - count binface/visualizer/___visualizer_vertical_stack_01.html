@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GLOBAL PEACE — VERTICAL STACK 01 · 1080×1920</title>
+<style>
+:root{--void:#02030a;--pink:#ff2bd6;--cyan:#25dcff;--gold:#ffe56b;--acid:#63ff9d}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--void);overflow:hidden}
+body{display:grid;place-items:center;font:500 13px/1.5 ui-monospace,Menlo,monospace;color:#e8ecf7}
+#stage{position:relative;aspect-ratio:1080/1920;height:100vh;max-width:100vw;background:#000}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#subs{position:absolute;left:0;right:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;gap:2.2%;padding:0 5%;pointer-events:none;text-align:center}
+#line{font:1000 clamp(18px,5.4cqw,64px)/1.06 "Arial Black",Impact,sans-serif;text-transform:uppercase;
+  letter-spacing:-.02em}
+#line span{display:inline-block;margin:0 .16em;color:rgba(255,255,255,.16)}
+#line span.done{color:rgba(255,255,255,.30)}
+#line span.on{color:#fff}
+#next{font:700 clamp(9px,1.5cqw,17px)/1.4 ui-monospace,monospace;letter-spacing:.22em;
+  color:rgba(255,255,255,.24);text-transform:uppercase}
+#stage{container-type:inline-size}
+#splash{position:absolute;inset:0;display:grid;place-items:center;background:rgba(2,3,10,.90);z-index:9;cursor:pointer}
+#splash div{text-align:center;padding:0 8%}
+#splash h1{font:1000 clamp(26px,7cqw,76px)/.94 "Arial Black",Impact,sans-serif;text-transform:uppercase;
+  letter-spacing:-.04em;color:#fff;text-shadow:-5px 0 var(--pink),5px 0 var(--cyan)}
+#splash p{margin-top:18px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--acid)}
+#splash small{display:block;margin-top:26px;font-size:10px;letter-spacing:.16em;color:rgba(255,255,255,.35);line-height:2}
+#hud{position:absolute;left:0;right:0;bottom:0;padding:10px 14px;display:flex;gap:14px;align-items:center;
+  font:700 9px/1 ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(255,255,255,.42);background:linear-gradient(transparent,rgba(0,0,0,.65));z-index:8}
+#hud b{color:var(--gold);font-weight:700}
+#hud.hide{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <div id="subs"><div id="line"></div><div id="next"></div></div>
+  <div id="hud"><span id="clock">0:00</span><span id="what">loading…</span><b id="beat"></b><span id="off"></span>
+    <span style="margin-left:auto">M hide · SPACE play · [ ] sync video</span></div>
+  <div id="splash"><div>
+    <h1>Global<br>Peace</h1>
+    <p id="ready">loading…</p>
+    <small>1080×1920 · video loops, the master drives the clock<br>click or press SPACE</small>
+  </div></div>
+</div>
+
+<video id="vid" playsinline muted loop crossorigin="anonymous" style="display:none"></video>
+<audio id="aud" preload="auto"></audio>
+
+<script>
+/* ================================================================
+   VERTICAL STACK 01 — the artwork rotated to 9:16.
+   Video sits full-width in the central band, untouched. Everything
+   above and below is the field: mirrored, RGB-split reflections that
+   burn hardest at the far edges and fall silent as they approach the
+   frame. Subtitles live below the video, driven by the aligner's own
+   JSON. All of it deterministic, all of it baked from the stems.
+   ================================================================ */
+var W=1080,H=1920;
+var BAND_H=608, BAND_TOP=Math.round(H*0.30);        /* video band, central-ish */
+var BAND_BOT=BAND_TOP+BAND_H;
+
+var vid=document.getElementById('vid'), aud=document.getElementById('aud');
+var cv=document.getElementById('gl'), gl=cv.getContext('webgl',{antialias:false,alpha:false});
+var lineEl=document.getElementById('line'), nextEl=document.getElementById('next');
+var subs=document.getElementById('subs');
+var words=[], feat=null, lines=[], started=false, lastLive='';
+var vOff=0, vDur=0;   /* video offset against the master clock, seconds */
+
+cv.width=W; cv.height=H;
+/* subtitles occupy the space under the band */
+subs.style.top=(100*(BAND_BOT+40)/H)+'%';
+subs.style.height=(100*(H-BAND_BOT-40)/H)+'%';
+
+/* ---------------- shader ---------------- */
+var VS='attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}';
+var FS=[
+'precision highp float;',
+'varying vec2 v;',
+'uniform sampler2D uTex;',
+'uniform vec2 uRes;',
+'uniform float uTop,uBot;',            /* band edges, pixels from top */
+'uniform float uRGB,uPulse,uTwist,uTurb,uImpact,uAir,uT;',
+'vec3 samp(vec2 uv,float k){',
+'  return vec3(texture2D(uTex,uv+vec2(k,0.)).r,',
+'              texture2D(uTex,uv).g,',
+'              texture2D(uTex,uv-vec2(k,0.)).b);',
+'}',
+'void main(){',
+'  float y=(1.0-v.y)*uRes.y;',        /* pixels from top */
+'  float x=v.x;',
+'  if(y>=uTop&&y<=uBot){',            /* THE FRAME: clean, never touched */
+'    vec2 uv=vec2(x,1.0-(y-uTop)/(uBot-uTop));',
+'    gl_FragColor=vec4(texture2D(uTex,uv).rgb,1.0);',
+'    return;',
+'  }',
+'  float h=uBot-uTop;',
+'  float d=(y<uTop)?(uTop-y):(y-uBot);',        /* distance out of the frame */
+'  float far=max(uTop,uRes.y-uBot);',
+'  float e=clamp(d/far,0.,1.);',               /* 0 at the frame, 1 at the far edge */
+'  float grow=smoothstep(0.0,0.85,e);',        /* quiet by the frame, wild at the ends */
+'  float rel=(y-uTop)/h;',
+'  float m=abs(fract(rel*0.5)*2.0-1.0);',      /* mirror-tile the frame outward */
+'  vec2 uv=vec2(x,m);',
+'  vec2 c=uv-0.5;',
+'  float a=(uTwist*0.9-0.45)*grow;',           /* morph, strongest far out */
+'  float s=sin(a),co=cos(a);',
+'  c=mat2(co,-s,s,co)*c*(1.0+uPulse*0.42*grow);',
+'  c.x+=sin(uv.y*11.0+uT*1.7)*0.035*uTurb*grow;',
+'  c.y+=cos(uv.x*9.0-uT*1.3)*0.028*uTurb*grow;',
+'  uv=c+0.5;',
+'  float k=(0.004+uRGB*0.055+uImpact*0.05)*grow;',
+'  vec3 col=samp(fract(uv),k);',
+'  col*=mix(1.0,0.16,grow);',                  /* dissolve into the void */
+'  col+=uAir*0.10*grow*vec3(0.35,0.55,1.0);',
+'  col*=1.0+uImpact*0.55*grow;',
+'  gl_FragColor=vec4(col,1.0);',
+'}'].join('\n');
+
+function sh(t,src){var s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));return s}
+var prog=gl.createProgram();
+gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));
+gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,FS));
+gl.linkProgram(prog); gl.useProgram(prog);
+var buf=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+var loc=gl.getAttribLocation(prog,'p');
+gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+var tex=gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D,tex);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+var U={};
+['uTex','uRes','uTop','uBot','uRGB','uPulse','uTwist','uTurb','uImpact','uAir','uT']
+  .forEach(function(n){U[n]=gl.getUniformLocation(prog,n)});
+gl.uniform1i(U.uTex,0); gl.uniform2f(U.uRes,W,H);
+gl.uniform1f(U.uTop,BAND_TOP); gl.uniform1f(U.uBot,BAND_BOT);
+gl.viewport(0,0,W,H);
+
+/* ---------------- baked features ---------------- */
+function scene(t){
+  if(!feat)return [0,0,.5,0,0,0,0];
+  var i=Math.min(feat.scene.length-1,Math.max(0,Math.floor(t*feat.fps)));
+  var r=feat.scene[i], o=[];
+  for(var k=0;k<r.length;k++)o.push(r[k]/255);
+  return o;
+}
+
+/* ---------------- lyrics ---------------- */
+function effEnd(i){
+  var w=words[i];
+  if(w.e!=null&&w.e>w.t)return w.e;
+  return (i+1<words.length)?Math.min(w.t+1.1,words[i+1].t):w.t+.6;
+}
+function buildLines(){
+  var L=[],cur=[];
+  for(var i=0;i<words.length;i++){
+    if(cur.length&&words[i].t-effEnd(cur[cur.length-1])>1.1){L.push(cur);cur=[]}
+    cur.push(i);
+  }
+  if(cur.length)L.push(cur);
+  return L;
+}
+function liveIdx(t){
+  var b=-1;
+  for(var i=0;i<words.length;i++){ if(words[i].t<=t+.02)b=i; else break }
+  if(b>=0&&t>effEnd(b)+1.6)return -1;
+  return b;
+}
+function drawSubs(t,s){
+  var a=liveIdx(t), key=(a>=0?'w'+a:'s');
+  if(key!==lastLive){
+    lastLive=key;
+    if(a<0){ lineEl.innerHTML=''; nextEl.textContent=''; }
+    else{
+      var li=-1,j;
+      for(j=0;j<lines.length;j++)if(lines[j].indexOf(a)>=0){li=j;break}
+      var ln=li>=0?lines[li]:[a],html='';
+      for(j=0;j<ln.length;j++){
+        var i=ln[j];
+        html+='<span class="'+(i===a?'on':(i<a?'done':''))+'" data-i="'+i+'">'+
+              words[i].w.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span>';
+      }
+      lineEl.innerHTML=html;
+      var nx=(li>=0&&li+1<lines.length)?lines[li+1]:null;
+      nextEl.textContent=nx?nx.map(function(i){return words[i].w}).join(' '):'';
+    }
+  }
+  /* the live word's chromatic ghost breathes with the stems — the type itself holds still */
+  var on=lineEl.querySelector('span.on');
+  if(on){
+    var k=(2.0+s[0]*16+s[5]*14).toFixed(1);
+    var dy=(s[1]*4-1).toFixed(1);
+    on.style.textShadow='-'+k+'px '+dy+'px var(--pink), '+k+'px '+(-dy)+'px var(--cyan)';
+  }
+}
+
+/* ---------------- loop ---------------- */
+function frame(){
+  requestAnimationFrame(frame);
+  var t=aud.currentTime||0, s=scene(t);
+  /* The master is the clock. The video is a picture source pinned to it — the
+     video is shorter than the song, so it wraps. Never let it free-run. */
+  if(vDur>0&&vid.readyState>=1){   /* follow even while paused, so scrubbing shows the right frame */
+    var want=((t+vOff)%vDur+vDur)%vDur;
+    /* Only re-seek when a seek is not already in flight — assigning
+       currentTime every frame cancels the pending seek and the video never
+       lands, which leaves the texture black forever. */
+    if(!vid.seeking&&Math.abs(vid.currentTime-want)>0.3)vid.currentTime=want;
+  }
+  if(vid.readyState>=2){
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,vid);
+  }
+  gl.uniform1f(U.uRGB,s[0]); gl.uniform1f(U.uPulse,s[1]); gl.uniform1f(U.uTwist,s[2]);
+  gl.uniform1f(U.uTurb,s[3]); gl.uniform1f(U.uImpact,s[5]); gl.uniform1f(U.uAir,s[6]);
+  gl.uniform1f(U.uT,t);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  drawSubs(t,s);
+  document.getElementById('clock').textContent=
+    Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
+  document.getElementById('beat').textContent='▮'.repeat(1+Math.round(s[5]*8));
+  document.getElementById('off').textContent='vid '+(vOff>=0?'+':'')+vOff.toFixed(2)+'s';
+}
+
+/* ---------------- load everything, no clicks ---------------- */
+fetch('_vertical/manifest.json').then(function(r){return r.json()}).then(function(man){
+  document.getElementById('what').textContent=man.song;
+  vOff=man.videoOffset||0; vDur=man.videoDur||0;
+  /* python's http.server answers no Range requests, so a plain src= can never
+     seek — the clock sticks wherever it buffered. Pull both media in as blobs
+     and hand the elements an object URL, which is fully seekable. */
+  var media=Promise.all([
+    fetch('_vertical/'+man.video).then(function(r){return r.blob()})
+      .then(function(b){vid.src=URL.createObjectURL(b)}),
+    fetch('_vertical/'+man.audio).then(function(r){return r.blob()})
+      .then(function(b){aud.src=URL.createObjectURL(b)})
+  ]);
+  return Promise.all([
+    fetch('_vertical/'+man.lyrics).then(function(r){return r.json()}),
+    fetch('_vertical/'+man.features).then(function(r){return r.json()}),
+    media
+  ]);
+}).then(function(res){
+  var j=res[0]; words=(j.words||j).filter(function(w){return typeof w.t==='number'});
+  words.sort(function(a,b){return a.t-b.t});
+  lines=buildLines();
+  feat=res[1];
+  document.getElementById('ready').textContent=
+    words.length+' words · '+lines.length+' lines · '+feat.duration.toFixed(0)+'s baked — ready';
+  frame();
+}).catch(function(e){
+  document.getElementById('ready').textContent='load failed: '+e.message;
+});
+
+function start(){
+  if(started)return; started=true;
+  document.getElementById('splash').style.display='none';
+  vid.play().catch(function(){});
+  aud.play().catch(function(){});
+}
+document.getElementById('splash').onclick=start;
+addEventListener('keydown',function(e){
+  if(e.key===' '){e.preventDefault(); if(!started)start(); else if(aud.paused){aud.play();vid.play()}else{aud.pause();vid.pause()}}
+  if(e.key.toLowerCase()==='m')document.getElementById('hud').classList.toggle('hide');
+  if(e.key.toLowerCase()==='r'){aud.currentTime=0;vid.currentTime=0}
+  if(e.key==='['){vOff-=0.05; vid.currentTime=((aud.currentTime+vOff)%vDur+vDur)%vDur}
+  if(e.key===']'){vOff+=0.05; vid.currentTime=((aud.currentTime+vOff)%vDur+vDur)%vDur}
+});
+</script>
+</body>
+</html>

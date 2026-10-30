@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LYRICS ALIGNER v5.01 — paste Suno text, tap to the vocals</title>
+<style>
+:root{--void:#010207;--pink:#ff2bd6;--cyan:#25dcff;--gold:#ffe56b;--acid:#63ff9d;--violet:#735cff}
+*{box-sizing:border-box;margin:0}
+body{background:var(--void);color:#e8ecf7;font:500 12px/1.5 ui-monospace,Menlo,Consolas,monospace;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.12)}
+h1{font:1000 15px/1 "Arial Black",Impact,sans-serif;letter-spacing:-.01em;text-transform:uppercase;color:#fff;
+   text-shadow:-2px 0 var(--pink),2px 0 var(--cyan);margin-right:6px}
+button,select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.22);color:#fff;font:700 10px/1 ui-monospace,monospace;
+  letter-spacing:.1em;padding:8px 10px;cursor:pointer;text-transform:uppercase}
+button:hover{border-color:var(--acid);color:var(--acid)}
+button.on{background:var(--violet);border-color:var(--violet);color:#fff}
+button.go{background:var(--acid);color:#031008;border:0}
+button:disabled{opacity:.35;cursor:not-allowed}
+.spacer{flex:1}
+#waves{position:relative;flex:0 0 auto;padding:8px 14px 0}
+canvas{display:block;width:100%;background:#05060d;border:1px solid rgba(255,255,255,.12);cursor:crosshair}
+.wlabel{font:700 9px/1 ui-monospace,monospace;letter-spacing:.24em;color:var(--gold);text-transform:uppercase;margin:8px 0 3px}
+#strip{flex:1;overflow-y:auto;padding:10px 14px;border-top:1px solid rgba(255,255,255,.12);margin-top:10px}
+.w{display:inline-block;padding:6px 9px;margin:0 4px 6px 0;border:1px solid rgba(255,255,255,.18);cursor:pointer;
+   font:700 12px/1 ui-monospace,monospace;white-space:nowrap}
+.w.placed{border-color:rgba(37,220,255,.5);color:var(--cyan)}
+.w.next{background:var(--acid);color:#031008;border-color:var(--acid)}
+.w.sel{outline:2px solid var(--violet);outline-offset:1px}
+.w.hov{border-color:var(--gold)}
+.w small{opacity:.6;font-weight:400;margin-left:6px}
+footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;border-top:1px solid rgba(255,255,255,.12);font-size:11px}
+.k{color:var(--gold)}
+#paste{position:fixed;inset:0;background:rgba(1,2,7,.94);z-index:40;display:none;place-items:center;padding:24px}
+#paste.on{display:grid}
+#paste div{width:min(760px,94vw)}
+textarea{width:100%;height:44vh;background:#05060d;color:#e8ecf7;border:1px solid rgba(255,255,255,.2);padding:12px;
+  font:500 13px/1.6 ui-monospace,monospace;resize:vertical}
+.note{color:rgba(255,255,255,.5);font-size:10px;line-height:1.7}
+#status{color:var(--gold);font-size:11px}
+audio{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Lyrics Aligner</h1>
+  <button id="loadMix">Load mix</button>
+  <button id="loadVox">Load vocals</button>
+  <button id="pasteBtn">Paste lyrics</button>
+  <button id="loadJson">Load JSON</button>
+  <span class="spacer"></span>
+  <span class="note">Hands</span>
+  <button class="hp on" data-h="left">Left ASDF</button>
+  <button class="hp" data-h="right">Right JKL</button>
+  <span class="spacer"></span>
+  <span id="status">load a mix + paste lyrics</span>
+  <button id="export" class="go">Export JSON</button>
+</header>
+
+<div id="waves">
+  <div class="wlabel">Song — full mix</div>
+  <canvas id="cMix" height="120"></canvas>
+  <div class="wlabel">Vocals — the stem you aim at</div>
+  <canvas id="cVox" height="120"></canvas>
+</div>
+
+<div id="strip"></div>
+
+<footer>
+  <button id="play">▶ Play</button>
+  <select id="rate">
+    <option value="0.25">0.25×</option><option value="0.5">0.5×</option>
+    <option value="0.75">0.75×</option><option value="1" selected>1×</option>
+  </select>
+  <button id="audioSrc">🔊 Mix</button>
+  <span id="tdisp">0:00.000</span>
+  <span class="spacer"></span>
+  <span id="keyhelp"></span>
+</footer>
+
+<div id="paste"><div>
+  <p style="margin-bottom:8px">Paste the lyrics (straight from Suno is fine — <b>[Verse]</b> / <b>[Chorus]</b> markers are ignored).</p>
+  <textarea id="ta" placeholder="EVERYBODY IN&#10;VOTE FOR THE BIN&#10;..."></textarea>
+  <div style="margin-top:10px;display:flex;gap:8px">
+    <button class="go" id="useText">Use these words</button>
+    <button id="cancelText">Cancel</button>
+    <span class="note" style="align-self:center">Every whitespace-separated token becomes one timed entry. Split them finer later with E.</span>
+  </div>
+</div></div>
+
+<audio id="aMix" preload="auto"></audio>
+<audio id="aVox" preload="auto"></audio>
+
+<script>
+/* ================= state ================= */
+var words=[];               /* {w, t:null|number} */
+var sel=-1, hov=-1;
+var peaksMix=null, peaksVox=null, PPS=400;   /* peak buckets per second */
+var viewStart=0, viewDur=12;                 /* visible window, seconds */
+var hands='left', audible='mix';
+var aMix=document.getElementById('aMix'), aVox=document.getElementById('aVox');
+var cMix=document.getElementById('cMix'), cVox=document.getElementById('cVox');
+var xMix=cMix.getContext('2d'), xVox=cVox.getContext('2d');
+var statusEl=document.getElementById('status'), strip=document.getElementById('strip');
+
+/* ================= keyboard presets ================= */
+var PRESETS={
+  left:  {stamp:'f', undo:'d', prev:'s', next:'a', nudgeD:'w', nudgeU:'r', label:'SPACE play · F stamp · D undo · S/A prev·next · W/R nudge · E split'},
+  right: {stamp:'j', undo:'k', prev:'l', next:';', nudgeD:'i', nudgeU:'o', label:'SPACE play · J stamp · K undo · L/; prev·next · I/O nudge · E split'}
+};
+function keyhelp(){document.getElementById('keyhelp').innerHTML=PRESETS[hands].label.replace(/([A-Z;\/]+) /g,'<span class="k">$1</span> ');}
+
+/* ================= lyrics text ================= */
+function parseText(txt){
+  var out=[], lines=txt.split(/\r?\n/);
+  for(var i=0;i<lines.length;i++){
+    var ln=lines[i].trim();
+    if(!ln) continue;
+    if(/^\[[^\]]*\]$/.test(ln)) continue;          /* [Verse] / [Chorus] section markers */
+    if(/^\([^)]*\)$/.test(ln)) continue;
+    var toks=ln.split(/\s+/);
+    for(var j=0;j<toks.length;j++){
+      var t=toks[j].replace(/[",]/g,'').trim();
+      if(t) out.push({w:t.toUpperCase(), t:null});
+    }
+  }
+  return out;
+}
+document.getElementById('pasteBtn').onclick=function(){document.getElementById('paste').classList.add('on');document.getElementById('ta').focus()};
+document.getElementById('cancelText').onclick=function(){document.getElementById('paste').classList.remove('on')};
+document.getElementById('useText').onclick=function(){
+  var v=document.getElementById('ta').value;
+  if(!v.trim())return;
+  words=parseText(v); sel=-1;
+  document.getElementById('paste').classList.remove('on');
+  renderStrip(); note(words.length+' words ready — press '+PRESETS[hands].stamp.toUpperCase()+' on each vocal onset');
+};
+document.getElementById('loadJson').onclick=function(){
+  var i=document.createElement('input');i.type='file';i.accept='.json,application/json';
+  i.onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();
+    r.onload=function(){try{var j=JSON.parse(r.result);
+      words=j.map(function(x){return {w:String(x.w!=null?x.w:x.word).toUpperCase(),t:(typeof x.t==='number'?x.t:null)}});
+      renderStrip();note('loaded '+words.length+' words from '+f.name);
+    }catch(err){note('bad JSON: '+err.message)}};
+    r.readAsText(f)};
+  i.click();
+};
+
+/* ================= audio ================= */
+function pickAudio(which){
+  var i=document.createElement('input');i.type='file';i.accept='audio/*';
+  i.onchange=function(e){var f=e.target.files[0];if(f)loadAudio(which,f)};
+  i.click();
+}
+document.getElementById('loadMix').onclick=function(){pickAudio('mix')};
+document.getElementById('loadVox').onclick=function(){pickAudio('vox')};
+
+function loadAudio(which,file){
+  var el=(which==='mix')?aMix:aVox;
+  el.src=URL.createObjectURL(file);
+  note('decoding '+file.name+' …');
+  file.arrayBuffer().then(function(buf){
+    var ac=new (window.AudioContext||window.webkitAudioContext)();
+    return ac.decodeAudioData(buf);
+  }).then(function(ab){
+    var p=computePeaks(ab);
+    if(which==='mix'){peaksMix=p}else{peaksVox=p}
+    note((which==='mix'?'Mix':'Vocals')+' ready · '+fmt(ab.duration));
+    draw();
+  }).catch(function(e){note('decode failed: '+e.message)});
+}
+function computePeaks(ab){
+  var ch=ab.getChannelData(0), n=Math.ceil(ab.duration*PPS), step=Math.floor(ch.length/n)||1;
+  var out=new Float32Array(n);
+  for(var i=0;i<n;i++){
+    var s=i*step, e=Math.min(ch.length,s+step), m=0;
+    for(var k=s;k<e;k+=2){var v=ch[k]<0?-ch[k]:ch[k]; if(v>m)m=v}
+    out[i]=m;
+  }
+  return {data:out, dur:ab.duration};
+}
+function dur(){return aMix.duration||(peaksMix&&peaksMix.dur)||0}
+function now(){return aMix.currentTime||0}
+
+/* ================= waveform drawing ================= */
+function sizeCanvases(){
+  [cMix,cVox].forEach(function(c){
+    var w=c.clientWidth||900;
+    if(c.width!==w){c.width=w}
+  });
+}
+function drawWave(ctx,cv,peaks,color){
+  var W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#05060d';ctx.fillRect(0,0,W,H);
+  if(peaks){
+    ctx.strokeStyle=color;ctx.globalAlpha=.85;ctx.beginPath();
+    for(var x=0;x<W;x++){
+      var t=viewStart+(x/W)*viewDur, idx=Math.floor(t*PPS);
+      var v=(idx>=0&&idx<peaks.data.length)?peaks.data[idx]:0;
+      var h=v*(H*0.46);
+      ctx.moveTo(x+.5,H/2-h);ctx.lineTo(x+.5,H/2+h);
+    }
+    ctx.stroke();ctx.globalAlpha=1;
+  }
+  /* second ticks */
+  ctx.fillStyle='rgba(255,255,255,.18)';
+  var s0=Math.ceil(viewStart), s1=viewStart+viewDur;
+  for(var s=s0;s<s1;s++){
+    var x=((s-viewStart)/viewDur)*W;
+    ctx.fillRect(x,0,1,6);
+    if(viewDur<40){ctx.font='9px ui-monospace,monospace';ctx.fillText(fmt(s),x+3,14)}
+  }
+  /* word markers */
+  for(var i=0;i<words.length;i++){
+    if(words[i].t==null)continue;
+    var wt=words[i].t;
+    if(wt<viewStart-1||wt>viewStart+viewDur+1)continue;
+    var wx=((wt-viewStart)/viewDur)*W;
+    var isSel=(i===sel);
+    ctx.fillStyle=isSel?'#735cff':'rgba(255,229,107,.85)';
+    ctx.fillRect(wx-(isSel?1.5:0.5),0,isSel?3:1,H);
+    if(viewDur<25){
+      ctx.fillStyle=isSel?'#735cff':'rgba(255,229,107,.9)';
+      ctx.font='700 10px ui-monospace,monospace';
+      ctx.fillText(words[i].w.slice(0,12),wx+3,H-6);
+    }
+  }
+  /* playhead */
+  var px=((now()-viewStart)/viewDur)*W;
+  if(px>=0&&px<=W){ctx.fillStyle='#63ff9d';ctx.fillRect(px-1,0,2,H)}
+}
+function draw(){
+  sizeCanvases();
+  drawWave(xMix,cMix,peaksMix,'#25dcff');
+  drawWave(xVox,cVox,peaksVox,'#ff2bd6');
+  document.getElementById('tdisp').textContent=fmt3(now());
+}
+function follow(){
+  var t=now();
+  if(t<viewStart+viewDur*0.15||t>viewStart+viewDur*0.85){
+    viewStart=Math.max(0,t-viewDur*0.35);
+  }
+}
+function loop(){ if(!aMix.paused){follow()} draw(); requestAnimationFrame(loop) }
+requestAnimationFrame(loop);
+addEventListener('resize',draw);
+
+/* click a waveform to seek; wheel to zoom */
+[cMix,cVox].forEach(function(cv){
+  cv.addEventListener('click',function(e){
+    var r=cv.getBoundingClientRect();
+    seek(viewStart+((e.clientX-r.left)/r.width)*viewDur);
+  });
+  cv.addEventListener('wheel',function(e){
+    e.preventDefault();
+    var r=cv.getBoundingClientRect(), f=(e.clientX-r.left)/r.width;
+    var anchor=viewStart+f*viewDur;
+    viewDur=Math.max(1.5,Math.min(120,viewDur*(e.deltaY>0?1.15:0.87)));
+    viewStart=Math.max(0,anchor-f*viewDur);
+    draw();
+  },{passive:false});
+});
+
+/* ================= transport ================= */
+function seek(t){
+  t=Math.max(0,Math.min(dur()||1e9,t));
+  aMix.currentTime=t; if(aVox.src)aVox.currentTime=t;
+  draw();
+}
+function playPause(){
+  if(aMix.paused){
+    if(aVox.src){aVox.currentTime=aMix.currentTime;aVox.play().catch(function(){})}
+    aMix.play().catch(function(){});
+    document.getElementById('play').textContent='❚❚ Pause';
+  }else{
+    aMix.pause();if(aVox.src)aVox.pause();
+    document.getElementById('play').textContent='▶ Play';
+  }
+}
+document.getElementById('play').onclick=playPause;
+document.getElementById('rate').onchange=function(e){
+  var r=parseFloat(e.target.value);
+  aMix.playbackRate=r;aVox.playbackRate=r;
+  aMix.preservesPitch=aVox.preservesPitch=true;
+};
+document.getElementById('audioSrc').onclick=function(){
+  audible=(audible==='mix')?'vox':'mix';
+  aMix.muted=(audible!=='mix'); aVox.muted=(audible!=='vox');
+  this.textContent=(audible==='mix')?'🔊 Mix':'🔊 Vocals';
+};
+aMix.muted=false;aVox.muted=true;
+
+/* ================= the word strip ================= */
+function nextUnplaced(){for(var i=0;i<words.length;i++){if(words[i].t==null)return i} return -1}
+function renderStrip(){
+  var nu=nextUnplaced(), html='';
+  for(var i=0;i<words.length;i++){
+    var w=words[i], cls='w';
+    if(w.t!=null)cls+=' placed';
+    if(i===nu)cls+=' next';
+    if(i===sel)cls+=' sel';
+    html+='<span class="'+cls+'" data-i="'+i+'">'+esc(w.w)+
+          (w.t!=null?'<small>'+w.t.toFixed(2)+'</small>':'')+'</span>';
+  }
+  strip.innerHTML=html;
+  var els=strip.querySelectorAll('.w');
+  for(var k=0;k<els.length;k++){
+    els[k].onmouseenter=function(){hov=parseInt(this.dataset.i,10)};
+    els[k].onmouseleave=function(){hov=-1};
+    els[k].onclick=function(){
+      sel=parseInt(this.dataset.i,10);
+      if(words[sel].t!=null)seek(words[sel].t);
+      renderStrip();
+    };
+  }
+  var nx=strip.querySelector('.next'); if(nx&&nx.scrollIntoView)nx.scrollIntoView({block:'nearest'});
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+/* ================= actions ================= */
+function stamp(){
+  var i=nextUnplaced(); if(i<0){note('all words placed');return}
+  words[i].t=now(); sel=i; renderStrip();
+  note('placed '+words[i].w+' @ '+words[i].t.toFixed(3)+'  ('+(i+1)+'/'+words.length+')');
+}
+function undo(){
+  var i=nextUnplaced(); var j=(i<0?words.length:i)-1;
+  if(j<0)return;
+  words[j].t=null; sel=j; renderStrip(); note('un-placed '+words[j].w);
+}
+function nudge(d){
+  if(sel<0||words[sel].t==null)return;
+  words[sel].t=Math.max(0,words[sel].t+d); renderStrip(); seek(words[sel].t);
+}
+/* E — split a word in half. The second half becomes an APPEND token so the
+   engine still renders one word: TECHNOLOGY -> TECHNO + [LOGY]. */
+function splitWord(i){
+  if(i<0||i>=words.length)return;
+  var w=words[i].w, isApp=/^\[.*\]$/.test(w);
+  var core=isApp?w.slice(1,-1):w;
+  var bare=core.replace(/^-/,'');
+  if(bare.length<2){note('too short to split');return}
+  var half=Math.ceil(bare.length/2);
+  var a=bare.slice(0,half), b=bare.slice(half);
+  var first=isApp?('['+(core.charAt(0)==='-'?'-':'')+a+']'):a;
+  var t0=words[i].t;
+  var t1=null;
+  if(t0!=null){
+    var nt=null;
+    for(var k=i+1;k<words.length;k++){if(words[k].t!=null){nt=words[k].t;break}}
+    t1=(nt!=null)?t0+(nt-t0)/2:t0+0.2;
+  }
+  words.splice(i,1,{w:first,t:t0},{w:'['+b+']',t:t1});
+  sel=i+1; renderStrip();
+  note('split → '+first+' + ['+b+']');
+}
+
+/* ================= keys ================= */
+addEventListener('keydown',function(e){
+  if(document.getElementById('paste').classList.contains('on'))return;
+  var tag=e.target.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+  var k=e.key.toLowerCase(), P=PRESETS[hands];
+  if(k===' '){e.preventDefault();playPause();return}
+  if(k==='e'){e.preventDefault();splitWord(hov>=0?hov:sel);return}
+  if(k===P.stamp){e.preventDefault();stamp();return}
+  if(k===P.undo){e.preventDefault();undo();return}
+  if(k===P.prev){e.preventDefault();if(sel>0){sel--;if(words[sel].t!=null)seek(words[sel].t);renderStrip()}return}
+  if(k===P.next){e.preventDefault();if(sel<words.length-1){sel++;if(words[sel].t!=null)seek(words[sel].t);renderStrip()}return}
+  if(k===P.nudgeD){e.preventDefault();nudge(-0.02);return}
+  if(k===P.nudgeU){e.preventDefault();nudge(0.02);return}
+  if(k==='arrowleft'){e.preventDefault();seek(now()-(e.shiftKey?5:1));return}
+  if(k==='arrowright'){e.preventDefault();seek(now()+(e.shiftKey?5:1));return}
+});
+var hpBtns=document.querySelectorAll('.hp');
+for(var q=0;q<hpBtns.length;q++){
+  hpBtns[q].onclick=function(){
+    hands=this.dataset.h;
+    for(var z=0;z<hpBtns.length;z++)hpBtns[z].classList.toggle('on',hpBtns[z]===this);
+    keyhelp();
+    try{localStorage.setItem('aligner-hands',hands)}catch(err){}
+  };
+}
+try{var sh=localStorage.getItem('aligner-hands'); if(sh){hands=sh;
+  for(var z2=0;z2<hpBtns.length;z2++)hpBtns[z2].classList.toggle('on',hpBtns[z2].dataset.h===hands);}}catch(err){}
+
+/* ================= export ================= */
+document.getElementById('export').onclick=function(){
+  var placed=words.filter(function(w){return w.t!=null})
+                  .map(function(w){return {t:+w.t.toFixed(3), w:w.w}})
+                  .sort(function(a,b){return a.t-b.t});
+  if(!placed.length){note('nothing placed yet');return}
+  var blob=new Blob([JSON.stringify(placed,null,1)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='aligned_words.json'; a.click();
+  note('exported '+placed.length+' words');
+};
+
+/* ================= util ================= */
+function fmt(t){t=t||0;return Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')}
+function fmt3(t){t=t||0;return Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')+'.'+String(Math.floor((t%1)*1000)).padStart(3,'0')}
+function note(m){statusEl.textContent=m}
+keyhelp(); renderStrip(); draw();
+</script>
+</body>
+</html>

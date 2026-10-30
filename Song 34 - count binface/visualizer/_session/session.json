@@ -1,0 +1,11 @@
+{
+ "name": "Song 27 - Global Pause",
+ "mix": "mix.mp3",
+ "vocals": "vocals.mp3",
+ "asr": "asr_words.json",
+ "sources": {
+  "mix": "/Users/m/Code/marsita-the-ultra/Song 27 - Global Pause/versions various strange WIP finalizing/Marsita the Ultra - Global Peace (new hope vibing flowing mix).wav",
+  "vocals": "/Users/m/Code/marsita-the-ultra/Song 27 - Global Pause/STEMS (new hope)/15 Vocals.mp3",
+  "asr": "/Users/m/Code/marsita-the-ultra/Song 27 - Global Pause/asr_words.json"
+ }
+}

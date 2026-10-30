@@ -1,0 +1,11 @@
+{
+ "video": "video.mp4",
+ "audio": "audio.mp3",
+ "lyrics": "lyrics.json",
+ "features": "features.json",
+ "song": "Global Peace (new hope)",
+ "videoDur": 260.0,
+ "songDur": 394.8,
+ "note": "master audio is the clock; the video is a silent picture source pinned to it and wraps (260s video vs 394.8s song). The video edit carries an extra broken-glass SFX layer, so its own audio is discarded. Tune videoOffset with [ and ] in the page, then write it here.",
+ "videoOffset": 0.0
+}

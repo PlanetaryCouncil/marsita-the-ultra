@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>REFRAME STUDIO 04 — horizontal → vertical, exported in the browser</title>
+<style>
+:root{--void:#010207;--pink:#ff2bd6;--cyan:#25dcff;--gold:#ffe56b;--acid:#63ff9d;--violet:#735cff}
+*{box-sizing:border-box;margin:0}
+body{background:var(--void);color:#e8ecf7;font:500 13px/1.6 ui-monospace,Menlo,Consolas,monospace;min-height:100vh}
+header{padding:20px 24px 8px}
+h1{font:1000 26px/1 "Arial Black",Impact,sans-serif;letter-spacing:-.02em;text-transform:uppercase;color:#fff;
+   text-shadow:-3px 0 var(--pink),3px 0 var(--cyan)}
+.kicker{font:700 10px/1 ui-monospace,monospace;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+main{display:grid;grid-template-columns:1fr 340px;gap:22px;padding:12px 24px 40px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+#stageWrap{background:#05060d;border:1px solid rgba(255,255,255,.14);display:grid;place-items:center;padding:16px;min-height:380px}
+#out{max-width:100%;max-height:72vh;cursor:grab;background:#000;display:block}
+#out.grabbing{cursor:grabbing}
+#drop{border:2px dashed rgba(255,255,255,.25);padding:56px 30px;text-align:center;color:rgba(255,255,255,.6)}
+#drop.hot{border-color:var(--acid);color:var(--acid)}
+aside section{border:1px solid rgba(255,255,255,.14);padding:14px 16px;margin-bottom:14px;background:rgba(255,255,255,.02)}
+h2{font:1000 11px/1 "Arial Black",Impact,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.22);color:#fff;font:700 11px/1 ui-monospace,monospace;
+  letter-spacing:.1em;padding:9px 12px;cursor:pointer;text-transform:uppercase}
+button:hover{border-color:var(--acid);color:var(--acid)}
+button.on{background:var(--violet);border-color:var(--violet);color:#fff}
+button:disabled{opacity:.35;cursor:not-allowed}
+label.sl{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+input[type=range]{flex:1;accent-color:var(--violet)}
+#exportBtn{width:100%;background:var(--acid);color:#031008;border:0;padding:15px;font:900 12px/1 ui-monospace,monospace;letter-spacing:.2em;
+  box-shadow:0 0 28px rgba(99,255,157,.22)}
+#exportBtn:disabled{background:rgba(255,255,255,.1);color:rgba(255,255,255,.4);box-shadow:none}
+#stopBtn{width:100%;background:var(--pink);color:#fff;border:0;padding:12px;font:900 11px/1 ui-monospace,monospace;letter-spacing:.2em;margin-top:8px}
+#prog{height:6px;background:rgba(255,255,255,.1);margin-top:10px}
+#prog i{display:block;height:100%;width:0;background:var(--acid);transition:width .2s}
+.note{font-size:10px;color:rgba(255,255,255,.45);line-height:1.6}
+.val{color:var(--cyan);min-width:52px;text-align:right}
+#status{font-size:11px;color:var(--gold);margin-top:8px;min-height:16px}
+#dl{display:block;margin-top:10px;color:var(--acid);font-size:11px;word-break:break-all}
+video{display:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">Planetary Council · tooling</div>
+  <h1>Reframe Studio</h1>
+</header>
+<main>
+  <div id="stageWrap">
+    <div id="drop">
+      <b style="font-size:15px;color:#fff">Drop a video here</b><br><br>
+      or <button id="pick">Choose file</button><br><br>
+      <span class="note">Nothing is uploaded anywhere. Everything happens in this browser.</span>
+    </div>
+    <canvas id="out" width="1080" height="1920" hidden></canvas>
+  </div>
+
+  <aside>
+    <section>
+      <h2>1 · Output</h2>
+      <div class="row">
+        <button class="ob on" data-o="v">▮ Vertical 1080×1920</button>
+        <button class="ob" data-o="h">▬ Horizontal 1920×1080</button>
+      </div>
+      <div class="note">Pick the shape you're posting to. Everything below reframes into it.</div>
+    </section>
+
+    <section>
+      <h2>2 · The part you use</h2>
+      <div class="row">
+        <button class="mb on" data-m="fill">Fill (crop)</button>
+        <button class="mb" data-m="fit">Fit (whole frame)</button>
+      </div>
+      <label class="sl">Zoom <input id="zoom" type="range" min="1" max="4" step="0.01" value="1"><span class="val" id="zoomV">1.00×</span></label>
+      <label class="sl">Time <input id="scrub" type="range" min="0" max="1000" step="1" value="0"><span class="val" id="timeV">0:00</span></label>
+      <div class="row">
+        <button id="reset">Reset crop</button>
+        <button id="playToggle">Preview ▶</button>
+        <button id="monBtn">🔇 Silent (audio still recorded)</button>
+      </div>
+      <div class="note">Drag the picture to move the crop. Scrub to check the whole clip stays framed.</div>
+    </section>
+
+    <section>
+      <h2>3 · Background</h2>
+      <div class="row">
+        <button class="bb on" data-b="blur">Blurred</button>
+        <button class="bb" data-b="mirror">Mirrored</button>
+        <button class="bb" data-b="black">Black</button>
+      </div>
+      <div class="note">Only visible in Fit mode, or when the crop doesn't reach the edges.</div>
+    </section>
+
+    <section>
+      <h2>4 · Export</h2>
+      <button id="exportBtn" disabled>⤓ Export video</button>
+      <button id="stopBtn" hidden>■ Stop &amp; save what's done</button>
+      <div id="prog"><i></i></div>
+      <div id="status"></div>
+      <a id="dl" hidden download></a>
+      <div class="note" style="margin-top:10px">Rendered and encoded here, then downloaded — no screen recording, no second re-encode.
+      Runs in real time: a 4-minute clip takes about 4 minutes. Keep this tab visible while it works.</div>
+    </section>
+  </aside>
+</main>
+
+<video id="src" playsinline crossorigin="anonymous"></video>
+
+<script>
+const out=document.getElementById('out'),ctx=out.getContext('2d',{alpha:false});
+const video=document.getElementById('src'),drop=document.getElementById('drop');
+const zoomEl=document.getElementById('zoom'),zoomV=document.getElementById('zoomV');
+const scrub=document.getElementById('scrub'),timeV=document.getElementById('timeV');
+const exportBtn=document.getElementById('exportBtn'),stopBtn=document.getElementById('stopBtn');
+const progI=document.querySelector('#prog i'),statusEl=document.getElementById('status'),dl=document.getElementById('dl');
+let orient='v',mode='fill',bg='blur',zoom=1,panX=0,panY=0,loaded=false,exporting=false,scrubbing=false;
+
+/* ---------- geometry ---------- */
+function setOrient(o){
+  orient=o;
+  out.width = o==='v'?1080:1920;
+  out.height= o==='v'?1920:1080;
+  out.style.maxHeight = o==='v'?'72vh':'60vh';
+  for(const b of document.querySelectorAll('.ob'))b.classList.toggle('on',b.dataset.o===o);
+  draw();
+}
+function baseScale(){
+  const vw=video.videoWidth,vh=video.videoHeight;if(!vw)return 1;
+  return mode==='fill' ? Math.max(out.width/vw,out.height/vh) : Math.min(out.width/vw,out.height/vh);
+}
+function placement(){
+  const vw=video.videoWidth,vh=video.videoHeight,s=baseScale()*zoom;
+  const dw=vw*s,dh=vh*s;
+  return {dx:(out.width-dw)/2+panX*out.width, dy:(out.height-dh)/2+panY*out.height, dw, dh};
+}
+/* ---------- draw one frame ---------- */
+function draw(){
+  const W=out.width,H=out.height;
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  if(!video.videoWidth)return;
+  const vw=video.videoWidth,vh=video.videoHeight;
+  const p=placement();
+  const coversAll = p.dx<=0&&p.dy<=0&&p.dx+p.dw>=W&&p.dy+p.dh>=H;
+  if(!coversAll && bg!=='black'){
+    if(bg==='blur'){
+      const s=Math.max(W/vw,H/vh)*1.18;
+      ctx.save();ctx.filter='blur(42px)';ctx.globalAlpha=.85;
+      ctx.drawImage(video,(W-vw*s)/2,(H-vh*s)/2,vw*s,vh*s);
+      ctx.restore();
+    }else{ // mirrored — the project's own trick: reflections share their edge
+      ctx.save();
+      if(orient==='v'){
+        ctx.translate(p.dx,p.dy);ctx.scale(1,-1);ctx.drawImage(video,0,0,p.dw,-p.dh);          // above
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.translate(p.dx,p.dy+2*p.dh);ctx.scale(1,-1);ctx.drawImage(video,0,0,p.dw,-p.dh);  // below
+      }else{
+        ctx.translate(p.dx,p.dy);ctx.scale(-1,1);ctx.drawImage(video,0,0,-p.dw,p.dh);
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.translate(p.dx+2*p.dw,p.dy);ctx.scale(-1,1);ctx.drawImage(video,0,0,-p.dw,p.dh);
+      }
+      ctx.restore();
+    }
+  }
+  ctx.drawImage(video,p.dx,p.dy,p.dw,p.dh);
+}
+/* keep drawing while it plays (per decoded frame when available) */
+function pump(){
+  draw();
+  if(!scrubbing){scrub.value=String(Math.round((video.currentTime/(video.duration||1))*1000));timeV.textContent=fmt(video.currentTime);}
+  if(exporting)progI.style.width=((video.currentTime/(video.duration||1))*100).toFixed(1)+'%';
+  if('requestVideoFrameCallback' in video)video.requestVideoFrameCallback(pump);
+  else requestAnimationFrame(pump);
+}
+const fmt=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
+
+/* ---------- load ---------- */
+function load(file){
+  video.src=URL.createObjectURL(file);
+  video.onloadedmetadata=()=>{
+    loaded=true;drop.hidden=true;out.hidden=false;exportBtn.disabled=false;
+    statusEl.textContent=video.videoWidth+'×'+video.videoHeight+' · '+fmt(video.duration);
+    video.currentTime=0;draw();pump();
+  };
+}
+document.getElementById('pick').onclick=()=>{
+  const i=document.createElement('input');i.type='file';i.accept='video/*';
+  i.onchange=e=>{if(e.target.files[0])load(e.target.files[0])};i.click();
+};
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot')}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)load(f)});
+
+/* ---------- controls ---------- */
+for(const b of document.querySelectorAll('.ob'))b.onclick=()=>setOrient(b.dataset.o);
+for(const b of document.querySelectorAll('.mb'))b.onclick=()=>{mode=b.dataset.m;
+  for(const x of document.querySelectorAll('.mb'))x.classList.toggle('on',x===b);draw()};
+for(const b of document.querySelectorAll('.bb'))b.onclick=()=>{bg=b.dataset.b;
+  for(const x of document.querySelectorAll('.bb'))x.classList.toggle('on',x===b);draw()};
+zoomEl.oninput=()=>{zoom=parseFloat(zoomEl.value);zoomV.textContent=zoom.toFixed(2)+'×';draw()};
+document.getElementById('reset').onclick=()=>{zoom=1;panX=panY=0;zoomEl.value=1;zoomV.textContent='1.00×';draw()};
+document.getElementById('playToggle').onclick=e=>{
+  if(video.paused){video.play();e.target.textContent='Preview ❚❚'}else{video.pause();e.target.textContent='Preview ▶'}
+};
+scrub.addEventListener('pointerdown',()=>scrubbing=true);
+scrub.addEventListener('pointerup',()=>scrubbing=false);
+scrub.addEventListener('input',()=>{if(!loaded)return;
+  video.currentTime=(parseInt(scrub.value)/1000)*(video.duration||0);timeV.textContent=fmt(video.currentTime);draw()});
+/* drag to pan */
+(()=>{let d=false,lx=0,ly=0;
+  out.addEventListener('pointerdown',e=>{if(!loaded)return;d=true;lx=e.clientX;ly=e.clientY;out.classList.add('grabbing');out.setPointerCapture?.(e.pointerId)});
+  out.addEventListener('pointermove',e=>{if(!d)return;const r=out.getBoundingClientRect();
+    panX+=(e.clientX-lx)/r.width;panY+=(e.clientY-ly)/r.height;
+    panX=Math.max(-1,Math.min(1,panX));panY=Math.max(-1,Math.min(1,panY));
+    lx=e.clientX;ly=e.clientY;draw()});
+  const up=()=>{d=false;out.classList.remove('grabbing')};
+  out.addEventListener('pointerup',up);out.addEventListener('pointercancel',up);
+})();
+
+/* ---------- EXPORT — encoded here, downloaded as a file ---------- */
+function pickMime(){
+  const c=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1','video/mp4',
+           'video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  return c.find(m=>MediaRecorder.isTypeSupported(m))||'';
+}
+let audioCtx=null,srcNode=null,monitorGain=null;
+function audioTrack(){
+  try{
+    if(!audioCtx){
+      audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      srcNode=audioCtx.createMediaElementSource(video);
+      monitorGain=audioCtx.createGain();
+      monitorGain.gain.value=0;              // SILENT by default — nobody wants to sit
+      monitorGain.connect(audioCtx.destination); // through a 4-minute export out loud
+      srcNode.connect(monitorGain);
+    }
+    audioCtx.resume();
+    const dest=audioCtx.createMediaStreamDestination();
+    srcNode.connect(dest);                   // the file still gets full audio
+    return dest.stream.getAudioTracks()[0]||null;
+  }catch(e){console.warn('audio capture unavailable:',e.message);return null}
+}
+function setMonitor(on){
+  if(monitorGain)monitorGain.gain.value=on?1:0;
+  video.muted=!on;
+  const b=document.getElementById('monBtn');
+  if(b){b.classList.toggle('on',on);b.textContent=on?'🔊 Monitor on':'🔇 Silent (audio still recorded)';}
+}
+let rec=null,exportTimer=null,exportMeta=null;
+exportBtn.onclick=async()=>{
+  if(!loaded||exporting)return;
+  const mime=pickMime();
+  if(!mime){statusEl.textContent='This browser cannot encode video. Try Chrome or Safari.';return}
+  exporting=true;exportBtn.disabled=true;stopBtn.hidden=false;dl.hidden=true;
+  statusEl.textContent='Recording in real time — keep this tab in front and visible.';
+  const fps=30;
+  const stream=out.captureStream(fps);
+  const at=audioTrack();if(at)stream.addTrack(at);
+  const chunks=[];
+  rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:14_000_000,audioBitsPerSecond:192_000});
+  rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+  rec.onstop=()=>{
+    if(exportTimer){clearInterval(exportTimer);exportTimer=null}
+    const meta=exportMeta?exportMeta():{starved:false,drawn:0};
+    const expected=(video.duration||1)*fps, ratio=meta.drawn/expected;
+    const ext=mime.startsWith('video/mp4')?'mp4':'webm';
+    const blob=new Blob(chunks,{type:mime});
+    const url=URL.createObjectURL(blob);
+    dl.href=url;dl.download='reframed-'+(orient==='v'?'1080x1920':'1920x1080')+'.'+ext;
+    dl.textContent='⤓ Download '+dl.download+'  ('+(blob.size/1e6).toFixed(1)+' MB)';
+    dl.hidden=false;dl.click();
+    statusEl.textContent=(ratio<.75)
+      ? '⚠ Saved, but only '+meta.drawn+' of ~'+Math.round(expected)+' frames were drawn — the tab was throttled. Re-export with this tab in front.'
+      : 'Done · '+ext.toUpperCase()+' · '+(blob.size/1e6).toFixed(1)+' MB · '+meta.drawn+' frames · '+((blob.size*8)/((video.duration||1)*1e6)).toFixed(1)+' Mbps';
+    exporting=false;exportBtn.disabled=false;stopBtn.hidden=true;progI.style.width='100%';
+  };
+  video.pause();video.currentTime=0;
+  await new Promise(r=>{const h=()=>{video.removeEventListener('seeked',h);r()};video.addEventListener('seeked',h);setTimeout(r,800)});
+  draw();
+  // Drive the canvas from a TIMER as well as the frame callback: rAF/rVFC are
+  // suspended the moment a tab is backgrounded, which would silently record a
+  // frozen frame. The timer keeps drawing (throttled, but alive) and any
+  // occlusion is reported instead of quietly ruining the take.
+  let starved=false,drawn=0;
+  let tick=0;
+  exportTimer=setInterval(()=>{draw();drawn++;tick++;
+    // judge by the actual draw rate, not by the visibility flag
+    const want=(video.currentTime||0.001)*fps;
+    if(drawn<want*0.6){starved=true;statusEl.textContent='⚠ Frames are being dropped — bring this tab to the front.';}
+    else if(tick%15===0)statusEl.textContent='Recording… '+fmt(video.currentTime)+' / '+fmt(video.duration)+' · '+drawn+' frames';
+  },1000/fps);
+  rec.start(1000);
+  video.onended=()=>{if(rec&&rec.state!=='inactive')rec.stop()};
+  exportMeta=()=>({starved,drawn});
+  video.play();
+};
+stopBtn.onclick=()=>{if(rec&&rec.state!=='inactive'){video.pause();rec.stop()}};
+document.getElementById('monBtn').onclick=()=>{
+  if(!audioCtx)audioTrack();                 // build the graph on first use
+  setMonitor(!(monitorGain&&monitorGain.gain.value>0));
+};
+video.muted=true;                            // nothing plays out loud until you ask
+setOrient('v');
+</script>
+</body>
+</html>
